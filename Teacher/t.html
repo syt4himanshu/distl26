@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Dashboard</title>
+    <link rel="stylesheet" href="t.css">
+    <script src="../js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.AuthGuard) { window.AuthGuard.guardRoute(['faculty']); }
+        });
+    </script>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <h1>Teacher Dashboard</h1>
+            <!-- ...existing code... -->
+            <div class="sid">
+                <a href="../forgot.html" class="logout-btn" style="text-decoration:none;">Change Password</a>
+                <button class="logout-btn" onclick="logout()">↗ Logout</button>
+            </div>
+
+        </header>
+
+        <div class="metrics-container">
+            <div class="metric-card">
+                <h3>Total Students</h3>
+                <div class="metric-value" id="totalStudents">0</div>
+            </div>
+            <div class="metric-card">
+                <h3>Programs</h3>
+                <div class="metric-value" id="totalPrograms">0</div>
+            </div>
+            <div class="metric-card">
+                <h3>Avg CGPA</h3>
+                <div class="metric-value" id="avgCGPA">N/A</div>
+            </div>
+            <div class="metric-card">
+                <h3>Domains</h3>
+                <div class="metric-value" id="totalDomains">0</div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+
+
+        <div class="search-section">
+            <h2>Search & Filter Students</h2>
+            <div class="search-filters">
+                <div class="search-input">
+                    <input type="text" id="searchInput" placeholder="Search students...">
+                </div>
+                <div class="filter-options">
+                    <select id="semesterFilter">
+                        <option value="">All Semesters</option>
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                    <select id="batchFilter">
+                        <option value="">All Batches</option>
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                    <select id="domainFilter">
+                        <option value="">All Domains</option>
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                    <select id="sectionFilter">
+                        <option value="">All Sections</option>
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="students-section">
+            <div class="section-header">
+                <h2>Students (<span id="studentCount">0</span>)</h2>
+                <div class="view-options">
+                    <button class="active">Student Details</button>
+                </div>
+            </div>
+
+            <div id="studentsContainer">
+                <!-- Students will be loaded dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Details Modal -->
+    <div class="details-container hidden">
+        <div class="dialog-container hidden">
+            <div class="dialog-header">
+                <button class="close-button" onclick="closeDialog()">×</button>
+                <h1 class="dialog-title">Student Information</h1>
+                <p class="dialog-subtitle">Department of Computer Engineering</p>
+            </div>
+
+            <div class="dialog-content" id="studentDetailsContent">
+                <!-- Student details will be loaded dynamically -->
+                <div class="loading-message">Loading student details...</div>
+            </div>
+
+            <div class="dialog-footer">
+                <button class="btn" onclick="printDialog()">Print</button>
+                <button class="btn btn-primary" onclick="downloadData()">Download</button>
+                <button class="btn" onclick="closeDialog()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let allStudents = [];
+        let filteredStudents = [];
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Initialize the dashboard
+            loadStudentsData();
+
+            // Event listeners for filtering
+            document.getElementById('searchInput').addEventListener('input', filterStudents);
+            document.getElementById('semesterFilter').addEventListener('change', filterStudents);
+            document.getElementById('batchFilter').addEventListener('change', filterStudents);
+            document.getElementById('domainFilter').addEventListener('change', filterStudents);
+            document.getElementById('sectionFilter').addEventListener('change', filterStudents);
+        });
+
+        async function loadStudentsData() {
+            try {
+                const token = localStorage.getItem("access_token");
+                if (!token) {
+                    window.location.href = "../login.html";
+                    return;
+                }
+
+                const response = await fetch("http://localhost:5002/faculty/me/mentees", {
+                    method: "GET",
+                    headers: {
+                        "Authorization": "Bearer " + token,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (response.ok) {
+                    allStudents = await response.json();
+                    filteredStudents = [...allStudents];
+                    
+                    // Update metrics
+                    updateMetrics();
+                    
+                    // Populate filter options
+                    populateFilterOptions();
+                    
+                    // Display students
+                    displayStudents(filteredStudents);
+                } else {
+                    console.error('Failed to fetch students:', await response.text());
+                    showError('Failed to load student data. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error loading students:', error);
+                showError('Error loading student data. Please check your connection.');
+            }
+        }
+
+        function updateMetrics() {
+            // Total students
+            document.getElementById('totalStudents').textContent = allStudents.length;
+            
+            // Calculate unique values for metrics
+            const semesters = new Set(allStudents.map(s => s.semester));
+            const sections = new Set(allStudents.map(s => s.section));
+            const years = new Set(allStudents.map(s => s.year_of_admission));
+            
+            document.getElementById('totalPrograms').textContent = semesters.size;
+            document.getElementById('totalDomains').textContent = sections.size;
+            
+            // For now, set CGPA as N/A since we don't have that data
+            document.getElementById('avgCGPA').textContent = 'N/A';
+        }
+
+        function populateFilterOptions() {
+            // Get unique values for filters
+            const semesters = [...new Set(allStudents.map(s => s.semester))].sort();
+            const years = [...new Set(allStudents.map(s => s.year_of_admission))].sort();
+            const sections = [...new Set(allStudents.map(s => s.section))].sort();
+
+            // Populate semester filter
+            const semesterFilter = document.getElementById('semesterFilter');
+            semesters.forEach(sem => {
+                const option = document.createElement('option');
+                option.value = sem;
+                option.textContent = `Sem ${sem}`;
+                semesterFilter.appendChild(option);
+            });
+
+            // Populate batch filter
+            const batchFilter = document.getElementById('batchFilter');
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                batchFilter.appendChild(option);
+            });
+
+            // Populate section filter
+            const sectionFilter = document.getElementById('sectionFilter');
+            sections.forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = section;
+                sectionFilter.appendChild(option);
+            });
+        }
+
+        function displayStudents(students) {
+            const container = document.getElementById('studentsContainer');
+            
+            if (students.length === 0) {
+                container.innerHTML = '<div class="no-students">No students found matching your criteria.</div>';
+                return;
+            }
+
+            const studentsHTML = students.map(student => `
+                <div class="student-card" 
+                     data-semester="${student.semester}" 
+                     data-batch="${student.year_of_admission}"
+                     data-name="${student.full_name}" 
+                     data-section="${student.section}"
+                     data-uid="${student.uid}">
+                    <div class="student-info">
+                        <div class="student-name">${student.full_name}</div>
+                        <div class="student-details">
+                            <span class="semester">Sem ${student.semester}</span>
+                            <span class="section">Section ${student.section}</span>
+                            <span class="batch">${student.year_of_admission}</span>
+                        </div>
+                    </div>
+                    <div class="student-actions">
+                        <button class="view-btn" onclick="viewStudentDetails('${student.uid}')">View</button>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = studentsHTML;
+
+            // Update count
+            document.getElementById('studentCount').textContent = students.length;
+        }
+
+        function filterStudents() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const selectedSemester = document.getElementById('semesterFilter').value;
+            const selectedBatch = document.getElementById('batchFilter').value;
+            const selectedSection = document.getElementById('sectionFilter').value;
+
+            filteredStudents = allStudents.filter(student => {
+                let matches = true;
+
+                // Search filter
+                if (searchTerm && !student.full_name.toLowerCase().includes(searchTerm)) {
+                    matches = false;
+                }
+
+                // Semester filter
+                if (selectedSemester && student.semester.toString() !== selectedSemester) {
+                    matches = false;
+                }
+
+                // Batch filter
+                if (selectedBatch && student.year_of_admission.toString() !== selectedBatch) {
+                    matches = false;
+                }
+
+                // Section filter
+                if (selectedSection && student.section !== selectedSection) {
+                    matches = false;
+                }
+
+                return matches;
+            });
+
+            displayStudents(filteredStudents);
+            document.getElementById('totalStudents').textContent = filteredStudents.length;
+        }
+
+        async function viewStudentDetails(uid) {
+            try {
+                const token = localStorage.getItem("access_token");
+                
+                const response = await fetch(`http://localhost:5002/students/${uid}`, {
+                    method: "GET",
+                    headers: {
+                        "Authorization": "Bearer " + token,
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (response.ok) {
+                    const studentData = await response.json();
+                    populateStudentModal(studentData);
+                    
+                    // Show modal
+                    document.querySelector('.dialog-container').classList.remove('hidden');
+                    document.querySelector('.details-container').classList.remove('hidden');
+                    document.getElementsByTagName('body')[0].classList.add('overflow-hidden');
+                } else {
+                    showError('Failed to load student details.');
+                }
+            } catch (error) {
+                console.error('Error loading student details:', error);
+                showError('Error loading student details. Please try again.');
+            }
+        }
+
+        function populateStudentModal(student) {
+            const content = document.getElementById('studentDetailsContent');
+            
+            // Build the modal content dynamically
+            let modalHTML = `
+                <!-- Student's Personal Information -->
+                <div class="section expanded">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span class="section-title">Student's Personal Information</span>
+                        <span class="expand-icon">▲</span>
+                    </div>
+                    <div class="section-content">
+                        <table class="data-table">
+                            <tr><th>Department</th><td>Computer Engineering</td></tr>
+                            <tr><th>Full Name</th><td>${student.full_name || 'N/A'}</td></tr>
+                            <tr><th>UID</th><td>${student.uid || 'N/A'}</td></tr>
+                            <tr><th>Section</th><td>${student.section || 'N/A'}</td></tr>
+                            <tr><th>Semester</th><td>${student.semester || 'N/A'}</td></tr>
+                            <tr><th>Year of Admission</th><td>${student.year_of_admission || 'N/A'}</td></tr>`;
+            
+            // Add personal info if available
+            if (student.personal_info) {
+                const pi = student.personal_info;
+                modalHTML += `
+                            <tr><th>Mobile No.</th><td>${pi.contact_number || 'N/A'}</td></tr>
+                            <tr><th>Email ID</th><td>${pi.email || 'N/A'}</td></tr>
+                            <tr><th>LinkedIn ID</th><td>${pi.linkedin || 'N/A'}</td></tr>
+                            <tr><th>Permanent Address</th><td>${pi.permanent_address || 'N/A'}</td></tr>`;
+            }
+            
+            modalHTML += `
+                        </table>
+                    </div>
+                </div>`;
+
+            // Add sections based on available data
+            modalHTML += buildModalSection('Past Education Records', student.past_education_records, (records) => 
+                records.map(rec => `<p>${rec.degree || 'Unknown'}: ${rec.percentage || 'N/A'}% (${rec.year_of_passing || 'N/A'})</p>`).join('')
+            );
+
+            modalHTML += buildModalSection('Post Admission Records', student.post_admission_records, (records) => 
+                records.map(rec => `<p>Semester ${rec.semester || 'N/A'}: SGPA ${rec.sgpa || 'N/A'}</p>`).join('')
+            );
+
+            modalHTML += buildModalSection('Projects', student.projects, (projects) => 
+                projects.map(proj => `<p><strong>${proj.title || 'Untitled'}</strong>: ${proj.description || 'No description'}</p>`).join('')
+            );
+
+            modalHTML += buildModalSection('Internships', student.internships, (internships) => 
+                internships.map(intern => `<p><strong>${intern.company || 'Unknown Company'}</strong>: ${intern.domain || 'N/A'} (${intern.start_date || 'N/A'} - ${intern.end_date || 'N/A'})</p>`).join('')
+            );
+
+            if (student.career_objective) {
+                modalHTML += `
+                <div class="section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span class="section-title">Career Objective</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <table class="data-table">
+                            <tr><th>Career Objective</th><td>${student.career_objective.career_objective || 'N/A'}</td></tr>
+                            <tr><th>Domain of Interest</th><td>${student.career_objective.domain_of_interest || 'N/A'}</td></tr>
+                        </table>
+                    </div>
+                </div>`;
+            }
+
+            if (student.skills) {
+                modalHTML += `
+                <div class="section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span class="section-title">Skills</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <table class="data-table">
+                            <tr><th>Technical Skills</th><td>${student.skills.technical_skills || 'N/A'}</td></tr>
+                            <tr><th>Soft Skills</th><td>${student.skills.soft_skills || 'N/A'}</td></tr>
+                        </table>
+                    </div>
+                </div>`;
+            }
+
+            content.innerHTML = modalHTML;
+        }
+
+        function buildModalSection(title, data, formatter) {
+            if (!data || data.length === 0) return '';
+            
+            return `
+                <div class="section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <span class="section-title">${title}</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="activity-list">
+                            ${formatter(data)}
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function showError(message) {
+            // Simple error display - you can enhance this
+            alert(message);
+        }
+
+        function toggleSection(header) {
+            const section = header.parentElement;
+            section.classList.toggle('expanded');
+            const icon = header.querySelector('.expand-icon');
+            icon.textContent = section.classList.contains('expanded') ? '▲' : '▼';
+        }
+
+        function closeDialog() {
+            if (confirm('Are you sure you want to close?')) {
+                document.querySelector('.dialog-container').classList.add('hidden');
+                document.querySelector('.details-container').classList.add('hidden');
+                document.getElementsByTagName('body')[0].classList.remove('overflow-hidden');
+            }
+        }
+
+        function printDialog() {
+            window.print();
+        }
+
+        function downloadData() {
+            // Get current student data from modal
+            alert('Download functionality would be implemented here.');
+        }
+
+        async function logout() {
+            const token = localStorage.getItem("access_token");
+            if (!token) {
+                console.log("No token found, already logged out.");
+                window.location.href = "../login.html";
+                return;
+            }
+            try {
+                const response = await fetch("http://localhost:5002/api/auth/logout", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
+                    }
+                });
+                if (response.ok) {
+                    console.log("Successfully logged out");
+                } else {
+                    console.error("Logout failed:", await response.json());
+                }
+            } catch (error) {
+                console.error("Error during logout:", error);
+            }
+            localStorage.removeItem("access_token");
+            window.location.href = "../login.html";
+        }
+
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('semesterFilter').value = '';
+            document.getElementById('batchFilter').value = '';
+            document.getElementById('domainFilter').value = '';
+            document.getElementById('sectionFilter').value = '';
+            filterStudents();
+        }
+    </script>
+</body>
+
+</html>

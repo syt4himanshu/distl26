@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Management System</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #3b82f6;
+            --secondary-color: #64748b;
+            --accent-color: #0ea5e9;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-light: #94a3b8;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+            --spacing-3xl: 4rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: 16px;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Page Management */
+        .page {
+            display: none;
+            min-height: 100vh;
+            position: relative;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .page.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Welcome Page Styles */
+        .welcome-page {
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-lg);
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f8fafc 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .welcome-page::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="%23e2e8f0" stroke-width="0.5" opacity="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>') repeat;
+            pointer-events: none;
+        }
+
+        .welcome-container {
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+            padding: var(--spacing-3xl);
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-xl);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo-container {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .logo {
+            width: 120px;
+            height: 120px;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-lg);
+            margin: 0 auto;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
+        }
+
+        .welcome-header {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .welcome-header h1 {
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-bottom: var(--spacing-sm);
+            letter-spacing: -0.025em;
+        }
+
+        .welcome-header h2 {
+            font-size: clamp(2rem, 6vw, 3.5rem);
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: var(--spacing-lg);
+            line-height: 1.2;
+            letter-spacing: -0.05em;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .welcome-description {
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .welcome-description p {
+            font-size: clamp(1rem, 2.5vw, 1.25rem);
+            color: var(--text-secondary);
+            line-height: 1.7;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .divider {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+            margin: var(--spacing-xl) 0;
+        }
+
+        .login-button {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+            color: white;
+            border: none;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg) var(--spacing-3xl);
+            font-size: 1.125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-md);
+            text-transform: capitalize;
+            letter-spacing: 0.025em;
+            position: relative;
+            overflow: hidden;
+            min-width: 160px;
+        }
+
+        .login-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .login-button:hover::before {
+            left: 100%;
+        }
+
+        .login-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .login-button:active {
+            transform: translateY(0);
+        }
+
+        .login-button:focus {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+
+        /* Role Selection Page Styles */
+        .role-selection-page {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            padding: var(--spacing-lg);
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: var(--spacing-xl);
+            position: relative;
+        }
+
+        .header-section {
+            width: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            padding: var(--spacing-lg);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .back-button {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .back-button:hover {
+            background: var(--bg-tertiary);
+            transform: translateX(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .back-button:focus {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+
+        .page-title {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            text-align: center;
+            letter-spacing: -0.025em;
+        }
+
+        .main-content {
+            margin-top: 120px;
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--spacing-xl);
+            padding: 0 var(--spacing-lg);
+        }
+
+        .role-card {
+            background: var(--bg-primary);
+            padding: var(--spacing-2xl);
+            border-radius: var(--radius-xl);
+            text-align: center;
+            box-shadow: var(--shadow-md);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .role-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, transparent 0%, rgba(37, 99, 235, 0.05) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .role-card:hover::before {
+            opacity: 1;
+        }
+
+        .role-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+            border-color: var(--primary-color);
+        }
+
+        .role-card:focus {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
+
+        .role-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto var(--spacing-lg);
+            border-radius: var(--radius-xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            position: relative;
+            z-index: 2;
+        }
+
+        .role-card.admin .role-icon {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+        }
+
+        .role-card.student .role-icon {
+            background: linear-gradient(135deg, #059669, #10b981);
+        }
+
+        .role-card.teacher .role-icon {
+            background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+        }
+
+        .role-title {
+            font-weight: 700;
+            font-size: 1.5rem;
+            margin-bottom: var(--spacing-md);
+            color: var(--text-primary);
+            letter-spacing: -0.025em;
+            position: relative;
+            z-index: 2;
+        }
+
+        .role-description {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 640px) {
+            .welcome-container {
+                padding: var(--spacing-xl);
+                margin: var(--spacing-md);
+            }
+
+            .logo {
+                width: 80px;
+                height: 80px;
+            }
+
+            .login-button {
+                width: 100%;
+                max-width: 280px;
+            }
+
+            .header-content {
+                padding: 0;
+            }
+
+            .page-title {
+                font-size: 1.5rem;
+                margin-left: var(--spacing-md);
+            }
+
+            .main-content {
+                margin-top: 100px;
+                grid-template-columns: 1fr;
+                gap: var(--spacing-lg);
+                padding: 0 var(--spacing-md);
+            }
+
+            .role-card {
+                padding: var(--spacing-xl);
+            }
+
+            .role-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .welcome-page {
+                padding: var(--spacing-md);
+            }
+
+            .welcome-container {
+                padding: var(--spacing-lg);
+            }
+
+            .header-section {
+                padding: var(--spacing-md);
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary-color: #3b82f6;
+                --primary-dark: #2563eb;
+                --primary-light: #60a5fa;
+                --text-primary: #f1f5f9;
+                --text-secondary: #cbd5e1;
+                --text-light: #94a3b8;
+                --bg-primary: #1e293b;
+                --bg-secondary: #0f172a;
+                --bg-tertiary: #334155;
+                --border-color: #334155;
+            }
+
+            .welcome-page {
+                background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            }
+
+            .welcome-container {
+                background: rgba(30, 41, 59, 0.95);
+                border-color: var(--border-color);
+            }
+
+            .role-selection-page {
+                background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            }
+
+            .header-section {
+                background: rgba(30, 41, 59, 0.95);
+                border-bottom-color: var(--border-color);
+            }
+        }
+
+        /* Reduced motion support */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+
+            .role-card:hover,
+            .login-button:hover,
+            .logo:hover {
+                transform: none;
+            }
+        }
+
+        /* High contrast mode */
+        @media (prefers-contrast: high) {
+            .welcome-container,
+            .role-card {
+                border: 2px solid currentColor;
+            }
+
+            .login-button {
+                border: 2px solid white;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Welcome Page -->
+    <div class="page welcome-page active" id="welcomePage">
+        <div class="welcome-container">
+            <div class="logo-container">
+                <img src="./Images/apple-touch-icon (1).png" alt="Know Your Student System Logo" class="logo">
+            </div>
+            
+            <div class="welcome-header">
+                <h1>Welcome to</h1>
+                <h2>Know Your Student System</h2>
+            </div>
+            
+            <div class="welcome-description">
+                <p>Streamline student monitoring, enhance class organization, and manage students and faculty with our comprehensive educational platform.</p>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <button class="login-button" onclick="showRoleSelection()" aria-label="Proceed to login and role selection">
+                Get Started
+            </button>
+        </div>
+    </div>
+
+    <!-- Role Selection Page -->
+    <div class="page role-selection-page" id="roleSelectionPage">
+        <div class="header-section">
+            <div class="header-content">
+                <button class="back-button" onclick="showWelcome()" aria-label="Go back to welcome page">
+                    <span>←</span>
+                    Back
+                </button>
+                
+                <h2 class="page-title">Choose Your Role</h2>
+                
+                <div style="width: 80px;"></div> <!-- Spacer for centering -->
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="role-card admin" onclick="selectRole('admin')" tabindex="0" role="button" aria-label="Select Administrator role">
+                <div class="role-icon">A</div>
+                <h3 class="role-title">Administrator</h3>
+                <p class="role-description">
+                    Comprehensive system management with full access to user administration, system settings, and advanced analytics.
+                </p>
+            </div>
+
+            <div class="role-card student" onclick="selectRole('student')" tabindex="0" role="button" aria-label="Select Student role">
+                <div class="role-icon">S</div>
+                <h3 class="role-title">Student</h3>
+                <p class="role-description">
+                    Access your personal dashboard, view grades, manage assignments, and track your academic progress effectively.
+                </p>
+            </div>
+
+            <div class="role-card teacher" onclick="selectRole('teacher')" tabindex="0" role="button" aria-label="Select Teacher role">
+                <div class="role-icon">T</div>
+                <h3 class="role-title">Teacher</h3>
+                <p class="role-description">
+                    Manage your classes, track student performance, create assessments, and communicate with students and parents.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Page navigation functions with smooth transitions
+        function showRoleSelection() {
+            const welcomePage = document.getElementById('welcomePage');
+            const roleSelectionPage = document.getElementById('roleSelectionPage');
+            
+            welcomePage.style.opacity = '0';
+            setTimeout(() => {
+                welcomePage.classList.remove('active');
+                roleSelectionPage.classList.add('active');
+                roleSelectionPage.style.opacity = '1';
+            }, 300);
+        }
+
+        function showWelcome() {
+            const welcomePage = document.getElementById('welcomePage');
+            const roleSelectionPage = document.getElementById('roleSelectionPage');
+            
+            roleSelectionPage.style.opacity = '0';
+            setTimeout(() => {
+                roleSelectionPage.classList.remove('active');
+                welcomePage.classList.add('active');
+                welcomePage.style.opacity = '1';
+            }, 300);
+        }
+
+        function selectRole(role) {
+            // Add loading state
+            const selectedCard = event.target.closest('.role-card');
+            selectedCard.style.opacity = '0.7';
+            selectedCard.style.pointerEvents = 'none';
+            
+            // Simulate loading then redirect
+            setTimeout(() => {
+                window.location.href = "login.html";
+            }, 500);
+        }
+
+        // Enhanced keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            const focusedElement = document.activeElement;
+            
+            if (focusedElement.classList.contains('role-card') && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                focusedElement.click();
+            }
+            
+            // Arrow key navigation for role cards
+            if (document.getElementById('roleSelectionPage').classList.contains('active')) {
+                const roleCards = document.querySelectorAll('.role-card');
+                const currentIndex = Array.from(roleCards).indexOf(focusedElement);
+                
+                if (e.key === 'ArrowLeft' && currentIndex > 0) {
+                    e.preventDefault();
+                    roleCards[currentIndex - 1].focus();
+                } else if (e.key === 'ArrowRight' && currentIndex < roleCards.length - 1) {
+                    e.preventDefault();
+                    roleCards[currentIndex + 1].focus();
+                }
+            }
+        });
+
+        // Add smooth page transitions
+        document.addEventListener('DOMContentLoaded', function() {
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(page => {
+                page.style.transition = 'opacity 0.3s ease-in-out';
+                page.style.opacity = page.classList.contains('active') ? '1' : '0';
+            });
+            
+            // Add intersection observer for animations
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+            
+            // Observe elements for animation
+            document.querySelectorAll('.role-card').forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(card);
+            });
+        });
+
+        // Add loading states and error handling
+        function handleImageError(img) {
+            img.style.display = 'none';
+            // You could add a default icon or placeholder here
+        }
+
+        // Preload images for better performance
+        window.addEventListener('load', function() {
+            const img = new Image();
+            img.src = './Images/apple-touch-icon (1).png';
+        });
+    </script>
+</body>
+</html>

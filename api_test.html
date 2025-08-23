@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>API Test</h1>
+    <button onclick="testLogin()">Test Login</button>
+    <button onclick="testStudents()">Test Students</button>
+    <div id="results"></div>
+
+    <script>
+        const results = document.getElementById('results');
+        
+        async function testLogin() {
+            try {
+                results.innerHTML = '<p>Testing login...</p>';
+                const response = await fetch('http://localhost:5002/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: 'admin',
+                        password: 'admin123'
+                    })
+                });
+                
+                const data = await response.json();
+                results.innerHTML = `<h3>Login Result:</h3><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+                if (data.access_token) {
+                    localStorage.setItem('access_token', data.access_token);
+                }
+            } catch (error) {
+                results.innerHTML = `<p>Login Error: ${error.message}</p>`;
+            }
+        }
+        
+        async function testStudents() {
+            try {
+                results.innerHTML = '<p>Testing students API...</p>';
+                const token = localStorage.getItem('access_token');
+                
+                if (!token) {
+                    results.innerHTML = '<p>No token found. Please login first.</p>';
+                    return;
+                }
+                
+                const response = await fetch('http://localhost:5002/api/students', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                results.innerHTML = `<h3>Students Result:</h3><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                results.innerHTML = `<p>Students Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

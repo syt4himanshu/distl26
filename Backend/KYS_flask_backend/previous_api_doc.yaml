@@ -1,0 +1,1017 @@
+openapi: 3.0.3
+info:
+  title: Role-Based University API
+  version: 1.0.0
+  description: |
+    A Flask-based API with role-based authentication for Admin, Student, and
+    Faculty. Supports JWT login, profile management, student search, password
+    management, and admin operations.
+servers:
+  - url: http://localhost:5000
+    description: Local server
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    UserBasic:
+      type: object
+      properties:
+        user_id:
+          type: integer
+        username:
+          type: string
+    StudentBasic:
+      type: object
+      properties:
+        uid:
+          type: string
+        name:
+          type: string
+        profile_url:
+          type: string
+    FacultyProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        first_name:
+          type: string
+        last_name:
+          type: string
+        email:
+          type: string
+        contact_number:
+          type: string
+    StudentPersonalInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        mobile_no:
+          type: string
+        personal_email:
+          type: string
+        college_email:
+          type: string
+        linked_in_id:
+          type: string
+        permanent_address:
+          type: string
+        dob:
+          type: string
+          format: date
+        gender:
+          type: string
+        father_name:
+          type: string
+        father_mobile_no:
+          type: string
+        father_email:
+          type: string
+          nullable: true
+        father_occupation:
+          type: string
+        mother_name:
+          type: string
+        mother_mobile_no:
+          type: string
+        mother_email:
+          type: string
+          nullable: true
+        mother_occupation:
+          type: string
+        emergency_contact_name:
+          type: string
+        emergency_contact_number:
+          type: string
+    PastEducation:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        exam_name:
+          type: string
+          enum: ["SSC", "hssc_or_diploma"]
+        percentage:
+          type: number
+          format: float
+        year_of_passing:
+          type: integer
+    PostAdmissionAcademicRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        semester:
+          type: integer
+        sgpa:
+          type: number
+          format: float
+        backlog_subjects:
+          type: string
+          nullable: true
+    CareerActivity:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        activity_name:
+          type: string
+        score_rank:
+          type: string
+        exam_date:
+          type: string
+          format: date
+    Project:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+    Internship:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        company_name:
+          type: string
+        domain:
+          type: string
+        internship_type:
+          type: string
+          enum: ["Online", "Physical"]
+        paid_unpaid:
+          type: string
+          enum: ["Paid", "Unpaid"]
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        end_date:
+          type: string
+          format: date
+          nullable: true
+    CoCurricularParticipation:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        name:
+          type: string
+        date:
+          type: string
+          format: date
+        level:
+          type: string
+          description: Institute/Dept/State/National/International
+        awards:
+          type: string
+          nullable: true
+    CoCurricularOrganization:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        name:
+          type: string
+        date:
+          type: string
+          format: date
+        level:
+          type: string
+          description: Institute/Dept/State/National/International
+        remark:
+          type: string
+          nullable: true
+    CareerObjective:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        career_goal:
+          type: string
+        specific_details:
+          type: string
+          nullable: true
+        clarity_preparedness:
+          type: string
+          nullable: true
+        interested_in_campus_placement:
+          type: boolean
+        campus_placement_reasons:
+          type: string
+          nullable: true
+    Skills:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        programming_languages:
+          type: string
+          nullable: true
+        technologies_frameworks:
+          type: string
+          nullable: true
+        domains_of_interest:
+          type: string
+          nullable: true
+        familiar_tools_platforms:
+          type: string
+          nullable: true
+    SWOC:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        strengths:
+          type: string
+          nullable: true
+        weaknesses:
+          type: string
+          nullable: true
+        opportunities:
+          type: string
+          nullable: true
+        challenges:
+          type: string
+          nullable: true
+    StudentProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        uid:
+          type: string
+        full_name:
+          type: string
+        semester:
+          type: integer
+        section:
+          type: string
+        year_of_admission:
+          type: integer
+        personal_info:
+          $ref: '#/components/schemas/StudentPersonalInfo'
+        past_education_records:
+          type: array
+          items:
+            $ref: '#/components/schemas/PastEducation'
+        post_admission_records:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostAdmissionAcademicRecord'
+        career_activities:
+          type: array
+          items:
+            $ref: '#/components/schemas/CareerActivity'
+        projects:
+          type: array
+          items:
+            $ref: '#/components/schemas/Project'
+        internships:
+          type: array
+          items:
+            $ref: '#/components/schemas/Internship'
+        cocurricular_participations:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoCurricularParticipation'
+        cocurricular_organizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoCurricularOrganization'
+        career_objective:
+          $ref: '#/components/schemas/CareerObjective'
+        skills:
+          $ref: '#/components/schemas/Skills'
+        swoc:
+          $ref: '#/components/schemas/SWOC'
+paths:
+  /auth/login:
+    post:
+      summary: Login with username & password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: JWT token issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Invalid credentials
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Internal server error
+  /auth/register:
+    post:
+      summary: Admin - create new Student or Faculty
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [role, uid, first_name, last_name, semester, section, year]
+                  properties:
+                    role:
+                      type: string
+                      enum: [student]
+                    uid:
+                      type: string
+                    first_name:
+                      type: string
+                    middle_name:
+                      type: string
+                      nullable: true
+                    last_name:  
+                      type: string
+                    semester:
+                      type: integer
+                    section:
+                      type: string
+                    year:
+                      type: integer
+                - type: object
+                  required: [role, email]
+                  properties:
+                    role:
+                      type: string
+                      enum: [faculty]
+                    email:
+                      type: string
+      responses:
+        '201':
+          description: Created student user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/StudentProfile'
+        "200":
+          description: Created faculty user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "400":
+          description: Validation error or duplicate user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "403":
+          description: Forbidden (not admin)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /auth/register/bulk:
+    post:
+      summary: Admin - bulk register students
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                required: [uid, first_name, last_name, semester, section, year]
+                properties:
+                  uid:
+                    type: string
+                  first_name:
+                    type: string
+                  middle_name:
+                    type: string
+                    nullable: true
+                  last_name:
+                    type: string
+                  semester:
+                    type: integer
+                  section:
+                    type: string
+                  year:
+                    type: integer
+      responses:
+        '200':
+          description: Bulk registration results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uid:
+                          type: string
+                          nullable: true
+                        status:
+                          type: string
+                          enum: [success, failed]
+                        error:
+                          type: string
+                          nullable: true
+  /auth/change-password:
+    post:
+      summary: Student/Faculty - change own password
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [old_password, new_password]
+              properties:
+                old_password:
+                  type: string
+                new_password:
+                  type: string
+      responses:
+        "200":
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "400":
+          description: Old password incorrect or invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "403":
+          description: Forbidden (not student/faculty)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /auth/logout:
+    post:
+      summary: Log out by blacklisting the current JWT token
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successfully logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Successfully logged out
+        "401":
+          description: Missing or invalid JWT token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: Missing Authorization Header
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /admin/reset-password:
+    post:
+      summary: Admin - reset password for student or faculty
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, role, new_password]
+              properties:
+                role:
+                  type: string
+                  enum: [student, faculty]
+                username:
+                  type: string
+                new_password:
+                  type: string
+      responses:
+        "200":
+          description: Password reset successful (new password returned once)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "400":
+          description: Invalid role or missing username
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "403":
+          description: Forbidden (not admin)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "404":
+          description: User with specified username and role not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /students/me:
+    get:
+      summary: Student - get own profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Own student profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentProfile'
+        "403":
+          description: Forbidden (not student role)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "404":
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+    put:
+      summary: Student - update own profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentProfile'
+      responses:
+        "200":
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "403":
+          description: Forbidden (not student role)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "404":
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /faculty/me:
+    get:
+      summary: Faculty - get own profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Own faculty profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FacultyProfile"
+        "403":
+          description: Forbidden (not faculty role)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+    put:
+      summary: Faculty - update own profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FacultyProfile"
+      responses:
+        "200":
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "403":
+          description: Forbidden (not faculty role)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /students:
+    get:
+      summary: Faculty/Admin - search/list students
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: uid
+          schema:
+            type: string
+        - in: query
+          name: name
+          schema:
+            type: string
+        - in: query
+          name: semester
+          schema:
+            type: integer
+        - in: query
+          name: section
+          schema:
+            type: string
+        - in: query
+          name: year
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A list of students (basic info only)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StudentBasic"
+        "403":
+          description: Forbidden (not faculty/admin)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /students/{uid}:
+    get:
+      summary: Get full profile of a student
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: uid
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Full student profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentProfile"
+        "403":
+          description: Forbidden (student can only access own profile)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "404":
+          description: Student not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /admin/student/{uid}:
+    delete:
+      summary: Admin - delete a student
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: uid
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Student deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "403":
+          description: Forbidden (not admin)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "404":
+          description: Student not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /admin/faculty/{email}:
+    delete:
+      summary: Admin - delete a faculty
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: email
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Faculty deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "403":
+          description: Forbidden (not admin)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "404":
+          description: Faculty not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
