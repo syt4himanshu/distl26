@@ -188,66 +188,53 @@ function checkTabsDebug() {
 }
 
 // Tab Switching - Simplified version
+ // Tab Switching - Simplified version
 function switchTab(tabId) {
-    console.log(`🔄 switchTab called with tabId: ${tabId}`);
+  console.log(`🔄 switchTab called with tabId: ${tabId}`);
 
-    try {
-        // Hide all sections
-        const allSections = document.querySelectorAll(".section");
-        console.log(`Found ${allSections.length} sections`);
+  try {
+    // Hide all tab sections (not nested ones like in student modal)
+    const allTabSections = document.querySelectorAll(".tab-section");
+    console.log(`Found ${allTabSections.length} tab sections`);
 
-        allSections.forEach((sec, index) => {
-            sec.classList.add('hidden');
-            sec.style.display = 'none';
-            console.log(`Hidden section ${index}: ${sec.id}`);
-        });
+    allTabSections.forEach((sec, index) => {
+      sec.classList.add('hidden');
+      sec.style.display = 'none';
+      console.log(`Hidden tab section ${index}: ${sec.id}`);
+    });
 
-        // Show the selected section
-        const targetSection = document.getElementById(tabId);
-        if (targetSection) {
-            targetSection.classList.remove('hidden');
-            targetSection.style.display = 'block';
-            console.log(`✅ Showing section: ${tabId}`);
-        } else {
-            console.error(`❌ Section not found: ${tabId}`);
-            return;
-        }
-
-        // Update active tab
-        const allTabs = document.querySelectorAll(".nav-tab");
-        console.log(`Found ${allTabs.length} tabs`);
-
-        allTabs.forEach((btn, index) => {
-            btn.classList.remove("active");
-            console.log(`Removed active from tab ${index}`);
-        });
-
-        // Find and activate the clicked tab
-        const activeTab = document.querySelector(`button[onclick*="switchTab('${tabId}')"]`);
-        if (activeTab) {
-            activeTab.classList.add("active");
-            console.log(`✅ Activated tab for: ${tabId}`);
-        } else {
-            console.error(`❌ Tab button not found for: ${tabId}`);
-        }
-
-        console.log(`🎉 Tab switch completed: ${tabId}`);
-
-        // Initialize reports if reports tab is clicked
-        if (tabId === 'reports') {
-            console.log('📊 Initializing reports section...');
-            if (typeof initializeReports === 'function') {
-                initializeReports();
-            } else {
-                console.warn('⚠️ initializeReports function not found. Make sure reports.js is loaded.');
-            }
-        }
-
-    } catch (error) {
-        console.error(`❌ Error in switchTab:`, error);
+    // Show the selected section
+    const targetSection = document.getElementById(tabId);
+    if (targetSection) {
+      targetSection.classList.remove('hidden');
+      targetSection.style.display = 'block';
+      console.log(`✅ Showing section: ${tabId}`);
+    } else {
+      console.error(`❌ Section not found: ${tabId}`);
+      return;
     }
-}
 
+    // Update active tab
+    const allTabs = document.querySelectorAll(".nav-tab");
+    allTabs.forEach((btn, index) => {
+      btn.classList.remove("active");
+      console.log(`Removed active from tab ${index}`);
+    });
+
+    const activeTab = document.querySelector(`button[onclick*="switchTab('${tabId}')"]`);
+    if (activeTab) {
+      activeTab.classList.add("active");
+      console.log(`✅ Activated tab for: ${tabId}`);
+    } else {
+      console.error(`❌ Tab button not found for: ${tabId}`);
+    }
+
+    console.log(`🎉 Tab switch completed: ${tabId}`);
+
+  } catch (error) {
+    console.error(`❌ Error in switchTab:`, error);
+  }
+}
 // User Management Functions
 function showAddUserForm() {
     document.getElementById("userForm").style.display = "block";
@@ -494,7 +481,7 @@ function renderStudents() {
 
     students.forEach(student => {
         // Handle both API format and detailed format
-        const studentId = student.id;
+        const studentId = student.uid;
         const uid = student.uid || 'N/A';
         const name = student.fullName || `${student.firstName || student.first_name || ''} ${student.lastName || student.last_name || ''}`.trim() || 'Unknown';
         const semester = student.semester || 'N/A';
@@ -609,90 +596,95 @@ async function deleteStudent(studentId) {
 
 // ========== END STUDENT MANAGEMENT FUNCTIONS ==========
 
-function viewStudent(studentId) {
-    const student = students.find(s => s.id === studentId);
-    if (!student) return;
+    function viewStudent(studentId) {
 
+      console.log(students, studentId)  
+      
+      const student = students.find(s => s.uid == studentId);
+      
+      if (!student) return;
 
-    // Populate the detailed student information
-    document.getElementById("studentFullName").textContent = `${student.firstName} ${student.middleName || ''} ${student.lastName}`;
-    document.getElementById("studentSection").textContent = student.section;
-    document.getElementById("studentSemester").textContent = student.semester;
-    document.getElementById("studentUID").textContent = student.uid;
-    document.getElementById("studentYear").textContent = student.year;
-    document.getElementById("studentMobile").textContent = student.mobile;
-    document.getElementById("studentEmail").textContent = student.email;
-    document.getElementById("studentLinkedIn").textContent = student.linkedInId;
-    document.getElementById("studentAddress").textContent = student.permanentAddress;
+     console.log(student);
 
-    // Parent information
-    document.getElementById("fatherName").textContent = student.fatherName;
-    document.getElementById("fatherMobile").textContent = student.mobile.replace(student.mobile.slice(-1), (parseInt(student.mobile.slice(-1)) + 1).toString());
-    document.getElementById("fatherEmail").textContent = student.email.replace('@', '.father@');
-    document.getElementById("fatherOccupation").textContent = "Software Engineer";
-    document.getElementById("motherName").textContent = student.motherName;
-    document.getElementById("motherMobile").textContent = student.mobile.replace(student.mobile.slice(-1), (parseInt(student.mobile.slice(-1)) + 2).toString());
-    document.getElementById("motherEmail").textContent = student.email.replace('@', '.mother@');
-    document.getElementById("motherOccupation").textContent = "Teacher";
+      // Populate the detailed student information
+      document.getElementById("studentFullName").textContent = `${student.firstName} ${student.middleName || ''} ${student.lastName}`;
+      document.getElementById("studentSection").textContent = student.section;
+      document.getElementById("studentSemester").textContent = student.semester;
+      document.getElementById("studentUID").textContent = student.uid;
+      document.getElementById("studentYear").textContent = student.year;
+      document.getElementById("studentMobile").textContent = student.mobile;
+      document.getElementById("studentEmail").textContent = student.email;
+      document.getElementById("studentLinkedIn").textContent = student.linkedInId;
+      document.getElementById("studentAddress").textContent = student.permanentAddress;
 
-    // Academic information
-    document.getElementById("currentSemester").textContent = student.semester;
-    document.getElementById("backlogCount").textContent = student.backlogSubjects === "None" ? "0" : "1";
-    document.getElementById("backlogSubjects").innerHTML = student.backlogSubjects === "None" ? '<span class="empty-value">None</span>' : student.backlogSubjects;
+      // Parent information
+      document.getElementById("fatherName").textContent = student.fatherName;
+      document.getElementById("fatherMobile").textContent = student.mobile.replace(student.mobile.slice(-1), (parseInt(student.mobile.slice(-1)) + 1).toString());
+      document.getElementById("fatherEmail").textContent = student.email.replace('@', '.father@');
+      document.getElementById("fatherOccupation").textContent = "Software Engineer";
+      document.getElementById("motherName").textContent = student.motherName;
+      document.getElementById("motherMobile").textContent = student.mobile.replace(student.mobile.slice(-1), (parseInt(student.mobile.slice(-1)) + 2).toString());
+      document.getElementById("motherEmail").textContent = student.email.replace('@', '.mother@');
+      document.getElementById("motherOccupation").textContent = "Teacher";
 
-    // Career development activities
-    document.getElementById("aptitudeScore").textContent = "85/100";
-    document.getElementById("aptitudeDate").textContent = "2023-10-15";
-    document.getElementById("cocubesScore").textContent = "720/1000";
-    document.getElementById("cocubesDate").textContent = "2023-11-20";
-    document.getElementById("gateScore").textContent = "650 (GATE)";
-    document.getElementById("gateDate").textContent = "2024-02-10";
-    document.getElementById("otherExamName").textContent = "Google Data Analytics";
-    document.getElementById("otherExamScore").textContent = "Certified";
-    document.getElementById("otherExamDate").textContent = "2023-08-05";
+      // Academic information
+      document.getElementById("currentSemester").textContent = student.semester;
+      document.getElementById("backlogCount").textContent = student.backlogSubjects === "None" ? "0" : "1";
+      document.getElementById("backlogSubjects").innerHTML = student.backlogSubjects === "None" ? '<span class="empty-value">None</span>' : student.backlogSubjects;
 
-    // Project and internship details
-    document.getElementById("microProjectTitle").textContent = student.projects[0] || "AI-powered Chatbot";
-    document.getElementById("microProjectGuide").textContent = "Prof. Anil Kumar";
-    document.getElementById("majorProjectTitle").textContent = student.projects[1] || "Inventory Management System";
-    document.getElementById("majorProjectGuide").textContent = "Prof. Sunita Verma";
-    document.getElementById("internship1Company").textContent = student.internships[0] || "TechCorp Solutions";
-    document.getElementById("internship1Domain").textContent = student.domain[0] || "Web Development";
-    document.getElementById("internship1Type").textContent = "Physical";
-    document.getElementById("internship1Paid").textContent = "Paid";
-    document.getElementById("internship1Duration").textContent = "2023-06-01 to 2023-08-01";
-    document.getElementById("internship2Company").textContent = student.internships[1] || "DataTech Inc.";
-    document.getElementById("internship2Domain").textContent = student.domain[1] || "Data Science";
-    document.getElementById("internship2Type").textContent = "Online";
-    document.getElementById("internship2Paid").textContent = "Unpaid";
-    document.getElementById("internship2Duration").textContent = "2023-12-01 to 2024-01-15";
+      // Career development activities
+      document.getElementById("aptitudeScore").textContent = "85/100";
+      document.getElementById("aptitudeDate").textContent = "2023-10-15";
+      document.getElementById("cocubesScore").textContent = "720/1000";
+      document.getElementById("cocubesDate").textContent = "2023-11-20";
+      document.getElementById("gateScore").textContent = "650 (GATE)";
+      document.getElementById("gateDate").textContent = "2024-02-10";
+      document.getElementById("otherExamName").textContent = "Google Data Analytics";
+      document.getElementById("otherExamScore").textContent = "Certified";
+      document.getElementById("otherExamDate").textContent = "2023-08-05";
 
-    // SWOC Analysis
-    document.getElementById("strengths").textContent = student.strengths;
-    document.getElementById("weaknesses").textContent = student.weaknesses;
-    document.getElementById("opportunities").textContent = student.opportunities;
-    document.getElementById("challenges").textContent = student.challenges;
+      // Project and internship details
+      document.getElementById("microProjectTitle").textContent = student.projects? student.projects[0] : "NULL";
+      document.getElementById("microProjectGuide").textContent = "Prof. Anil Kumar";
+      document.getElementById("majorProjectTitle").textContent = student.projects? student.projects[1] : "NULL";
+      document.getElementById("majorProjectGuide").textContent = "Prof. Sunita Verma";
+      document.getElementById("internship1Company").textContent = student.internships? student.internships[0] : "NULL";
+      document.getElementById("internship1Domain").textContent = student.domain? student.domain[0]: "Not entered yet";
+      document.getElementById("internship1Type").textContent = "Physical";
+      document.getElementById("internship1Paid").textContent = "Paid";
+      document.getElementById("internship1Duration").textContent = "2023-06-01 to 2023-08-01";
+      document.getElementById("internship2Company").textContent = student.internships? student.internships[1] : "Not done";
+      document.getElementById("internship2Domain").textContent = student.domain? student.domain[1] : "NULL";
+      document.getElementById("internship2Type").textContent = "Online";
+      document.getElementById("internship2Paid").textContent = "Unpaid";
+      document.getElementById("internship2Duration").textContent = "2023-12-01 to 2024-01-15";
 
-    // Career objectives and skills
-    document.getElementById("careerObjectives").textContent = student.careerGoal === "Placement" ? "Job" : "Higher studies";
-    document.getElementById("careerDetails").textContent = student.careerGoal === "Placement" ?
+      // SWOC Analysis
+      document.getElementById("strengths").textContent = student.strengths;
+      document.getElementById("weaknesses").textContent = student.weaknesses;
+      document.getElementById("opportunities").textContent = student.opportunities;
+      document.getElementById("challenges").textContent = student.challenges;
+
+      // Career objectives and skills
+      document.getElementById("careerObjectives").textContent = student.careerGoal === "Placement" ? "Job" : "Higher studies";
+      document.getElementById("careerDetails").textContent = student.careerGoal === "Placement" ?
         "Software engineer role in tech industry" : "Pursue MS in Computer Science";
-    document.getElementById("clarityPreparedness").textContent = "Good";
-    document.getElementById("campusPlacement").textContent = student.careerGoal === "Placement" ? "Yes" : "No";
-    document.getElementById("interpersonalSkills").textContent = student.softSkillsRating;
-    document.getElementById("softSkills").textContent = "Presentation Skills, Writing";
-    document.getElementById("additionalSkills").textContent = "Cloud Computing, Advanced Machine Learning";
-    document.getElementById("expectations").textContent = "Industry mentorship, Advanced technical workshops, Placement preparation";
+      document.getElementById("clarityPreparedness").textContent = "Good";
+      document.getElementById("campusPlacement").textContent = student.careerGoal === "Placement" ? "Yes" : "No";
+      document.getElementById("interpersonalSkills").textContent = student.softSkillsRating;
+      document.getElementById("softSkills").textContent = "Presentation Skills, Writing";
+      document.getElementById("additionalSkills").textContent = "Cloud Computing, Advanced Machine Learning";
+      document.getElementById("expectations").textContent = "Industry mentorship, Advanced technical workshops, Placement preparation";
 
-    // Update domain tags
-    const domainContainer = document.getElementById("domainOfInterest");
-    domainContainer.innerHTML = student.domain.map(d => `<span class="tag">${d}</span>`).join('');
+      // Update domain tags
+      const domainContainer = document.getElementById("domainOfInterest");
+      domainContainer.innerHTML = student.domain.map(d => `<span class="tag">${d}</span>`).join('');
 
-    // Show the modal
-    document.querySelector('.dialog-container').classList.remove('hidden');
-    document.querySelector('.details-container').classList.remove('hidden');
-    document.getElementsByTagName('body')[0].classList.add('overflow-hidden');
-}
+      // Show the modal
+      document.querySelector('.dialog-container').classList.remove('hidden');
+      document.querySelector('.details-container').classList.remove('hidden');
+      document.getElementsByTagName('body')[0].classList.add('overflow-hidden');
+    }
 
 function closeDialog() {
     if (confirm('Are you sure you want to close?')) {
@@ -1010,23 +1002,238 @@ async function deallocateStudent(teacherId, studentId, studentUid) {
 }
 
 // Bulk Upload Functions
-document.getElementById('bulkUploadFile').addEventListener('change', function (e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            try {
-                // This is a simplified version - you would need a proper CSV/Excel parser
-                const data = e.target.result;
-                alert('Bulk upload functionality would process the file here. File loaded: ' + file.name);
-                // In a real implementation, you would parse CSV/Excel and add users
-            } catch (error) {
-                alert('Error processing file: ' + error.message);
-            }
-        };
-        reader.readAsText(file);
+document.getElementById('bulkUploadStudent').addEventListener('change', handleStudentUpload);
+document.getElementById('bulkUploadFaculty').addEventListener('change', handleFacultyUpload);
+
+// Function to handle student bulk upload
+async function handleStudentUpload(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        alert('No file selected.');
+        return;
     }
-});
+
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+        alert('You must be logged in as an admin to perform this action.');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const fileData = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(fileData, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            
+            // Convert sheet to JSON array, assuming first row is headers
+            const students = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+            console.log('Raw parsed student data:', students); // Debug: Log raw data
+            
+            // Remove header row and map to expected object format
+            const studentData = students.slice(1).map(row => ({
+                uid: row[0]?.trim() || '',
+                full_name: row[1]?.trim() || '',
+                semester: row[2]?.trim() || '',
+                section: row[3]?.trim() || '',
+                year_of_admission: row[4]?.trim() || ''
+            }));
+
+            // Filter out invalid rows
+            const validStudents = studentData.filter(student => student.uid && student.uid.trim());
+            console.log('Valid student data:', validStudents); // Debug: Log filtered data
+
+            if (validStudents.length === 0) {
+                alert('No valid student data found in the file.');
+                return;
+            }
+
+            // Send to backend
+            const response = await fetch('http://localhost:5002/api/auth/register/bulk', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(validStudents)
+            });
+
+            console.log('Response status:', response.status); // Debug: Log status
+
+            // Check if response is OK
+            if (!response.ok) {
+                let errorResponse;
+                try {
+                    errorResponse = await response.json();
+                } catch {
+                    errorResponse = {};
+                }
+                throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorResponse.msg || errorResponse.error || response.statusText}`);
+            }
+
+            // Parse response
+            const responseData = await response.json();
+            console.log('Student bulk upload response:', responseData); // Debug: Log response
+
+            // Process results
+            let successCount = 0;
+            let failureCount = 0;
+            let failureMessages = [];
+            if (responseData.result && Array.isArray(responseData.result)) {
+                responseData.result.forEach(result => {
+                    console.log(`Student ${result.uid}: ${result.status} ${result.error || ''}`);
+                    if (result.status === 'success') {
+                        successCount++;
+                    } else {
+                        failureCount++;
+                        failureMessages.push(`Student ${result.uid}: ${result.error}`);
+                    }
+                });
+            } else {
+                console.warn('Unexpected response format:', responseData);
+                alert('Unexpected response format from server. Check console for details.');
+                return;
+            }
+
+            // Show appropriate alert
+            if (failureCount === 0) {
+                alert(`Student bulk upload completed. ${successCount} succeeded, ${failureCount} failed.`);
+            } else {
+                alert(`Student bulk upload completed. ${successCount} succeeded, ${failureCount} failed.\nErrors:\n${failureMessages.join('\n')}`);
+            }
+
+            // Reload data
+            await loadUsersFromAPI();
+            await loadStatisticsFromAPI();
+            await loadStudentsFromAPI();
+
+        } catch (error) {
+            console.error('Error uploading students:', error, error.stack);
+            alert(`Error uploading students: ${error.message}`);
+        }
+    };
+    reader.onerror = function() {
+        console.error('Error reading file');
+        alert('Error reading the uploaded file.');
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// Function to handle faculty bulk upload
+async function handleFacultyUpload(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        alert('No file selected.');
+        return;
+    }
+
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+        alert('You must be logged in as an admin to perform this action.');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const fileData = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(fileData, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            
+            // Convert sheet to JSON array, assuming first row is headers
+            const faculties = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+            console.log('Raw parsed faculty data:', faculties); // Debug: Log raw data
+            
+            // Remove header row and map to expected object format
+            const facultyData = faculties.slice(1).map(row => ({
+                email: row[0]?.trim() || '',
+                first_name: row[1]?.trim() || '',
+                last_name: row[2]?.trim() || '',
+                contact_number: row[3]?.trim() || '',
+                password: row[4]?.trim() || undefined
+            }));
+
+            // Filter out invalid rows
+            const validFaculties = facultyData.filter(faculty => faculty.email && faculty.email.trim());
+            console.log('Valid faculty data:', validFaculties); // Debug: Log filtered data
+
+            if (validFaculties.length === 0) {
+                alert('No valid faculty data found in the file.');
+                return;
+            }
+
+            // Send to backend
+            const response = await fetch('http://localhost:5002/api/auth/register/faculty/bulk', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(validFaculties)
+            });
+
+            console.log('Response status:', response.status); // Debug: Log status
+
+            // Check if response is OK
+            if (!response.ok) {
+                let errorResponse;
+                try {
+                    errorResponse = await response.json();
+                } catch {
+                    errorResponse = {};
+                }
+                throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorResponse.msg || errorResponse.error || response.statusText}`);
+            }
+
+            // Parse response
+            const responseData = await response.json();
+            console.log('Faculty bulk upload response:', responseData); // Debug: Log response
+
+            // Process results
+            let successCount = 0;
+            let failureCount = 0;
+            let failureMessages = [];
+            if (responseData.result && Array.isArray(responseData.result)) {
+                responseData.result.forEach(result => {
+                    console.log(`Faculty ${result.email}: ${result.status} ${result.error || ''}`);
+                    if (result.status === 'success') {
+                        successCount++;
+                    } else {
+                        failureCount++;
+                        failureMessages.push(`Faculty ${result.email}: ${result.error}`);
+                    }
+                });
+            } else {
+                console.warn('Unexpected response format:', responseData);
+                alert('Unexpected response format from server. Check console for details.');
+                return;
+            }
+
+            // Show appropriate alert
+            if (failureCount === 0) {
+                alert(`Faculty bulk upload completed. ${successCount} succeeded, ${failureCount} failed.`);
+            } else {
+                alert(`Faculty bulk upload completed. ${successCount} succeeded, ${failureCount} failed.\nErrors:\n${failureMessages.join('\n')}`);
+            }
+
+            // Reload data
+            await loadUsersFromAPI();
+            await loadStatisticsFromAPI();
+            await loadTeachersFromAPI();
+
+        } catch (error) {
+            console.error('Error uploading faculty:', error, error.stack);
+            alert(`Error uploading faculty: ${error.message}`);
+        }
+    };
+    reader.onerror = function() {
+        console.error('Error reading file');
+        alert('Error reading the uploaded file.');
+    };
+    reader.readAsArrayBuffer(file);
+}
 
 function downloadExcelFormat() {
     const csvContent = `User ID,Password,Role,First Name,Last Name,Email
