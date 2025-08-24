@@ -83,12 +83,18 @@
             <option value="student">Student</option>
             <option value="faculty">Faculty</option>
           </select>
+          <!-- Bulk Upload student -->
           <div class="file-input-wrapper">
-            <input type="file" id="bulkUploadFile" accept=".xlsx,.xls,.csv">
-            <label for="bulkUploadFile" class="file-input-label">
-              📤 Bulk Upload
-            </label>
+              <input type="file" id="bulkUploadStudent"  accept=".xlsx,.xls,.csv">
+              <label for="bulkUploadStudent" class="file-input-label">📤 Bulk Upload Student</label>
           </div>
+          <!-- Bulk Upload Faculty -->
+          <div class="file-input-wrapper">
+              <input type="file" id="bulkUploadFaculty"  accept=".xlsx,.xls,.csv">
+              <label for="bulkUploadFaculty" class="file-input-label">📤 Bulk Upload Faculty</label>
+          </div>
+
+
           <button class="btn btn-warning" onclick="downloadExcelFormat()">📥 Download Excel Format</button>
           <button class="btn btn-primary" onclick="showAddUserForm()">➕ Add User</button>
         </div>
@@ -735,7 +741,7 @@
       </div>
     </div>
   </div>
-
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="./admin.js"></script>
 </body>
 

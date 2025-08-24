@@ -166,7 +166,8 @@
       renderUsers();
       renderTeachers();
       loadStudentsFromAPI(); // Load students from API instead of hardcoded
-      updateStats();
+      loadTeachersFromAPI()
+      loadStatisticsFromAPI();
       
       // Debug: Log initial tab state
       console.log('Page loaded, checking tab functionality...');
@@ -515,8 +516,8 @@
           <td><span class="tag ${careerGoal === 'Placement' ? 'placement' : 'higher-studies'}">${careerGoal}</span></td>
           <td>${mentor}</td>
           <td>
-            <button class="btn-sm btn-view" onclick="viewStudent(${uid})">👁 View</button>
-            <button class="btn-sm btn-delete" onclick="deleteStudent(${uid})" style="margin-left: 5px;">🗑 Delete</button>
+            <button class="btn-sm btn-view" onclick="viewStudent('${uid}')">👁 View</button>
+            <button class="btn-sm btn-delete" onclick="deleteStudent('${uid}')" style="margin-left: 5px;">🗑 Delete</button>
             <small style="display: block; color: #666; margin-top: 5px;">Edit via User Mgmt</small>
           </td>
         `;
@@ -1028,44 +1029,244 @@
       }
     }
 
-    // Bulk Upload Functions
-    document.getElementById('bulkUploadFile').addEventListener('change', function (e) {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          try {
-            // This is a simplified version - you would need a proper CSV/Excel parser
-            const data = e.target.result;
-            alert('Bulk upload functionality would process the file here. File loaded: ' + file.name);
-            // In a real implementation, you would parse CSV/Excel and add users
-          } catch (error) {
-            alert('Error processing file: ' + error.message);
-          }
-        };
-        reader.readAsText(file);
-      }
-    });
 
-    function downloadExcelFormat() {
-      const csvContent = `User ID,Password,Role,First Name,Last Name,Email
-FAC001,password123,teacher,John,Doe,john.doe@university.edu
-21CE001,password123,student,Jane,Smith,jane.smith@student.edu`;
+//******************* Bulk Upload functionality **************************88
+    // Add event listeners to the file inputs
+document.getElementById('bulkUploadStudent').addEventListener('change', handleStudentUpload);
+document.getElementById('bulkUploadFaculty').addEventListener('change', handleFacultyUpload);
 
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'bulk_upload_format.csv';
-      a.click();
-      window.URL.revokeObjectURL(url);
+// Function to handle student bulk upload
+async function handleStudentUpload(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        alert('No file selected.');
+        return;
     }
 
-    // Update Statistics
-    function updateStats() {
-      // Stats are now loaded dynamically from API
-      loadStatisticsFromAPI();
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+        alert('You must be logged in as an admin to perform this action.');
+        return;
     }
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const fileData = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(fileData, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            
+            // Convert sheet to JSON array, assuming first row is headers
+            const students = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+            console.log('Raw parsed student data:', students); // Debug: Log raw data
+            
+            // Remove header row and map to expected object format
+            const studentData = students.slice(1).map(row => ({
+                uid: row[0]?.trim() || '',
+                full_name: row[1]?.trim() || '',
+                semester: row[2]?.trim() || '',
+                section: row[3]?.trim() || '',
+                year_of_admission: row[4]?.trim() || ''
+            }));
+
+            // Filter out invalid rows
+            const validStudents = studentData.filter(student => student.uid && student.uid.trim());
+            console.log('Valid student data:', validStudents); // Debug: Log filtered data
+
+            if (validStudents.length === 0) {
+                alert('No valid student data found in the file.');
+                return;
+            }
+
+            // Send to backend
+            const response = await fetch('http://localhost:5002/api/auth/register/bulk', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(validStudents)
+            });
+
+            console.log('Response status:', response.status); // Debug: Log status
+
+            // Check if response is OK
+            if (!response.ok) {
+                let errorResponse;
+                try {
+                    errorResponse = await response.json();
+                } catch {
+                    errorResponse = {};
+                }
+                throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorResponse.msg || errorResponse.error || response.statusText}`);
+            }
+
+            // Parse response
+            const responseData = await response.json();
+            console.log('Student bulk upload response:', responseData); // Debug: Log response
+
+            // Process results
+            let successCount = 0;
+            let failureCount = 0;
+            let failureMessages = [];
+            if (responseData.result && Array.isArray(responseData.result)) {
+                responseData.result.forEach(result => {
+                    console.log(`Student ${result.uid}: ${result.status} ${result.error || ''}`);
+                    if (result.status === 'success') {
+                        successCount++;
+                    } else {
+                        failureCount++;
+                        failureMessages.push(`Student ${result.uid}: ${result.error}`);
+                    }
+                });
+            } else {
+                console.warn('Unexpected response format:', responseData);
+                alert('Unexpected response format from server. Check console for details.');
+                return;
+            }
+
+            // Show appropriate alert
+            if (failureCount === 0) {
+                alert(`Student bulk upload completed. ${successCount} succeeded, ${failureCount} failed.`);
+            } else {
+                alert(`Student bulk upload completed. ${successCount} succeeded, ${failureCount} failed.\nErrors:\n${failureMessages.join('\n')}`);
+            }
+
+            // Reload data
+            await loadUsersFromAPI();
+            await loadStatisticsFromAPI();
+            await loadStudentsFromAPI();
+
+        } catch (error) {
+            console.error('Error uploading students:', error, error.stack);
+            alert(`Error uploading students: ${error.message}`);
+        }
+    };
+    reader.onerror = function() {
+        console.error('Error reading file');
+        alert('Error reading the uploaded file.');
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+// Function to handle faculty bulk upload
+async function handleFacultyUpload(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        alert('No file selected.');
+        return;
+    }
+
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+        alert('You must be logged in as an admin to perform this action.');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const fileData = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(fileData, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            
+            // Convert sheet to JSON array, assuming first row is headers
+            const faculties = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false });
+            console.log('Raw parsed faculty data:', faculties); // Debug: Log raw data
+            
+            // Remove header row and map to expected object format
+            const facultyData = faculties.slice(1).map(row => ({
+                email: row[0]?.trim() || '',
+                first_name: row[1]?.trim() || '',
+                last_name: row[2]?.trim() || '',
+                contact_number: row[3]?.trim() || '',
+                password: row[4]?.trim() || undefined
+            }));
+
+            // Filter out invalid rows
+            const validFaculties = facultyData.filter(faculty => faculty.email && faculty.email.trim());
+            console.log('Valid faculty data:', validFaculties); // Debug: Log filtered data
+
+            if (validFaculties.length === 0) {
+                alert('No valid faculty data found in the file.');
+                return;
+            }
+
+            // Send to backend
+            const response = await fetch('http://localhost:5002/api/auth/register/faculty/bulk', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(validFaculties)
+            });
+
+            console.log('Response status:', response.status); // Debug: Log status
+
+            // Check if response is OK
+            if (!response.ok) {
+                let errorResponse;
+                try {
+                    errorResponse = await response.json();
+                } catch {
+                    errorResponse = {};
+                }
+                throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorResponse.msg || errorResponse.error || response.statusText}`);
+            }
+
+            // Parse response
+            const responseData = await response.json();
+            console.log('Faculty bulk upload response:', responseData); // Debug: Log response
+
+            // Process results
+            let successCount = 0;
+            let failureCount = 0;
+            let failureMessages = [];
+            if (responseData.result && Array.isArray(responseData.result)) {
+                responseData.result.forEach(result => {
+                    console.log(`Faculty ${result.email}: ${result.status} ${result.error || ''}`);
+                    if (result.status === 'success') {
+                        successCount++;
+                    } else {
+                        failureCount++;
+                        failureMessages.push(`Faculty ${result.email}: ${result.error}`);
+                    }
+                });
+            } else {
+                console.warn('Unexpected response format:', responseData);
+                alert('Unexpected response format from server. Check console for details.');
+                return;
+            }
+
+            // Show appropriate alert
+            if (failureCount === 0) {
+                alert(`Faculty bulk upload completed. ${successCount} succeeded, ${failureCount} failed.`);
+            } else {
+                alert(`Faculty bulk upload completed. ${successCount} succeeded, ${failureCount} failed.\nErrors:\n${failureMessages.join('\n')}`);
+            }
+
+            // Reload data
+            await loadUsersFromAPI();
+            await loadStatisticsFromAPI();
+            await loadTeachersFromAPI();
+
+        } catch (error) {
+            console.error('Error uploading faculty:', error, error.stack);
+            alert(`Error uploading faculty: ${error.message}`);
+        }
+    };
+    reader.onerror = function() {
+        console.error('Error reading file');
+        alert('Error reading the uploaded file.');
+    };
+    reader.readAsArrayBuffer(file);
+}
+ 
+
+    
 
     // Logout function
     async function logout() {

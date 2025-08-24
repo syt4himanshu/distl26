@@ -480,6 +480,56 @@ def register():
         return jsonify({"message": "Faculty created successfully"}), 200
     else:
         return jsonify({"error": "Invalid role"}), 400
+    
+
+# Bulk Register Faculty  End Point
+
+@app.route("/api/auth/register/faculty/bulk", methods=["POST"])
+@role_required(["admin"])
+def bulk_register_faculty():
+    faculties = request.get_json()
+    if not isinstance(faculties, list):
+        return jsonify({"error": "Input must be a list of faculty members"}), 400
+
+    results = []
+    for entry in faculties:
+        email = entry.get("email")
+        password = entry.get("password", "default_password")  # Default password or require it
+        first_name = entry.get("first_name", "")
+        last_name = entry.get("last_name", "")
+        contact_number = entry.get("contact_number", "")
+
+        if not email or not email.endswith("@stvincentngp.edu.in"):
+            results.append({"email": email, "status": "failed", "error": "Invalid email format"})
+            continue
+
+        if User.query.filter_by(username=email).first():
+            results.append({"email": email, "status": "failed", "error": "Faculty with given email already exists"})
+            continue
+
+        user = User(
+            username=email,
+            role="faculty",
+            password_hash=generate_password_hash(password)
+        )
+        faculty = Faculty(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            contact_number=contact_number,
+            user=user
+        )
+        db.session.add(user)
+        db.session.add(faculty)
+        results.append({"email": email, "status": "success"})
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Database error", "details": str(e)}), 500
+
+    return jsonify({"result": results}), 200
 
 
 @app.route("/api/auth/register/bulk", methods=["POST"])
@@ -972,14 +1022,28 @@ def get_my_mentees():
     mentees = faculty.mentees
 
     mentees_data = []
-    for s in mentees:
+    for student in mentees:
         mentees_data.append({
-            "id": s.id,
-            "uid": s.uid,
-            "full_name": s.full_name,
-            "semester": s.semester,
-            "section": s.section,
-            "year_of_admission": s.year_of_admission
+            "id": student.id,
+            "uid": student.uid,
+            "first_name": student.first_name,
+            "middle_name": student.middle_name,
+            "last_name": student.last_name,
+            "full_name": student.full_name,
+            "semester": student.semester,
+            "section": student.section,
+            "year_of_admission": student.year_of_admission,
+            "personal_info": serialize_model(student.personal_info) if student.personal_info else None,
+            "past_education_records": [serialize_model(rec) for rec in student.past_education_records] if student.past_education_records else [],
+            "post_admission_records": [serialize_model(rec) for rec in student.post_admission_records] if student.post_admission_records else [],
+            "career_activities": [serialize_model(rec) for rec in student.career_activities] if student.career_activities else [],
+            "projects": [serialize_model(rec) for rec in student.projects] if student.projects else [],
+            "internships": [serialize_model(rec) for rec in student.internships] if student.internships else [],
+            "cocurricular_participations": [serialize_model(rec) for rec in student.cocurricular_participations] if student.cocurricular_participations else [],
+            "cocurricular_organizations": [serialize_model(rec) for rec in student.cocurricular_organizations] if student.cocurricular_organizations else [],
+            "career_objective": serialize_model(student.career_objective) if student.career_objective else None,
+            "skills": serialize_model(student.skills) if student.skills else None,
+            "swoc": serialize_model(student.swoc) if student.swoc else None,
         })
 
     return jsonify(mentees_data), 200
