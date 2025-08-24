@@ -6,13 +6,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard</title>
   <link rel="stylesheet" href="./a.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
   <script src="../js/auth.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function () {
       if (window.AuthGuard) { window.AuthGuard.guardRoute(['admin']); }
     });
   </script>
-  <script src="../js/auth.js"></script>
 
 </head>
 
@@ -67,14 +67,17 @@
       <button class="nav-tab" onclick="switchTab('teacher-list'); return false;">Teachers List</button>
       <button class="nav-tab" onclick="switchTab('student-list'); return false;">Students List</button>
       <button class="nav-tab" onclick="switchTab('allocate-students'); return false;">Student Allocation</button>
+      <button class="nav-tab" onclick="switchTab('reports'); return false;">📊 Reports</button>
     </div>
 
     <!-- User Management Section -->
     <div class="section tab-section" id="user-management" style="display:block;">
       <div class="section-header">
         <div class="section-title">👥 User Management</div>
-        <div class="info-banner" style="background: linear-gradient(135deg, #0ea5e9, #3b82f6); color: white; padding: 8px 15px; border-radius: 8px; margin: 10px 0; font-size: 13px; font-weight: 500;">
-          🎯 Primary Hub: Create students & faculty here. They will appear in respective sections once profiles are complete.
+        <div class="info-banner"
+          style="background: linear-gradient(135deg, #0ea5e9, #3b82f6); color: white; padding: 8px 15px; border-radius: 8px; margin: 10px 0; font-size: 13px; font-weight: 500;">
+          🎯 Primary Hub: Create students & faculty here. They will appear in respective sections once profiles are
+          complete.
         </div>
         <div class="section-actions">
           <input type="text" id="searchInput" placeholder="🔍 Search by User ID..." onkeyup="filterUsers()">
@@ -283,6 +286,203 @@
         <div style="margin-top: 15px;">
           <button class="btn btn-primary" onclick="confirmAllocation()">✅ Confirm Allocation</button>
           <button class="btn btn-cancel" onclick="cancelAllocation()">❌ Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reports Section -->
+    <div class="section hidden" id="reports">
+      <div class="section-header">
+        <div class="section-title">📊 Analytics & Reports</div>
+        <div class="section-actions">
+          <button class="btn btn-primary" onclick="refreshReports()">🔄 Refresh Data</button>
+          <button class="btn btn-success" onclick="exportAllReports()">📥 Export All</button>
+        </div>
+      </div>
+
+      <!-- Key Metrics Cards -->
+      <div class="report-metrics-grid">
+        <div class="metric-card students">
+          <div class="metric-value" id="totalStudentsMetric">-</div>
+          <div class="metric-label">Total Students</div>
+        </div>
+        <div class="metric-card cgpa">
+          <div class="metric-value" id="avgCGPAMetric">-</div>
+          <div class="metric-label">Average CGPA</div>
+        </div>
+        <div class="metric-card backlogs">
+          <div class="metric-value" id="totalBacklogsMetric">-</div>
+          <div class="metric-label">Students with Backlogs</div>
+        </div>
+        <div class="metric-card semesters">
+          <div class="metric-value" id="activeSemestersMetric">-</div>
+          <div class="metric-label">Active Semesters</div>
+        </div>
+      </div>
+
+      <!-- Report Cards Grid -->
+      <div class="report-grid">
+        <!-- Top 10 Toppers -->
+        <div class="report-card">
+          <h3>🏆 Top 10 Toppers (Semester-wise)</h3>
+          <div class="semester-tabs" id="semesterTabs">
+            <div class="semester-tab active" data-semester="1">Sem 1</div>
+            <div class="semester-tab" data-semester="2">Sem 2</div>
+            <div class="semester-tab" data-semester="3">Sem 3</div>
+            <div class="semester-tab" data-semester="4">Sem 4</div>
+            <div class="semester-tab" data-semester="5">Sem 5</div>
+            <div class="semester-tab" data-semester="6">Sem 6</div>
+            <div class="semester-tab" data-semester="7">Sem 7</div>
+            <div class="semester-tab" data-semester="8">Sem 8</div>
+          </div>
+          <div class="toppers-table">
+            <table class="data-table" id="toppersTable">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Name</th>
+                  <th>UID</th>
+                  <th>CGPA</th>
+                </tr>
+              </thead>
+              <tbody id="toppersTableBody">
+                <tr>
+                  <td colspan="4" class="loading">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Toppers Chart -->
+        <div class="report-card">
+          <h3>📊 Toppers Chart</h3>
+          <div class="chart-container">
+            <canvas id="toppersChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Semester Distribution -->
+        <div class="report-card">
+          <h3>📈 Semester-wise Student Distribution</h3>
+          <div class="table-container" style="max-height: 200px; overflow-y: auto;">
+            <table class="data-table" id="distributionTable">
+              <thead>
+                <tr>
+                  <th>Semester</th>
+                  <th>Students Count</th>
+                  <th>Percentage</th>
+                </tr>
+              </thead>
+              <tbody id="distributionTableBody">
+                <tr>
+                  <td colspan="3" class="loading">Loading...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Distribution Chart -->
+        <div class="report-card">
+          <h3>🥧 Distribution Pie Chart</h3>
+          <div class="chart-container">
+            <canvas id="distributionChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Backlog Students -->
+      <div class="report-card" style="margin-bottom: 20px;">
+        <h3>⚠️ Students with Backlogs in Current Semester</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <div>
+            <span style="font-size: 24px; font-weight: bold; color: #ef4444;" id="backlogStudentsCount">-</span>
+            <span style="color: #64748b;"> students have backlogs</span>
+          </div>
+          <button class="btn btn-warning" onclick="exportBacklogReport()">📥 Export Backlog Report</button>
+        </div>
+        <div class="backlog-list" id="backlogList">
+          <div class="loading">Loading backlog data...</div>
+        </div>
+      </div>
+
+      <!-- General Report -->
+      <div class="report-card">
+        <h3>📋 General Report - All Students</h3>
+
+        <!-- Export Buttons -->
+        <div class="export-buttons">
+          <button class="btn btn-success" onclick="exportToExcel()">📊 Export to Excel</button>
+          <button class="btn btn-primary" onclick="exportToPDF()">📄 Export to PDF</button>
+          <button class="btn btn-warning" onclick="printReport()">🖨️ Print Report</button>
+        </div>
+
+        <!-- Filters -->
+        <div class="general-report-filters">
+          <div class="filter-item">
+            <label>Search</label>
+            <input type="text" id="generalSearchInput" placeholder="Search by name or UID..."
+              onkeyup="filterGeneralReport()">
+          </div>
+          <div class="filter-item">
+            <label>Semester</label>
+            <select id="generalSemesterFilter" onchange="filterGeneralReport()">
+              <option value="">All Semesters</option>
+              <option value="1">Semester 1</option>
+              <option value="2">Semester 2</option>
+              <option value="3">Semester 3</option>
+              <option value="4">Semester 4</option>
+              <option value="5">Semester 5</option>
+              <option value="6">Semester 6</option>
+              <option value="7">Semester 7</option>
+              <option value="8">Semester 8</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>CGPA Range</label>
+            <select id="cgpaRangeFilter" onchange="filterGeneralReport()">
+              <option value="">All CGPAs</option>
+              <option value="9-10">9.0 - 10.0</option>
+              <option value="8-9">8.0 - 8.9</option>
+              <option value="7-8">7.0 - 7.9</option>
+              <option value="6-7">6.0 - 6.9</option>
+              <option value="0-6">Below 6.0</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label>Backlog Count</label>
+            <select id="backlogCountFilter" onchange="filterGeneralReport()">
+              <option value="">All Students</option>
+              <option value="0">No Backlogs</option>
+              <option value="1-2">1-2 Backlogs</option>
+              <option value="3-5">3-5 Backlogs</option>
+              <option value="5+">5+ Backlogs</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- General Report Table -->
+        <div class="table-container">
+          <table class="data-table" id="generalReportTable">
+            <thead>
+              <tr>
+                <th>UID</th>
+                <th>Name</th>
+                <th>Semester</th>
+                <th>CGPA</th>
+                <th>Backlogs</th>
+                <th>Domain</th>
+                <th>Career Goal</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="generalReportTableBody">
+              <tr>
+                <td colspan="8" class="loading">Loading general report...</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
