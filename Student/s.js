@@ -1,6 +1,5 @@
-
-
 document.addEventListener('DOMContentLoaded', () => {
+    // DOM Elements
     const form = document.getElementById('wizardForm');
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
@@ -10,18 +9,51 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressFill = document.querySelector('.progress-fill');
     const progressPercentage = document.querySelector('.progress-percentage');
     const reviewContent = document.getElementById('reviewContent');
+    const campusPlacement = document.getElementById('campusPlacement');
+    const placementReasonRow = document.getElementById('placementReasonRow');
+    const domainOtherCheckbox = document.getElementById('domainOtherCheckbox');
+    const domainOtherText = document.getElementById('domainOtherText');
+
+    // State variables
     let currentStep = 1;
     const totalSteps = stepContents.length;
 
     // Initialize form
     initializeForm();
 
+    // Event Listeners
+    prevBtn.addEventListener('click', goToPreviousStep);
+    nextBtn.addEventListener('click', handleNextButtonClick);
+
+    if (campusPlacement && placementReasonRow) {
+        campusPlacement.addEventListener('change', togglePlacementReason);
+    }
+
+    if (domainOtherCheckbox && domainOtherText) {
+        domainOtherCheckbox.addEventListener('change', toggleDomainOtherText);
+    }
+
+    // Add real-time validation
+    form.querySelectorAll('input, select, textarea').forEach(field => {
+        field.addEventListener('blur', () => {
+            if (field.hasAttribute('required')) {
+                validateField(field);
+            }
+        });
+
+        field.addEventListener('input', () => {
+            if (field.classList.contains('error')) {
+                clearFieldError(field);
+            }
+        });
+    });
+
+    // Functions
     async function initializeForm() {
         await loadStudentData();
         updateFormState();
     }
 
-    // Load existing student data
     async function loadStudentData() {
         try {
             const token = localStorage.getItem("access_token");
@@ -102,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Career objective
         if (data.career_objective) {
             const co = data.career_objective;
-            if (co.career_objective) document.getElementById('careerObjective').value = co.career_objective;
+            if (co.career_objective) document.getElementById('careerObjectives').value = co.career_objective;
             if (co.domain_of_interest) document.getElementById('domainOfInterest').value = co.domain_of_interest;
             if (co.additional_skills) document.getElementById('additionalSkills').value = co.additional_skills;
             if (co.expectations) document.getElementById('expectations').value = co.expectations;
@@ -119,179 +151,246 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Form populated with existing student data');
     }
 
-    // Navigation button event listeners
-    prevBtn.addEventListener('click', () => {
+    function goToPreviousStep() {
         if (currentStep > 1) {
             currentStep--;
             updateFormState();
         }
-    });
+    }
 
-    nextBtn.addEventListener('click', () => {
-        if (validateStep(currentStep) && currentStep < totalSteps) {
-            currentStep++;
-            updateFormState();
-        } else if (currentStep === totalSteps && validateStep(currentStep)) {
-            submitForm();
+    function handleNextButtonClick() {
+        if (validateStep(currentStep)) {
+            if (currentStep < totalSteps) {
+                currentStep++;
+                updateFormState();
+            } else {
+                submitForm();
+            }
         }
-    });
+    }
 
-    // Update form state
     function updateFormState() {
-        // Update step visibility
+        // Update step contents visibility
         stepContents.forEach((content, index) => {
             content.classList.toggle('active', index + 1 === currentStep);
         });
 
         // Update step indicators
-        stepIndicators.forEach((indicator, index) => {
-            indicator.classList.toggle('active', index + 1 === currentStep);
-            indicator.classList.toggle('completed', index + 1 < currentStep);
-        });
+        if (stepIndicators.length) {
+            stepIndicators.forEach((indicator, index) => {
+                indicator.classList.toggle('active', index + 1 === currentStep);
+                indicator.classList.toggle('completed', index + 1 < currentStep);
+            });
+        }
 
         // Update progress bar
         const progress = ((currentStep - 1) / (totalSteps - 1)) * 100;
         progressFill.style.width = `${progress}%`;
         progressPercentage.textContent = `${Math.round(progress)}%`;
 
-        // Update navigation buttons
+        // Update buttons
         prevBtn.disabled = currentStep === 1;
         nextBtn.textContent = currentStep === totalSteps ? 'Submit' : 'Next →';
         currentStepSpan.textContent = currentStep;
 
-        // Populate review content on final step
+        // Populate review content if on final step
         if (currentStep === totalSteps) {
             populateReviewContent();
         }
-
-        // Show/hide placement reason field based on selection
-        const campusPlacement = document.getElementById('campusPlacement');
-        const placementReasonRow = document.getElementById('placementReasonRow');
-
-        if (campusPlacement) {
-            if (campusPlacement.value === 'no') {
-                placementReasonRow.style.display = 'block';
-            } else {
-                placementReasonRow.style.display = 'none';
-            }
-
-            // Add event listener if not already added
-            if (!campusPlacement.hasListener) {
-                campusPlacement.addEventListener('change', function () {
-                    if (this.value === 'no') {
-                        placementReasonRow.style.display = 'block';
-                    } else {
-                        placementReasonRow.style.display = 'none';
-                    }
-                });
-                campusPlacement.hasListener = true;
-            }
-        }
     }
 
-    // Validate current step
     function validateStep(step) {
         const currentStepContent = document.querySelector(`.step-content[data-step="${step}"]`);
         const requiredFields = currentStepContent.querySelectorAll('[required]');
         let isValid = true;
 
-        requiredFields.forEach(field => {
-            const formGroup = field.closest('.form-group');
-            const errorMessage = formGroup.querySelector('.error-message');
-
-            if (!field.value.trim()) {
-                field.classList.add('error');
-                if (errorMessage) errorMessage.style.display = 'block';
-                isValid = false;
-            } else {
-                field.classList.remove('error');
-                if (errorMessage) errorMessage.style.display = 'none';
-            }
-
-            // Additional validation for specific fields
-            if (field.type === 'email') {
-                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailPattern.test(field.value)) {
-                    field.classList.add('error');
-                    if (errorMessage) {
-                        errorMessage.textContent = 'Please enter a valid email address';
-                        errorMessage.style.display = 'block';
-                    }
-                    isValid = false;
-                }
-            }
-
-            if (field.type === 'tel') {
-                const phonePattern = /^\+?[\d\s-]{10,}$/;
-                if (!phonePattern.test(field.value)) {
-                    field.classList.add('error');
-                    if (errorMessage) {
-                        errorMessage.textContent = 'Please enter a valid phone number';
-                        errorMessage.style.display = 'block';
-                    }
-                    isValid = false;
-                }
-            }
-
-            // Validate admission year
-            if (field.id === 'admissionYear' && field.value) {
-                const year = parseInt(field.value);
-                const currentYear = new Date().getFullYear();
-                if (year < 2000 || year > currentYear) {
-                    field.classList.add('error');
-                    if (errorMessage) {
-                        errorMessage.textContent = 'Please enter a valid admission year';
-                        errorMessage.style.display = 'block';
-                    }
-                    isValid = false;
-                }
-            }
-
-            // Validate semester fields
-            if ((field.id === 'semester' || field.id === 'resultSemester') && field.value) {
-                const semester = parseInt(field.value);
-                if (semester < 1 || semester > 8) {
-                    field.classList.add('error');
-                    if (errorMessage) {
-                        errorMessage.textContent = 'Semester must be between 1 and 8';
-                        errorMessage.style.display = 'block';
-                    }
-                    isValid = false;
-                }
-            }
-
-            // Validate percentage fields
-            if ((field.id === 'percentage' || field.id === 'semesterPercentage') && field.value) {
-                const percentage = parseFloat(field.value);
-                if (percentage < 0 || percentage > 100) {
-                    field.classList.add('error');
-                    if (errorMessage) {
-                        errorMessage.textContent = 'Percentage must be between 0 and 100';
-                        errorMessage.style.display = 'block';
-                    }
-                    isValid = false;
-                }
-            }
-        });
-
-        // Special validation for checkbox group in step 8 (career objectives)
+        // Set dynamic required attributes for step 8
         if (step === 8) {
-            const checkboxes = currentStepContent.querySelectorAll('input[name="careerObjective"]');
-            const checked = Array.from(checkboxes).some(checkbox => checkbox.checked);
-            const errorMessage = currentStepContent.querySelector('.checkbox-group + .error-message');
+            if (campusPlacement) {
+                const reason = document.getElementById('placementReason');
+                if (reason) reason.required = (campusPlacement.value === 'no');
+            }
 
-            if (!checked) {
-                if (errorMessage) errorMessage.style.display = 'block';
-                isValid = false;
-            } else {
-                if (errorMessage) errorMessage.style.display = 'none';
+            if (domainOtherCheckbox && domainOtherText) {
+                domainOtherText.required = domainOtherCheckbox.checked;
             }
         }
+
+        for (let field of requiredFields) {
+            if (!validateField(field)) {
+                isValid = false;
+
+                // Scroll to first error field
+                field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                break; // Only scroll to the first error
+            }
+        }
+
+        // Special validation for step 8 (career objectives) - removed checkbox validation since using select dropdown
+        // The required validation for the select dropdown is handled by the standard required field validation above
 
         return isValid;
     }
 
-    // Populate review content
+    function validateField(field) {
+        const formGroup = field.closest('.form-group');
+        const errorMessage = formGroup.querySelector('.error-message');
+
+        // Reset previous validation states
+        clearFieldError(field);
+
+        let fieldValid = true;
+        let errorMsg = 'This field is required';
+
+        // Check if field is empty
+        if (field.type === 'checkbox') {
+            if (!field.checked) {
+                fieldValid = false;
+            }
+        } else if (!field.value.trim()) {
+            fieldValid = false;
+        } else {
+            // Field-specific validation
+            switch (field.id) {
+                case 'mobile':
+                case 'fatherMobile':
+                case 'motherMobile':
+                    if (!isValidPhone(field.value)) {
+                        fieldValid = false;
+                        errorMsg = 'Please enter a valid 10-digit mobile number';
+                    }
+                    break;
+                case 'email':
+                case 'fatherEmail':
+                case 'motherEmail':
+                case 'collegeEmail':
+                    if (!isValidEmail(field.value)) {
+                        fieldValid = false;
+                        errorMsg = 'Please enter a valid email address';
+                    }
+                    break;
+                case 'admissionYear':
+                    if (!isValidYear(field.value)) {
+                        fieldValid = false;
+                        errorMsg = 'Please enter a valid year between 2000 and current year';
+                    }
+                    break;
+                case 'sscPercentage':
+                case 'hsscPercentage':
+                case 'diplomaPercentage':
+                    if (!isValidPercentage(field.value)) {
+                        fieldValid = false;
+                        errorMsg = 'Please enter a valid percentage (0-100)';
+                    }
+                    break;
+                case 'sscYear':
+                    if (!isValidPassingYear(field.value, 'ssc')) {
+                        fieldValid = false;
+                        errorMsg = 'Please enter a valid passing year for SSC';
+                    }
+                    break;
+                case 'hsscYear':
+                    if (!isValidPassingYear(field.value, 'hssc')) {
+                        fieldValid = false;
+                        errorMsg = 'Please enter a valid passing year for HSSC';
+                    }
+                    break;
+                case 'placementReason':
+                    errorMsg = 'Please specify the reasons';
+                    break;
+                case 'domainOtherText':
+                    errorMsg = 'Please specify the other domain';
+                    break;
+                case 'semester':
+                    if (!isValidSemester(field.value)) {
+                        fieldValid = false;
+                        errorMsg = 'Semester must be between 1 and 8';
+                    }
+                    break;
+            }
+
+            // For selects, ensure not default if value is ''
+            if (field.tagName === 'SELECT' && field.value === '') {
+                fieldValid = false;
+            }
+        }
+
+        // Apply validation state
+        if (!fieldValid) {
+            field.classList.add('error');
+            errorMessage.textContent = errorMsg;
+            errorMessage.style.display = 'block';
+        }
+
+        return fieldValid;
+    }
+
+    function clearFieldError(field) {
+        const formGroup = field.closest('.form-group');
+        const errorMessage = formGroup.querySelector('.error-message');
+
+        field.classList.remove('error');
+        errorMessage.style.display = 'none';
+    }
+
+    // Validation helper functions
+    function isValidEmail(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email.trim());
+    }
+
+    function isValidPhone(phone) {
+        const re = /^[0-9]{10}$/;
+        return re.test(phone.replace(/\D/g, ''));
+    }
+
+    function isValidYear(year) {
+        const currentYear = new Date().getFullYear();
+        const numYear = parseInt(year);
+        return !isNaN(numYear) && numYear >= 2000 && numYear <= currentYear;
+    }
+
+    function isValidPercentage(value) {
+        const numValue = parseFloat(value);
+        return !isNaN(numValue) && numValue >= 0 && numValue <= 100;
+    }
+
+    function isValidSemester(semester) {
+        const numSemester = parseInt(semester);
+        return !isNaN(numSemester) && numSemester >= 1 && numSemester <= 8;
+    }
+
+    function isValidPassingYear(year, type) {
+        const numYear = parseInt(year);
+        const currentYear = new Date().getFullYear();
+
+        if (isNaN(numYear)) return false;
+
+        // SSC should be at least 5 years before current year
+        if (type === 'ssc') {
+            return numYear >= 2000 && numYear <= currentYear - 5;
+        }
+
+        // HSSC can be up to current year (allowing current year students)
+        if (type === 'hssc') {
+            return numYear >= 2000 && numYear <= currentYear;
+        }
+
+        return numYear >= 2000 && numYear <= currentYear;
+    }
+
+    function togglePlacementReason() {
+        if (campusPlacement.value === 'no') {
+            placementReasonRow.style.display = 'block';
+        } else {
+            placementReasonRow.style.display = 'none';
+        }
+    }
+
+    function toggleDomainOtherText() {
+        domainOtherText.style.display = domainOtherCheckbox.checked ? 'inline-block' : 'none';
+    }
+
     function populateReviewContent() {
         const formData = new FormData(form);
         let reviewHTML = '<h3>Review Your Information</h3>';
@@ -328,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             {
                 title: 'Career Objectives and Skills',
-                fields: ['careerObjective', 'careerDetails', 'careerPreparedness', 'campusPlacement', 'placementReason', 'interpersonalSkills', 'softSkills', 'additionalSkills', 'expectations', 'mentorSignature']
+                fields: ['careerObjectives', 'careerDetails', 'careerPreparedness', 'campusPlacement', 'placementReason', 'interpersonalSkills', 'softSkills', 'additionalSkills', 'expectations', 'mentorSignature']
             }
         ];
 
@@ -337,10 +436,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let sectionHTML = `<h4>${section.title}</h4><div class="review-section">`;
 
             section.fields.forEach(field => {
-                if (field === 'careerObjective') {
-                    const interests = formData.getAll('careerObjective');
-                    if (interests.length > 0) {
-                        sectionHTML += `<p><strong>Career Objectives:</strong> ${interests.join(', ')}</p>`;
+                if (field === 'careerObjectives') {
+                    const value = formData.get('careerObjectives');
+                    if (value) {
+                        sectionHTML += `<p><strong>Career Objectives:</strong> ${value}</p>`;
                         sectionHasContent = true;
                     }
                 } else {
@@ -390,7 +489,6 @@ document.addEventListener('DOMContentLoaded', () => {
         reviewContent.innerHTML = reviewHTML;
     }
 
-    // Handle form submission
     async function submitForm() {
         if (validateStep(currentStep)) {
             try {
@@ -420,12 +518,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const result = await response.json();
                     alert('Profile updated successfully!');
                     console.log('Form submitted successfully:', result);
-
-                    // Optionally reset form or redirect
-                    // form.reset();
-                    // currentStep = 1;
-                    // updateFormState();
-
                 } else {
                     const error = await response.json();
                     console.error('Submission failed:', error);
@@ -499,7 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Career objective
             career_objective: {
-                career_objective: rawData.careerObjective || '',
+                career_objective: rawData.careerObjectives || '',
                 domain_of_interest: rawData.domainOfInterest || '',
                 additional_skills: rawData.additionalSkills || '',
                 expectations: rawData.expectations || ''
@@ -589,22 +681,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
         return apiData;
     }
-
-    // Real-time validation
-    form.querySelectorAll('input, select, textarea').forEach(field => {
-        field.addEventListener('input', () => {
-            if (field.classList.contains('error')) {
-                validateStep(currentStep);
-            }
-        });
-
-        field.addEventListener('change', () => {
-            if (field.classList.contains('error')) {
-                validateStep(currentStep);
-            }
-        });
-    });
-
-    // Add row functionality for co-curricular activities
-
 });

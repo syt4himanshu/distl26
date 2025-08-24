@@ -102,17 +102,18 @@
                         <div class="form-group">
                             <label for="admissionYear" class="form-label">Year of Admission <span
                                     class="required">*</span></label>
-                            <input type="text" id="admissionYear" name="admissionYear" class="form-input"
-                                placeholder="e.g., 2023" required>
-                            <div class="error-message">Please enter year of admission</div>
+                            <input type="number" id="admissionYear" name="admissionYear" class="form-input"
+                                placeholder="2023" required>
+                            <div class="error-message" id="admissionYearError">Please enter year of admission</div>
                         </div>
                         <div class="form-group">
                             <label for="mobile" class="form-label">Mobile No. <span class="required">*</span></label>
-                            <input type="tel" id="mobile" name="mobile" class="form-input" placeholder="+91 1234567890"
+                            <input type="number" id="mobile" name="mobile" class="form-input" placeholder="1234567890"
                                 required>
-                            <div class="error-message">Please enter a valid mobile number</div>
+                            <div class="error-message" id="mobileError">Please enter a valid mobile number</div>
                         </div>
                     </div>
+
 
                     <div class="form-row two-cols">
                         <div class="form-group">
@@ -154,8 +155,8 @@
                         </div>
                         <div class="form-group">
                             <label for="fatherMobile" class="form-label">Father's Mobile No.</label>
-                            <input type="tel" id="fatherMobile" name="fatherMobile" class="form-input"
-                                placeholder="+91 1234567890" required>
+                            <input type="number" id="fatherMobile" name="fatherMobile" class="form-input"
+                                placeholder="1234567890" required>
                             <div class="error-message">Please enter Mobile No.</div>
                         </div>
                     </div>
@@ -187,8 +188,8 @@
                         </div>
                         <div class="form-group">
                             <label for="motherMobile" class="form-label">Mother's Mobile No.</label>
-                            <input type="tel" id="motherMobile" name="motherMobile" class="form-input"
-                                placeholder="+91 1234567890" required>
+                            <input type="number" id="motherMobile" name="motherMobile" class="form-input"
+                                placeholder=" 1234567890" required>
                             <div class="error-message">Please enter Mother's mobile number</div>
                         </div>
                     </div>
@@ -221,12 +222,12 @@
                             <label class="form-label">SSC (X) Details</label>
                             <div class="form-row two-cols">
                                 <div class="form-group">
-                                    <input type="text" id="sscPercentage" name="sscPercentage" class="form-input"
+                                    <input type="number" id="sscPercentage" name="sscPercentage" class="form-input"
                                         placeholder="Percentage/Grade" required>
                                     <div class="error-message">Please enter SSC percentage/grade</div>
                                 </div>
                                 <div class="form-group">
-                                    <input type="text" id="sscYear" name="sscYear" class="form-input"
+                                    <input type="number" id="sscYear" name="sscYear" class="form-input"
                                         placeholder="Year of Passing" required>
                                     <div class="error-message">Please enter SSC year of passing</div>
                                 </div>
@@ -239,14 +240,14 @@
                             <label class="form-label">HSSC (XII)/Diploma Details</label>
                             <div class="form-row two-cols">
                                 <div class="form-group">
-                                    <input type="text" id="hsscPercentage" name="hsscPercentage" class="form-input"
+                                    <input type="number" id="hsscPercentage" name="hsscPercentage" class="form-input"
                                         placeholder="Percentage/Grade" required>
                                     <div class="error-message">Please enter HSSC Details</div>
                                 </div>
                                 <div class="form-group">
-                                    <input type="text" id="hsscYear" name="hsscYear" class="form-input"
+                                    <input type="number" id="hsscYear" name="hsscYear" class="form-input"
                                         placeholder="Year of Passing" required>
-                                    <div class="error-message">Please Enter the passing year t</div>
+                                    <div class="error-message">Please enter a valid year (2000 to current year)</div>
 
                                 </div>
                             </div>
@@ -916,162 +917,14 @@
                 ← Previous
             </button>
             <div class="step-counter">
-                Step <span id="currentStep">1</span> of 10
+                Step <span id="currentStep">1</span> of 9
             </div>
             <button type="button" id="nextBtn" class="nav-button btn-next">
                 Next →
             </button>
         </div>
     </div>
-    <script>
 
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const form = document.getElementById('wizardForm');
-            const prevBtn = document.getElementById('prevBtn');
-            const nextBtn = document.getElementById('nextBtn');
-            const currentStepSpan = document.getElementById('currentStep');
-            const stepContents = document.querySelectorAll('.step-content');
-            const stepIndicators = document.querySelectorAll('.step-indicator');
-            const progressFill = document.querySelector('.progress-fill');
-            const progressPercentage = document.querySelector('.progress-percentage');
-            const reviewContent = document.getElementById('reviewContent');
-            let currentStep = 1;
-            const totalSteps = stepContents.length;
-
-            updateFormState();
-
-            prevBtn.addEventListener('click', () => {
-                if (currentStep > 1) {
-                    currentStep--;
-                    updateFormState();
-                }
-            });
-
-            nextBtn.addEventListener('click', () => {
-                if (validateStep(currentStep) && currentStep < totalSteps) {
-                    currentStep++;
-                    updateFormState();
-                } else if (currentStep === totalSteps && validateStep(currentStep)) {
-                    submitForm();
-                }
-            });
-
-            function updateFormState() {
-                stepContents.forEach((content, index) => {
-                    content.classList.toggle('active', index + 1 === currentStep);
-                });
-
-                if (stepIndicators.length) {
-                    stepIndicators.forEach((indicator, index) => {
-                        indicator.classList.toggle('active', index + 1 === currentStep);
-                        indicator.classList.toggle('completed', index + 1 < currentStep);
-                    });
-                }
-
-                const progress = ((currentStep - 1) / (totalSteps - 1)) * 100;
-                progressFill.style.width = `${progress}%`;
-                progressPercentage.textContent = `${Math.round(progress)}%`;
-
-                prevBtn.disabled = currentStep === 1;
-                nextBtn.textContent = currentStep === totalSteps ? 'Submit' : 'Next →';
-                currentStepSpan.textContent = currentStep;
-
-                if (currentStep === totalSteps) {
-                    populateReviewContent();
-                }
-            }
-
-            function validateStep(step) {
-                const currentStepContent = document.querySelector(`.step-content[data-step="${step}"]`);
-                const requiredFields = currentStepContent.querySelectorAll('[required]');
-                let isValid = true;
-
-                requiredFields.forEach(field => {
-                    const formGroup = field.closest('.form-group');
-                    const errorMessage = formGroup.querySelector('.error-message');
-                    if (!field.value.trim() || (field.type === "checkbox" && !field.checked)) {
-                        field.classList.add('error');
-                        errorMessage.style.display = 'block';
-                        isValid = false;
-                    } else {
-                        field.classList.remove('error');
-                        errorMessage.style.display = 'none';
-                    }
-                });
-
-                return isValid;
-            }
-
-            function populateReviewContent() {
-                const formData = new FormData(form);
-                let reviewHTML = '<h3>Review Your Information</h3><div class="review-section">';
-                for (const [key, value] of formData.entries()) {
-                    if (key === "termsAccepted") continue;
-                    if (value) {
-                        const label = document.querySelector(`label[for="${key}"]`)?.textContent?.replace(' *', '') || key;
-                        reviewHTML += `<p><strong>${label}:</strong> ${value}</p>`;
-                    }
-                }
-                reviewHTML += '</div>';
-                reviewContent.innerHTML = reviewHTML;
-            }
-
-            function submitForm() {
-                if (validateStep(currentStep)) {
-                    const formData = new FormData(form);
-                    const data = {};
-                    for (const [key, value] of formData.entries()) {
-                        if (data[key]) {
-                            if (Array.isArray(data[key])) {
-                                data[key].push(value);
-                            } else {
-                                data[key] = [data[key], value];
-                            }
-                        } else {
-                            data[key] = value;
-                        }
-                    }
-                    // Show in console
-                    console.log('Form submitted:', data);
-                    alert('Form submitted successfully! Check console for form data.');
-                    form.reset();
-                    currentStep = 1;
-                    updateFormState();
-                }
-            }
-
-            form.querySelectorAll('input, select, textarea').forEach(field => {
-                field.addEventListener('input', () => {
-                    if (field.classList.contains('error')) {
-                        validateStep(currentStep);
-                    }
-                });
-            });
-
-            // --- Add Row Logic for Activities ---
-            // Participation Activities
-            document.querySelectorAll('.add-row-btn').forEach((btn, idx) => {
-                btn.addEventListener('click', function () {
-                    // Find the correct activity-row (Participation or Organized)
-                    const activitySection = btn.closest('.form-group');
-                    const activityRows = activitySection.querySelectorAll('.activity-row');
-                    const lastRow = activityRows[activityRows.length - 1];
-                    // Clone the last activity-row
-                    const newRow = lastRow.cloneNode(true);
-                    // Clear all input/select values in the cloned row
-                    newRow.querySelectorAll('input, select').forEach(input => {
-                        if (input.type === 'text' || input.type === 'date') input.value = '';
-                        if (input.tagName.toLowerCase() === 'select') input.selectedIndex = 0;
-                    });
-                    // Insert the new row before the button
-                    btn.parentNode.insertBefore(newRow, btn);
-                });
-            });
-        });
-        // Validate current semester
-
-    </script>
     <script src="./s.js"></script>
 </body>
 

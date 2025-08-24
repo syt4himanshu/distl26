@@ -428,33 +428,46 @@ def login():
 def register():
     data = request.get_json()
     role = data.get("role")
+    
     if role == "student":
         uid = data.get("uid")
-        if not uid:
-            return jsonify({"error": "Missing UID"}), 400
+        full_name = data.get("full_name")
+        semester = data.get("semester")
+        section = data.get("section")
+        year_of_admission = data.get("year_of_admission")
+
+        # Validate required fields
+        if not uid or not full_name:
+            return jsonify({"error": "Missing UID or full_name"}), 400
         if User.query.filter_by(username=uid).first():
             return jsonify({"error": "Student with given UID already exists"}), 400
 
+        # Split full name into first_name, middle_name, last_name
+        first_name, middle_name, last_name = split_full_name(full_name)
+
+        # Create user and student
         user = User(username=uid, role="student", password_hash=generate_password_hash(uid))
-        first_name, middle_name, last_name = split_full_name(data.get("full_name", ""))
         student = Student(
             uid=uid,
             first_name=first_name,
             middle_name=middle_name,
             last_name=last_name,
-            semester=data.get("semester"),
-            section=data.get("section"),
-            year_of_admission=data.get("year_of_admission"),
+            semester=semester,
+            section=section,
+            year_of_admission=year_of_admission,
             user=user
         )
         db.session.add(user)
         db.session.add(student)
         db.session.commit()
+
         return jsonify({
             "message": "Student created successfully",
+            "student_profile": "created",
             "user": {
                 "uid": uid,
                 "full_name": student.full_name,
+                "first_name": student.first_name,
                 "middle_name": student.middle_name,
                 "last_name": student.last_name,
                 "semester": student.semester,
@@ -462,24 +475,98 @@ def register():
                 "year_of_admission": student.year_of_admission
             }
         }), 201
+
     elif role == "faculty":
         email = data.get("email")
-        password = data.get("password")
+        first_name = data.get("first_name")
+        last_name = data.get("last_name")
+        contact_number = data.get("contact_number")
+        password = data.get("password", "default_password")  # Default password if not provided
 
-        if not email or not email.endswith("@stvincentngp.edu.in"):
+        # Validate required fields
+        if not email or not first_name or not last_name:
+            return jsonify({"error": "Missing email, first_name, or last_name"}), 400
+        if not email.endswith("@stvincentngp.edu.in"):
             return jsonify({"error": "Invalid email format, must end with @stvincentngp.edu.in"}), 400
         if User.query.filter_by(username=email).first():
             return jsonify({"error": "Faculty with given email already exists"}), 400
-        username = email
-        user = User(username=username, role="faculty",
-                    password_hash=generate_password_hash(password))
-        faculty = Faculty(email=email, user=user)
+
+        # Create user and faculty
+        user = User(username=email, role="faculty", password_hash=generate_password_hash(password))
+        faculty = Faculty(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            contact_number=contact_number,
+            user=user
+        )
         db.session.add(user)
         db.session.add(faculty)
         db.session.commit()
-        return jsonify({"message": "Faculty created successfully"}), 200
+
+        return jsonify({
+            "message": "Faculty created successfully",
+            "faculty_profile": "created",
+            "user": {
+                "email": email,
+                "first_name": first_name,
+                "last_name": last_name,
+                "contact_number": contact_number
+            }
+        }), 201
+
     else:
         return jsonify({"error": "Invalid role"}), 400
+    
+
+# Bulk Register Faculty  End Point
+
+@app.route("/api/auth/register/faculty/bulk", methods=["POST"])
+@role_required(["admin"])
+def bulk_register_faculty():
+    faculties = request.get_json()
+    if not isinstance(faculties, list):
+        return jsonify({"error": "Input must be a list of faculty members"}), 400
+
+    results = []
+    for entry in faculties:
+        email = entry.get("email")
+        password = entry.get("password", "default_password")  # Default password or require it
+        first_name = entry.get("first_name", "")
+        last_name = entry.get("last_name", "")
+        contact_number = entry.get("contact_number", "")
+
+        if not email or not email.endswith("@stvincentngp.edu.in"):
+            results.append({"email": email, "status": "failed", "error": "Invalid email format"})
+            continue
+
+        if User.query.filter_by(username=email).first():
+            results.append({"email": email, "status": "failed", "error": "Faculty with given email already exists"})
+            continue
+
+        user = User(
+            username=email,
+            role="faculty",
+            password_hash=generate_password_hash(password)
+        )
+        faculty = Faculty(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            contact_number=contact_number,
+            user=user
+        )
+        db.session.add(user)
+        db.session.add(faculty)
+        results.append({"email": email, "status": "success"})
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Database error", "details": str(e)}), 500
+
+    return jsonify({"result": results}), 200
 
 
 @app.route("/api/auth/register/bulk", methods=["POST"])
@@ -742,10 +829,12 @@ def search_students():
     if "name" in request.args:
         name = request.args.get("name")
         query = query.filter((Student.first_name.like(f"%{name}%")) | (Student.last_name.like(f"%{name}%")))
+    
     results = query.all()
+    
     return jsonify([{
         "id": s.id,
-        "uid": s.uid, 
+        "uid": s.uid,
         "firstName": s.first_name,
         "middleName": s.middle_name,
         "lastName": s.last_name,
@@ -754,39 +843,14 @@ def search_students():
         "section": s.section,
         "year": s.year_of_admission,
         "mentorId": s.mentor_id,
-        "profile_url": f"/students/{s.uid}"
+        "profile_url": f"/students/{s.uid}",
+        "post_admission_records": [serialize_model(rec) for rec in s.post_admission_records] if s.post_admission_records else [], 
+        "backlogs": sum(1 for rec in s.post_admission_records if rec.backlog_subjects) if s.post_admission_records else 0,
+        "backlogSubjects": [subject for rec in s.post_admission_records if rec.backlog_subjects for subject in (rec.backlog_subjects.split(',') if rec.backlog_subjects else [])],
+        "domain": s.skills.domains_of_interest if s.skills else (s.internships[0].domain if s.internships else ""),
+        "careerGoal": s.career_objective.career_goal if s.career_objective else "",
+        "semesterGrades": {}  # Empty since sgpa is not used
     } for s in results])
-
-@app.route("/students/<uid>", methods=["GET"])
-@role_required(["admin", "faculty", "student"])
-def get_student(uid):
-    s = Student.query.filter_by(uid=uid).first()
-    if not s:
-        return jsonify({"error": "Student not found"}), 404
-    # student themselves can only access their record
-    current_user = db.session.get(User, get_jwt_identity())
-    if current_user.role == "student" and s.user_id != current_user.id:
-        return jsonify({"error": "Forbidden"}), 403
-    response = {
-        "id": s.id,
-        "uid": s.uid,
-        "full_name": s.full_name,
-        "semester": s.semester,
-        "section": s.section,
-        "year_of_admission": s.year_of_admission,
-        "personal_info": serialize_model(s.personal_info) if s.personal_info else None,
-        "past_education_records": [serialize_model(rec) for rec in s.past_education_records] if s.past_education_records else [],
-        "post_admission_records": [serialize_model(rec) for rec in s.post_admission_records] if s.post_admission_records else [],
-        "career_activities": [serialize_model(rec) for rec in s.career_activities] if s.career_activities else [],
-        "projects": [serialize_model(rec) for rec in s.projects] if s.projects else [],
-        "internships": [serialize_model(rec) for rec in s.internships] if s.internships else [],
-        "cocurricular_participations": [serialize_model(rec) for rec in s.cocurricular_participations] if s.cocurricular_participations else [],
-        "cocurricular_organizations": [serialize_model(rec) for rec in s.cocurricular_organizations] if s.cocurricular_organizations else [],
-        "career_objective": serialize_model(s.career_objective) if s.career_objective else None,
-        "skills": serialize_model(s.skills) if s.skills else None,
-        "swoc": serialize_model(s.swoc) if s.swoc else None,
-    }
-    return jsonify(response)
 
 @app.route("/api/students/<int:student_id>", methods=["PUT"])
 @role_required(["admin"])
@@ -972,14 +1036,28 @@ def get_my_mentees():
     mentees = faculty.mentees
 
     mentees_data = []
-    for s in mentees:
+    for student in mentees:
         mentees_data.append({
-            "id": s.id,
-            "uid": s.uid,
-            "full_name": s.full_name,
-            "semester": s.semester,
-            "section": s.section,
-            "year_of_admission": s.year_of_admission
+            "id": student.id,
+            "uid": student.uid,
+            "first_name": student.first_name,
+            "middle_name": student.middle_name,
+            "last_name": student.last_name,
+            "full_name": student.full_name,
+            "semester": student.semester,
+            "section": student.section,
+            "year_of_admission": student.year_of_admission,
+            "personal_info": serialize_model(student.personal_info) if student.personal_info else None,
+            "past_education_records": [serialize_model(rec) for rec in student.past_education_records] if student.past_education_records else [],
+            "post_admission_records": [serialize_model(rec) for rec in student.post_admission_records] if student.post_admission_records else [],
+            "career_activities": [serialize_model(rec) for rec in student.career_activities] if student.career_activities else [],
+            "projects": [serialize_model(rec) for rec in student.projects] if student.projects else [],
+            "internships": [serialize_model(rec) for rec in student.internships] if student.internships else [],
+            "cocurricular_participations": [serialize_model(rec) for rec in student.cocurricular_participations] if student.cocurricular_participations else [],
+            "cocurricular_organizations": [serialize_model(rec) for rec in student.cocurricular_organizations] if student.cocurricular_organizations else [],
+            "career_objective": serialize_model(student.career_objective) if student.career_objective else None,
+            "skills": serialize_model(student.skills) if student.skills else None,
+            "swoc": serialize_model(student.swoc) if student.swoc else None,
         })
 
     return jsonify(mentees_data), 200
@@ -1181,11 +1259,12 @@ def create_user():
         import traceback
         traceback.print_exc()
         return jsonify({"error": "Database error", "details": str(e)}), 500
+    
+# Update user endpoint
 
 @app.route("/api/admin/users/<int:user_id>", methods=["PUT"])
 @role_required(["admin"])
 def update_user(user_id):
-    """Update an existing user"""
     user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
@@ -1195,24 +1274,88 @@ def update_user(user_id):
         return jsonify({"error": "No data provided"}), 400
 
     try:
-        # Update allowed fields
-        if "username" in data:
-            # Check if new username conflicts with existing users (except current user)
-            existing_user = User.query.filter(User.username == data["username"], User.id != user_id).first()
-            if existing_user:
-                return jsonify({"error": "Username already exists"}), 400
-            user.username = data["username"]
+        # Prevent role changes to avoid orphaned profiles
+        if "role" in data and data["role"] != user.role:
+            return jsonify({"error": "Changing user role is not allowed. Delete and recreate the user with the new role."}), 400
 
-        if "password" in data:
-            user.password_hash = generate_password_hash(data["password"])  # Hash the password properly
+        if user.role == "student":
+            student = user.student_profile
+            if not student:
+                return jsonify({"error": "Student profile not found"}), 404
 
-        if "role" in data:
-            if data["role"] not in ["admin", "faculty", "student"]:
-                return jsonify({"error": "Invalid role"}), 400
-            user.role = data["role"]
+            # Update User.username if uid is provided
+            if "uid" in data:
+                if User.query.filter(User.username == data["uid"], User.id != user_id).first():
+                    return jsonify({"error": "UID already exists"}), 400
+                user.username = data["uid"]
+                student.uid = data["uid"]
+
+            # Update Student fields
+            if "full_name" in data:
+                first_name, middle_name, last_name = split_full_name(data["full_name"])
+                student.first_name = first_name
+                student.middle_name = middle_name
+                student.last_name = last_name
+
+            for field in ["semester", "section", "year_of_admission"]:
+                if field in data:
+                    setattr(student, field, data[field] if data[field] != "" else None)
+
+            response_data = {
+                "message": "Student updated successfully",
+                "student_profile": "updated",
+                "user": {
+                    "uid": student.uid,
+                    "full_name": student.full_name,
+                    "first_name": student.first_name,
+                    "middle_name": student.middle_name,
+                    "last_name": student.last_name,
+                    "semester": student.semester,
+                    "section": student.section,
+                    "year_of_admission": student.year_of_admission
+                }
+            }
+
+        elif user.role == "faculty":
+            faculty = user.faculty_profile
+            if not faculty:
+                return jsonify({"error": "Faculty profile not found"}), 404
+
+            # Update User.username if email is provided
+            if "email" in data:
+                if not data["email"].endswith("@stvincentngp.edu.in"):
+                    return jsonify({"error": "Invalid email format, must end with @stvincentngp.edu.in"}), 400
+                if User.query.filter(User.username == data["email"], User.id != user_id).first():
+                    return jsonify({"error": "Email already exists"}), 400
+                user.username = data["email"]
+                faculty.email = data["email"]
+
+            # Update Faculty fields
+            for field in ["first_name", "last_name", "contact_number"]:
+                if field in data:
+                    setattr(faculty, field, data[field] if data[field] != "" else None)
+
+            # Update password if provided
+            if "password" in data and data["password"]:
+                user.password_hash = generate_password_hash(data["password"])
+
+            response_data = {
+                "message": "Faculty updated successfully",
+                "faculty_profile": "updated",
+                "user": {
+                    "email": faculty.email,
+                    "first_name": faculty.first_name,
+                    "last_name": faculty.last_name,
+                    "contact_number": faculty.contact_number
+                }
+            }
+
+        else:
+            return jsonify({"error": "Invalid user role"}), 400
 
         db.session.commit()
-        return jsonify({"message": "User updated successfully"}), 200
+        return jsonify(response_data), 200
+
     except Exception as e:
         db.session.rollback()
         print(f"❌ Database error in update_user: {str(e)}")

@@ -93,25 +93,444 @@
     </div>
 
     <!-- Student Details Modal -->
-    <div class="details-container hidden">
-        <div class="dialog-container hidden">
-            <div class="dialog-header">
-                <button class="close-button" onclick="closeDialog()">×</button>
-                <h1 class="dialog-title">Student Information</h1>
-                <p class="dialog-subtitle">Department of Computer Engineering</p>
-            </div>
+    <div class="details-container hidden" id="studentModal">
+    <div class="dialog-container hidden">
+      <div class="dialog-header">
+        <button class="close-button" onclick="closeDialog()">×</button>
+        <h1 class="dialog-title">Student Information</h1>
+        <p class="dialog-subtitle">Department of Computer Engineering</p>
+      </div>
 
-            <div class="dialog-content" id="studentDetailsContent">
-                <!-- Student details will be loaded dynamically -->
-                <div class="loading-message">Loading student details...</div>
-            </div>
-
-            <div class="dialog-footer">
-                <button class="btn" onclick="printDialog()">Print</button>
-                <button class="btn btn-primary" onclick="downloadData()">Download</button>
-                <button class="btn" onclick="closeDialog()">Close</button>
-            </div>
+      <div class="dialog-content">
+        <!-- Student's Personal Information -->
+        <div class="section expanded">
+          <div class="section-header" onclick="toggleSection(this)">
+            <span class="section-title">Student's Personal Information</span>
+            <span class="expand-icon">▲</span>
+          </div>
+          <div class="section-content">
+            <table class="data-table">
+              <tr>
+                <th>Department</th>
+                <td>Computer Engineering</td>
+              </tr>
+              <tr>
+                <th>Full Name</th>
+                <td id="studentFullName">Rahul Sharma</td>
+              </tr>
+              <tr>
+                <th>Section</th>
+                <td id="studentSection">A</td>
+              </tr>
+              <tr>
+                <th>Semester</th>
+                <td id="studentSemester">6</td>
+              </tr>
+              <tr>
+                <th>Roll No./UID</th>
+                <td id="studentUID">21CE001234</td>
+              </tr>
+              <tr>
+                <th>Year of Admission</th>
+                <td id="studentYear">2021</td>
+              </tr>
+              <tr>
+                <th>Mobile No.</th>
+                <td id="studentMobile">+91 9876543210</td>
+              </tr>
+              <tr>
+                <th>Email ID</th>
+                <td id="studentEmail">rahul.sharma@example.com</td>
+              </tr>
+              <tr>
+                <th>LinkedIn ID</th>
+                <td id="studentLinkedIn">linkedin.com/in/rahulsharma</td>
+              </tr>
+              <tr>
+                <th>Permanent Address</th>
+                <td id="studentAddress">123, MG Road, Sector 15, New Delhi - 110001</td>
+              </tr>
+            </table>
+          </div>
         </div>
+
+        <!-- Parent's Information -->
+        <div class="section">
+          <div class="section-header" onclick="toggleSection(this)">
+            <span class="section-title">Parent's Information</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="section-content">
+            <table class="data-table">
+              <tr>
+                <th>Father's Name</th>
+                <td id="fatherName">Vikash Sharma</td>
+              </tr>
+              <tr>
+                <th>Father's Mobile No.</th>
+                <td id="fatherMobile">+91 9876543211</td>
+              </tr>
+              <tr>
+                <th>Father's Email ID</th>
+                <td id="fatherEmail">vikash.sharma@example.com</td>
+              </tr>
+              <tr>
+                <th>Father's Occupation</th>
+                <td id="fatherOccupation">Software Engineer</td>
+              </tr>
+              <tr>
+                <th>Mother's Name</th>
+                <td id="motherName">Priya Sharma</td>
+              </tr>
+              <tr>
+                <th>Mother's Mobile No.</th>
+                <td id="motherMobile">+91 9876543212</td>
+              </tr>
+              <tr>
+                <th>Mother's Email ID</th>
+                <td id="motherEmail">priya.sharma@example.com</td>
+              </tr>
+              <tr>
+                <th>Mother's Occupation</th>
+                <td id="motherOccupation">Teacher</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- Academic Information - Before Admission -->
+        <div class="section">
+          <div class="section-header" onclick="toggleSection(this)">
+            <span class="section-title">Academic Information - Before Admission</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="section-content">
+            <table class="data-table">
+              <tr>
+                <th>SSC (X) Percentage/Grade</th>
+                <td id="sscPercentage">92.5%</td>
+              </tr>
+              <tr>
+                <th>SSC Year of Passing</th>
+                <td id="sscYear">2018</td>
+              </tr>
+              <tr>
+                <th>HSSC (XII) Percentage/Grade</th>
+                <td id="hsscPercentage">90%</td>
+              </tr>
+              <tr>
+                <th>HSSC Year of Passing</th>
+                <td id="hsscYear">2020</td>
+              </tr>
+              <tr>
+                <th>Diploma Percentage/Grade</th>
+                <td><span class="empty-value">N/A</span></td>
+              </tr>
+              <tr>
+                <th>Diploma Year of Passing</th>
+                <td><span class="empty-value">N/A</span></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- Academic Information - After Admission -->
+        <div class="section">
+          <div class="section-header" onclick="toggleSection(this)">
+            <span class="section-title">Academic Information - After Admission</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="section-content">
+            <table class="data-table">
+              <tr>
+                <th>Semester 1 SGPA</th>
+                <td id="sem1SGPA">8.2</td>
+              </tr>
+              <tr>
+                <th>Semester 2 SGPA</th>
+                <td id="sem2SGPA">8.4</td>
+              </tr>
+              <tr>
+                <th>Semester 3 SGPA</th>
+                <td id="sem3SGPA">8.6</td>
+              </tr>
+              <tr>
+                <th>Semester 4 SGPA</th>
+                <td id="sem4SGPA">8.5</td>
+              </tr>
+              <tr>
+                <th>Semester 5 SGPA</th>
+                <td id="sem5SGPA">8.7</td>
+              </tr>
+              <tr>
+                <th>Semester 6 SGPA</th>
+                <td id="sem6SGPA">8.5</td>
+              </tr>
+              <tr>
+                <th>Semester 7 SGPA</th>
+                <td><span class="empty-value">N/A</span></td>
+              </tr>
+              <tr>
+                <th>Semester 8 SGPA</th>
+                <td><span class="empty-value">N/A</span></td>
+              </tr>
+              <tr>
+                <th>Current Semester</th>
+                <td id="currentSemester">6</td>
+              </tr>
+              <tr>
+                <th>Number of Active Backlogs</th>
+                <td id="backlogCount">0</td>
+              </tr>
+              <tr>
+                <th>Backlog Subject Names</th>
+                <td id="backlogSubjects"><span class="empty-value">None</span></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- Performance in Career Development Activities -->
+        <div class="section">
+          <div class="section-header" onclick="toggleSection(this)">
+            <span class="section-title">Performance in Career Development Activities</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="section-content">
+            <table class="data-table">
+              <tr>
+                <th>Aptitude Test Score/Rank</th>
+                <td id="aptitudeScore">85/100</td>
+              </tr>
+              <tr>
+                <th>Aptitude Test Date</th>
+                <td id="aptitudeDate">2023-10-15</td>
+              </tr>
+              <tr>
+                <th>Co-Cubes Score/Rank</th>
+                <td id="cocubesScore">720/1000</td>
+              </tr>
+              <tr>
+                <th>Co-Cubes Date</th>
+                <td id="cocubesDate">2023-11-20</td>
+              </tr>
+              <tr>
+                <th>GATE/CAT Score/Rank</th>
+                <td id="gateScore">650 (GATE)</td>
+              </tr>
+              <tr>
+                <th>GATE/CAT Date</th>
+                <td id="gateDate">2024-02-10</td>
+              </tr>
+              <tr>
+                <th>Other Exam Name</th>
+                <td id="otherExamName">Google Data Analytics</td>
+              </tr>
+              <tr>
+                <th>Other Exam Score/Rank</th>
+                <td id="otherExamScore">Certified</td>
+              </tr>
+              <tr>
+                <th>Other Exam Date</th>
+                <td id="otherExamDate">2023-08-05</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- Project and Internship Details -->
+        <div class="section">
+          <div class="section-header" onclick="toggleSection(this)">
+            <span class="section-title">Project and Internship Details</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="section-content">
+            <table class="data-table">
+              <tr>
+                <th>Micro Project Title</th>
+                <td id="microProjectTitle">AI-powered Chatbot</td>
+              </tr>
+              <tr>
+                <th>Micro Project Guide</th>
+                <td id="microProjectGuide">Prof. Anil Kumar</td>
+              </tr>
+              <tr>
+                <th>Major Project Title</th>
+                <td id="majorProjectTitle">Inventory Management System</td>
+              </tr>
+              <tr>
+                <th>Major Project Guide</th>
+                <td id="majorProjectGuide">Prof. Sunita Verma</td>
+              </tr>
+              <tr>
+                <th>Internship 1 Company</th>
+                <td id="internship1Company">TechCorp Solutions</td>
+              </tr>
+              <tr>
+                <th>Internship 1 Domain</th>
+                <td id="internship1Domain">Web Development</td>
+              </tr>
+              <tr>
+                <th>Internship 1 Type</th>
+                <td id="internship1Type">Physical</td>
+              </tr>
+              <tr>
+                <th>Internship 1 Paid/Unpaid</th>
+                <td id="internship1Paid">Paid</td>
+              </tr>
+              <tr>
+                <th>Internship 1 Duration</th>
+                <td id="internship1Duration">2023-06-01 to 2023-08-01</td>
+              </tr>
+              <tr>
+                <th>Internship 2 Company</th>
+                <td id="internship2Company">DataTech Inc.</td>
+              </tr>
+              <tr>
+                <th>Internship 2 Domain</th>
+                <td id="internship2Domain">Data Science</td>
+              </tr>
+              <tr>
+                <th>Internship 2 Type</th>
+                <td id="internship2Type">Online</td>
+              </tr>
+              <tr>
+                <th>Internship 2 Paid/Unpaid</th>
+                <td id="internship2Paid">Unpaid</td>
+              </tr>
+              <tr>
+                <th>Internship 2 Duration</th>
+                <td id="internship2Duration">2023-12-01 to 2024-01-15</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- Co-Curricular Activities -->
+        <div class="section">
+          <div class="section-header" onclick="toggleSection(this)">
+            <span class="section-title">Co-Curricular Activities</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="section-content">
+            <table class="data-table">
+              <tr>
+                <th>Participation Activities</th>
+                <td>
+                  <div class="activity-list">
+                    <p>Name: CodeChef Monthly Contest, Date: 2023-09-10, Level: International,
+                      Awards: Rank 150</p>
+                    <p>Name: Smart India Hackathon, Date: 2023-12-15, Level: National, Awards:
+                      Finalist</p>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <th>Organized Activities</th>
+                <td>
+                  <div class="activity-list">
+                    <p>Name: Tech Fest 2023, Date: 2023-03-20, Level: Institute, Remark: Coordinator
+                    </p>
+                    <p>Name: Coding Workshop, Date: 2023-05-10, Level: Department, Remark:
+                      Co-Coordinator</p>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- SWOC Analysis -->
+        <div class="section">
+          <div class="section-header" onclick="toggleSection(this)">
+            <span class="section-title">SWOC Analysis</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="section-content">
+            <table class="data-table">
+              <tr>
+                <th>Strengths</th>
+                <td id="strengths">Strong problem-solving skills, Team leadership, Quick learner, Good communication
+                </td>
+              </tr>
+              <tr>
+                <th>Weaknesses</th>
+                <td id="weaknesses">Time management, Public speaking anxiety</td>
+              </tr>
+              <tr>
+                <th>Opportunities</th>
+                <td id="opportunities">Growing AI/ML industry, Remote work opportunities, Startup ecosystem</td>
+              </tr>
+              <tr>
+                <th>Challenges</th>
+                <td id="challenges">Balancing academics with skill development, Staying updated with latest technologies
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        <!-- Career Objectives and Skills -->
+        <div class="section">
+          <div class="section-header" onclick="toggleSection(this)">
+            <span class="section-title">Career Objectives and Skills</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="section-content">
+            <table class="data-table">
+              <tr>
+                <th>Career Objectives</th>
+                <td id="careerObjectives">Job, Higher studies</td>
+              </tr>
+              <tr>
+                <th>Specific Details</th>
+                <td id="careerDetails">Software engineer role in tech industry, Pursue MS in Computer Science</td>
+              </tr>
+              <tr>
+                <th>Clarity and Preparedness</th>
+                <td id="clarityPreparedness">Good</td>
+              </tr>
+              <tr>
+                <th>Interested in Campus Placement</th>
+                <td id="campusPlacement">Yes</td>
+              </tr>
+              <tr>
+                <th>Interpersonal Skills (1-5)</th>
+                <td id="interpersonalSkills">4</td>
+              </tr>
+              <tr>
+                <th>Soft Skills</th>
+                <td id="softSkills">Presentation Skills, Writing</td>
+              </tr>
+              <tr>
+                <th>Domain of Interest</th>
+                <td id="domainOfInterest">
+                  <div class="tags">
+                    <span class="tag">Web Development</span>
+                    <span class="tag">Machine Learning</span>
+                    <span class="tag">Data Science</span>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <th>Additional Technical Skills Desired</th>
+                <td id="additionalSkills">Cloud Computing, Advanced Machine Learning</td>
+              </tr>
+              <tr>
+                <th>Expectations from Institute/Department</th>
+                <td id="expectations">Industry mentorship, Advanced technical workshops, Placement preparation</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button class="btn" onclick="printDialog()">Print</button>
+        <button class="btn btn-primary" onclick="downloadData()">Download</button>
+        <button class="btn" onclick="closeDialog()">Close</button>
+      </div>
+    </div>
     </div>
 
     <script>
@@ -290,34 +709,96 @@
             document.getElementById('totalStudents').textContent = filteredStudents.length;
         }
 
-        async function viewStudentDetails(uid) {
-            try {
-                const token = localStorage.getItem("access_token");
-                
-                const response = await fetch(`http://localhost:5002/students/${uid}`, {
-                    method: "GET",
-                    headers: {
-                        "Authorization": "Bearer " + token,
-                        "Content-Type": "application/json"
-                    }
-                });
 
-                if (response.ok) {
-                    const studentData = await response.json();
-                    populateStudentModal(studentData);
-                    
-                    // Show modal
-                    document.querySelector('.dialog-container').classList.remove('hidden');
-                    document.querySelector('.details-container').classList.remove('hidden');
-                    document.getElementsByTagName('body')[0].classList.add('overflow-hidden');
-                } else {
-                    showError('Failed to load student details.');
-                }
-            } catch (error) {
-                console.error('Error loading student details:', error);
-                showError('Error loading student details. Please try again.');
-            }
-        }
+        <!-- View Students -->
+
+         function viewStudentDetails(studentId) {
+      
+                const student = filteredStudents.find(s => s.uid == studentId);
+                
+                if (!student) return;
+
+                console.log(student);
+
+                // Populate the detailed student information
+                document.getElementById("studentFullName").textContent = `${student.first_name} ${student.middle_name || ''} ${student.last_name}`;
+                document.getElementById("studentSection").textContent = student.section;
+                document.getElementById("studentSemester").textContent = student.semester;
+                document.getElementById("studentUID").textContent = student.uid;
+                document.getElementById("studentYear").textContent = student.year_of_admission;
+                document.getElementById("studentMobile").textContent = student.personal_info.mobile;
+                document.getElementById("studentEmail").textContent = student.email;
+                document.getElementById("studentLinkedIn").textContent = student.linkedInId;
+                document.getElementById("studentAddress").textContent = student.permanentAddress;
+
+                // Parent information
+                document.getElementById("fatherName").textContent = student.fatherName;
+                document.getElementById("fatherMobile").textContent = student.mobile.replace(student.mobile.slice(-1), (parseInt(student.mobile.slice(-1)) + 1).toString());
+                document.getElementById("fatherEmail").textContent = student.email.replace('@', '.father@');
+                document.getElementById("fatherOccupation").textContent = "Software Engineer";
+                document.getElementById("motherName").textContent = student.motherName;
+                document.getElementById("motherMobile").textContent = student.mobile.replace(student.mobile.slice(-1), (parseInt(student.mobile.slice(-1)) + 2).toString());
+                document.getElementById("motherEmail").textContent = student.email.replace('@', '.mother@');
+                document.getElementById("motherOccupation").textContent = "Teacher";
+
+                // Academic information
+                document.getElementById("currentSemester").textContent = student.semester;
+                document.getElementById("backlogCount").textContent = student.backlogSubjects === "None" ? "0" : "1";
+                document.getElementById("backlogSubjects").innerHTML = student.backlogSubjects === "None" ? '<span class="empty-value">None</span>' : student.backlogSubjects;
+
+                // Career development activities
+                document.getElementById("aptitudeScore").textContent = "85/100";
+                document.getElementById("aptitudeDate").textContent = "2023-10-15";
+                document.getElementById("cocubesScore").textContent = "720/1000";
+                document.getElementById("cocubesDate").textContent = "2023-11-20";
+                document.getElementById("gateScore").textContent = "650 (GATE)";
+                document.getElementById("gateDate").textContent = "2024-02-10";
+                document.getElementById("otherExamName").textContent = "Google Data Analytics";
+                document.getElementById("otherExamScore").textContent = "Certified";
+                document.getElementById("otherExamDate").textContent = "2023-08-05";
+
+                // Project and internship details
+                document.getElementById("microProjectTitle").textContent = student.projects? student.projects[0] : "NULL";
+                document.getElementById("microProjectGuide").textContent = "Prof. Anil Kumar";
+                document.getElementById("majorProjectTitle").textContent = student.projects? student.projects[1] : "NULL";
+                document.getElementById("majorProjectGuide").textContent = "Prof. Sunita Verma";
+                document.getElementById("internship1Company").textContent = student.internships? student.internships[0] : "NULL";
+                document.getElementById("internship1Domain").textContent = student.domain? student.domain[0]: "Not entered yet";
+                document.getElementById("internship1Type").textContent = "Physical";
+                document.getElementById("internship1Paid").textContent = "Paid";
+                document.getElementById("internship1Duration").textContent = "2023-06-01 to 2023-08-01";
+                document.getElementById("internship2Company").textContent = student.internships? student.internships[1] : "Not done";
+                document.getElementById("internship2Domain").textContent = student.domain? student.domain[1] : "NULL";
+                document.getElementById("internship2Type").textContent = "Online";
+                document.getElementById("internship2Paid").textContent = "Unpaid";
+                document.getElementById("internship2Duration").textContent = "2023-12-01 to 2024-01-15";
+
+                // SWOC Analysis
+                document.getElementById("strengths").textContent = student.strengths;
+                document.getElementById("weaknesses").textContent = student.weaknesses;
+                document.getElementById("opportunities").textContent = student.opportunities;
+                document.getElementById("challenges").textContent = student.challenges;
+
+                // Career objectives and skills
+                document.getElementById("careerObjectives").textContent = student.careerGoal === "Placement" ? "Job" : "Higher studies";
+                document.getElementById("careerDetails").textContent = student.careerGoal === "Placement" ?
+                    "Software engineer role in tech industry" : "Pursue MS in Computer Science";
+                document.getElementById("clarityPreparedness").textContent = "Good";
+                document.getElementById("campusPlacement").textContent = student.careerGoal === "Placement" ? "Yes" : "No";
+                document.getElementById("interpersonalSkills").textContent = student.softSkillsRating;
+                document.getElementById("softSkills").textContent = "Presentation Skills, Writing";
+                document.getElementById("additionalSkills").textContent = "Cloud Computing, Advanced Machine Learning";
+                document.getElementById("expectations").textContent = "Industry mentorship, Advanced technical workshops, Placement preparation";
+
+                // Update domain tags
+                const domainContainer = document.getElementById("domainOfInterest");
+                domainContainer.innerHTML = student.domain.map(d => `<span class="tag">${d}</span>`).join('');
+
+                // Show the modal
+                document.querySelector('.dialog-container').classList.remove('hidden');
+                document.querySelector('.details-container').classList.remove('hidden');
+                document.getElementsByTagName('body')[0].classList.add('overflow-hidden');
+         }
 
         function populateStudentModal(student) {
             const content = document.getElementById('studentDetailsContent');
