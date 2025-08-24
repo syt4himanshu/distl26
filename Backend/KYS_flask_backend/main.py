@@ -829,10 +829,12 @@ def search_students():
     if "name" in request.args:
         name = request.args.get("name")
         query = query.filter((Student.first_name.like(f"%{name}%")) | (Student.last_name.like(f"%{name}%")))
+    
     results = query.all()
+    
     return jsonify([{
         "id": s.id,
-        "uid": s.uid, 
+        "uid": s.uid,
         "firstName": s.first_name,
         "middleName": s.middle_name,
         "lastName": s.last_name,
@@ -841,39 +843,14 @@ def search_students():
         "section": s.section,
         "year": s.year_of_admission,
         "mentorId": s.mentor_id,
-        "profile_url": f"/students/{s.uid}"
+        "profile_url": f"/students/{s.uid}",
+        "post_admission_records": [serialize_model(rec) for rec in s.post_admission_records] if s.post_admission_records else [], 
+        "backlogs": sum(1 for rec in s.post_admission_records if rec.backlog_subjects) if s.post_admission_records else 0,
+        "backlogSubjects": [subject for rec in s.post_admission_records if rec.backlog_subjects for subject in (rec.backlog_subjects.split(',') if rec.backlog_subjects else [])],
+        "domain": s.skills.domains_of_interest if s.skills else (s.internships[0].domain if s.internships else ""),
+        "careerGoal": s.career_objective.career_goal if s.career_objective else "",
+        "semesterGrades": {}  # Empty since sgpa is not used
     } for s in results])
-
-@app.route("/students/<uid>", methods=["GET"])
-@role_required(["admin", "faculty", "student"])
-def get_student(uid):
-    s = Student.query.filter_by(uid=uid).first()
-    if not s:
-        return jsonify({"error": "Student not found"}), 404
-    # student themselves can only access their record
-    current_user = db.session.get(User, get_jwt_identity())
-    if current_user.role == "student" and s.user_id != current_user.id:
-        return jsonify({"error": "Forbidden"}), 403
-    response = {
-        "id": s.id,
-        "uid": s.uid,
-        "full_name": s.full_name,
-        "semester": s.semester,
-        "section": s.section,
-        "year_of_admission": s.year_of_admission,
-        "personal_info": serialize_model(s.personal_info) if s.personal_info else None,
-        "past_education_records": [serialize_model(rec) for rec in s.past_education_records] if s.past_education_records else [],
-        "post_admission_records": [serialize_model(rec) for rec in s.post_admission_records] if s.post_admission_records else [],
-        "career_activities": [serialize_model(rec) for rec in s.career_activities] if s.career_activities else [],
-        "projects": [serialize_model(rec) for rec in s.projects] if s.projects else [],
-        "internships": [serialize_model(rec) for rec in s.internships] if s.internships else [],
-        "cocurricular_participations": [serialize_model(rec) for rec in s.cocurricular_participations] if s.cocurricular_participations else [],
-        "cocurricular_organizations": [serialize_model(rec) for rec in s.cocurricular_organizations] if s.cocurricular_organizations else [],
-        "career_objective": serialize_model(s.career_objective) if s.career_objective else None,
-        "skills": serialize_model(s.skills) if s.skills else None,
-        "swoc": serialize_model(s.swoc) if s.swoc else None,
-    }
-    return jsonify(response)
 
 @app.route("/api/students/<int:student_id>", methods=["PUT"])
 @role_required(["admin"])

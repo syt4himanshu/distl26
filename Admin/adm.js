@@ -229,6 +229,11 @@ function switchTab(tabId) {
       console.error(`❌ Tab button not found for: ${tabId}`);
     }
 
+    if(tabId == "reports")
+    {
+        initializeReports();
+    }
+
     console.log(`🎉 Tab switch completed: ${tabId}`);
 
   } catch (error) {
