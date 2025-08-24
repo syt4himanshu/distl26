@@ -233,6 +233,16 @@ function switchTab(tabId) {
 
         console.log(`🎉 Tab switch completed: ${tabId}`);
 
+        // Initialize reports if reports tab is clicked
+        if (tabId === 'reports') {
+            console.log('📊 Initializing reports section...');
+            if (typeof initializeReports === 'function') {
+                initializeReports();
+            } else {
+                console.warn('⚠️ initializeReports function not found. Make sure reports.js is loaded.');
+            }
+        }
+
     } catch (error) {
         console.error(`❌ Error in switchTab:`, error);
     }
