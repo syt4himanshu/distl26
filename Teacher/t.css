@@ -66,7 +66,7 @@ body {
     font-weight: 700;
     margin-bottom: 30px;
     color: var(--text-primary);
-    
+
 }
 
 .metrics-container {
@@ -294,7 +294,8 @@ body {
     gap: 10px;
 }
 
-.view-btn, .message-btn {
+.view-btn,
+.message-btn {
     padding: 8px 16px;
     border: none;
     border-radius: var(--border-radius);
@@ -313,7 +314,8 @@ body {
     color: var(--text-secondary);
 }
 
-.view-btn:hover, .message-btn:hover {
+.view-btn:hover,
+.message-btn:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-sm);
 }
@@ -323,13 +325,13 @@ body {
     .metrics-container {
         grid-template-columns: repeat(2, 1fr);
     }
-    
+
     .section-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
     }
-    
+
     .search-filters {
         flex-direction: column;
     }
@@ -339,13 +341,13 @@ body {
     .metrics-container {
         grid-template-columns: 1fr;
     }
-    
+
     .student-card {
         flex-direction: column;
         align-items: flex-start;
         gap: 15px;
     }
-    
+
     .student-actions {
         width: 100%;
         justify-content: flex-end;
@@ -360,22 +362,25 @@ body {
 
 
 
-.details-container{
-   background-color: #00000094;  /* dark overlay */
-    display: flex;               /* center content */
+.details-container {
+    background-color: #00000094;
+    /* dark overlay */
+    display: flex;
+    /* center content */
     justify-content: center;
     align-items: center;
-    position: fixed;             /* use fixed, not absolute */
+    position: fixed;
+    /* use fixed, not absolute */
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
     padding: 20px;
     z-index: 9999;
-}  
+}
 
 
-.hidden{
+.hidden {
     display: none;
 }
 
@@ -386,7 +391,7 @@ body {
     max-width: 800px;
     margin: 0 auto;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    min-width : 600px;
+    min-width: 600px;
 }
 
 .dialog-header {
@@ -549,13 +554,13 @@ body {
 }
 
 @media (max-width: 768px) {
-    
-    
+
+
     .data-table th,
     .data-table td {
         padding: 8px;
     }
-    
+
     .data-table th {
         width: 120px;
         font-size: 13px;

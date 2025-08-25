@@ -23,7 +23,8 @@
       <div class="logo">Admin Dashboard</div>
       <!-- ...existing code... -->
       <div class="sid">
-        <a href="../forgot.html" class="logout-btn" style="text-decoration:none;">Change Password</a>
+        <button class="logout-btn" onclick="showChangePasswordModal()" style="text-decoration:none;">🔐 Change
+          Password</button>
         <button class="logout-btn" onclick="logout()">↗ Logout</button>
       </div>
 
@@ -88,13 +89,13 @@
           </select>
           <!-- Bulk Upload student -->
           <div class="file-input-wrapper">
-              <input type="file" id="bulkUploadStudent"  accept=".xlsx,.xls,.csv">
-              <label for="bulkUploadStudent" class="file-input-label">📤 Bulk Upload Student</label>
+            <input type="file" id="bulkUploadStudent" accept=".xlsx,.xls,.csv">
+            <label for="bulkUploadStudent" class="file-input-label">📤 Bulk Upload Student</label>
           </div>
           <!-- Bulk Upload Faculty -->
           <div class="file-input-wrapper">
-              <input type="file" id="bulkUploadFaculty"  accept=".xlsx,.xls,.csv">
-              <label for="bulkUploadFaculty" class="file-input-label">📤 Bulk Upload Faculty</label>
+            <input type="file" id="bulkUploadFaculty" accept=".xlsx,.xls,.csv">
+            <label for="bulkUploadFaculty" class="file-input-label">📤 Bulk Upload Faculty</label>
           </div>
 
 
@@ -103,20 +104,98 @@
         </div>
       </div>
 
-      <!-- Add/Edit User Form -->
-      <div id="userForm">
-        <input type="hidden" id="editIndex">
-        <div class="form-row">
-          <input type="text" id="userId" placeholder="User ID">
-          <input type="password" id="password" placeholder="Password">
-          <select id="role">
-            <option value="student">Student</option>
-            <option value="faculty">Faculty</option>
-          </select>
+      <!-- Role Selection Form -->
+      <div id="roleSelectionForm" style="display: none;">
+        <div class="form-header">
+          <h3>🎯 Select User Role</h3>
+          <p>Choose the type of user you want to create:</p>
+        </div>
+        <div class="role-options">
+          <div class="role-option" onclick="selectRole('student')">
+            <div class="role-icon">🎓</div>
+            <div class="role-info">
+              <h4>Student</h4>
+              <p>Create a new student account</p>
+            </div>
+          </div>
+          <div class="role-option" onclick="selectRole('faculty')">
+            <div class="role-icon">👨‍🏫</div>
+            <div class="role-info">
+              <h4>Faculty</h4>
+              <p>Create a new faculty account</p>
+            </div>
+          </div>
         </div>
         <div class="form-buttons">
-          <button class="btn-save" onclick="saveUser()">💾 Save</button>
-          <button class="btn-cancel" onclick="cancelUser()">❌ Cancel</button>
+          <button class="btn-cancel" onclick="cancelRoleSelection()">❌ Cancel</button>
+        </div>
+      </div>
+
+      <!-- Student Form -->
+      <div id="studentForm" style="display: none;">
+        <div class="form-header">
+          <h3>🎓 Create Student Account</h3>
+          <p>Fill in the student details:</p>
+        </div>
+        <input type="hidden" id="editIndex">
+        <div class="form-row">
+          <input type="text" id="studentUid" placeholder="Student UID">
+          <input type="text" id="studentFullName" placeholder="Full Name">
+        </div>
+        <div class="form-row">
+          <input type="number" id="studentSemester" placeholder="Semester" min="1" max="8">
+          <input type="text" id="studentSection" placeholder="Section (e.g., A, B, C)">
+        </div>
+        <div class="form-row">
+          <input type="number" id="studentYearOfAdmission" placeholder="Year of Admission" min="2000" max="2030">
+          <input type="password" id="studentPassword" placeholder="Password">
+        </div>
+        <div class="form-buttons">
+          <button class="btn-save" onclick="saveStudent()">💾 Save Student</button>
+          <button class="btn-cancel" onclick="cancelStudent()">❌ Cancel</button>
+        </div>
+      </div>
+
+      <!-- Faculty Form -->
+      <div id="facultyForm" style="display: none;">
+        <div class="form-header">
+          <h3>👨‍🏫 Create Faculty Account</h3>
+          <p>Fill in the faculty details:</p>
+        </div>
+        <input type="hidden" id="editIndex">
+        <div class="form-row">
+          <input type="email" id="facultyEmail" placeholder="Email Address">
+          <input type="password" id="facultyPassword" placeholder="Password">
+        </div>
+        <div class="form-row">
+          <input type="text" id="facultyFirstName" placeholder="First Name">
+          <input type="text" id="facultyLastName" placeholder="Last Name">
+        </div>
+        <div class="form-row">
+          <input type="tel" id="facultyContactNumber" placeholder="Contact Number">
+        </div>
+        <div class="form-buttons">
+          <button class="btn-save" onclick="saveFaculty()">💾 Save Faculty</button>
+          <button class="btn-cancel" onclick="cancelFaculty()">❌ Cancel</button>
+        </div>
+      </div>
+
+      <!-- Password Edit Form -->
+      <div id="passwordEditForm" style="display: none;">
+        <div class="form-header">
+          <h3>🔐 Change User Password</h3>
+          <p>Update password for user: <strong id="editingUserName"></strong></p>
+        </div>
+        <input type="hidden" id="passwordEditIndex">
+        <input type="hidden" id="passwordEditUserId">
+        <input type="hidden" id="passwordEditUserRole">
+        <div class="form-row">
+          <input type="password" id="newPassword" placeholder="New Password (min 8 characters)" required>
+          <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+        </div>
+        <div class="form-buttons">
+          <button class="btn-save" onclick="handleAdminPasswordChange()">💾 Update Password</button>
+          <button class="btn-cancel" onclick="cancelPasswordEdit()">❌ Cancel</button>
         </div>
       </div>
 
@@ -281,9 +360,11 @@
       <!-- Allocation Interface -->
       <div id="allocationInterface" class="allocation-section hidden">
         <h3 id="selectedTeacherTitle">Allocating Students</h3>
-        <p>Select students to allocate to this teacher (Max: 10)</p>
+        <p>Select students to allocate to this teacher (Max: 20)</p>
+
         <div id="studentAllocationGrid" class="student-allocation-grid"></div>
-        <div style="margin-top: 15px;">
+        <div class="allocation-buttons" style="margin-top: 15px;">
+          <button class="btn btn-success" onclick="generateRandomAllocation()">🎲 Random Allocation</button>
           <button class="btn btn-primary" onclick="confirmAllocation()">✅ Confirm Allocation</button>
           <button class="btn btn-cancel" onclick="cancelAllocation()">❌ Cancel</button>
         </div>
@@ -307,8 +388,8 @@
           <div class="metric-label">Total Students</div>
         </div>
         <div class="metric-card cgpa">
-          <div class="metric-value" id="avgCGPAMetric">-</div>
-          <div class="metric-label">Average CGPA</div>
+          <div class="metric-value" id="avgSGPAMetric">-</div>
+          <div class="metric-label">Average SGPA</div>
         </div>
         <div class="metric-card backlogs">
           <div class="metric-value" id="totalBacklogsMetric">-</div>
@@ -342,7 +423,7 @@
                   <th>Rank</th>
                   <th>Name</th>
                   <th>UID</th>
-                  <th>CGPA</th>
+                  <th>SGPA</th>
                 </tr>
               </thead>
               <tbody id="toppersTableBody">
@@ -442,7 +523,7 @@
           <div class="filter-item">
             <label>CGPA Range</label>
             <select id="cgpaRangeFilter" onchange="filterGeneralReport()">
-              <option value="">All CGPAs</option>
+              <option value="">All SGPAs</option>
               <option value="9-10">9.0 - 10.0</option>
               <option value="8-9">8.0 - 8.9</option>
               <option value="7-8">7.0 - 7.9</option>
@@ -470,7 +551,7 @@
                 <th>UID</th>
                 <th>Name</th>
                 <th>Semester</th>
-                <th>CGPA</th>
+                <th>SGPA</th>
                 <th>Backlogs</th>
                 <th>Domain</th>
                 <th>Career Goal</th>
@@ -486,9 +567,11 @@
         </div>
       </div>
     </div>
+
   </div>
 
   <!-- Student Details Modal -->
+
   <div class="details-container hidden" id="studentModal">
     <div class="dialog-container hidden">
       <div class="dialog-header">
@@ -512,39 +595,59 @@
               </tr>
               <tr>
                 <th>Full Name</th>
-                <td id="studentFullName">Rahul Sharma</td>
+                <td id="studentFullNam">Alice Smith</td>
               </tr>
               <tr>
                 <th>Section</th>
-                <td id="studentSection">A</td>
+                <td id="studentSection">B</td>
               </tr>
               <tr>
                 <th>Semester</th>
-                <td id="studentSemester">6</td>
+                <td id="studentSemester">3</td>
               </tr>
               <tr>
                 <th>Roll No./UID</th>
-                <td id="studentUID">21CE001234</td>
+                <td id="studentUID">S12346</td>
               </tr>
               <tr>
                 <th>Year of Admission</th>
                 <td id="studentYear">2021</td>
               </tr>
               <tr>
-                <th>Mobile No.</th>
-                <td id="studentMobile">+91 9876543210</td>
+                <th>Date of Birth</th>
+                <td id="studentDOB">2025-08-26</td>
               </tr>
               <tr>
-                <th>Email ID</th>
-                <td id="studentEmail">rahul.sharma@example.com</td>
+                <th>Gender</th>
+                <td id="studentGender">Male</td>
+              </tr>
+              <tr>
+                <th>Mobile No.</th>
+                <td id="studentMobile">9012901912</td>
+              </tr>
+              <tr>
+                <th>Personal Email ID</th>
+                <td id="studentPersonalEmail">mirehimanshu@gmail.com</td>
+              </tr>
+              <tr>
+                <th>College Email ID</th>
+                <td id="studentCollegeEmail">S@stvincentngp.edu.in</td>
               </tr>
               <tr>
                 <th>LinkedIn ID</th>
-                <td id="studentLinkedIn">linkedin.com/in/rahulsharma</td>
+                <td id="studentLinkedIn">dcvbv</td>
               </tr>
               <tr>
                 <th>Permanent Address</th>
-                <td id="studentAddress">123, MG Road, Sector 15, New Delhi - 110001</td>
+                <td id="studentAddress">anm sd</td>
+              </tr>
+              <tr>
+                <th>Emergency Contact Name</th>
+                <td id="emergencyContactName">xdfg</td>
+              </tr>
+              <tr>
+                <th>Emergency Contact Number</th>
+                <td id="emergencyContactNumber">8765432345</td>
               </tr>
             </table>
           </div>
@@ -560,35 +663,35 @@
             <table class="data-table">
               <tr>
                 <th>Father's Name</th>
-                <td id="fatherName">Vikash Sharma</td>
+                <td id="fatherName">mnad</td>
               </tr>
               <tr>
                 <th>Father's Mobile No.</th>
-                <td id="fatherMobile">+91 9876543211</td>
+                <td id="fatherMobile">1234567898</td>
               </tr>
               <tr>
                 <th>Father's Email ID</th>
-                <td id="fatherEmail">vikash.sharma@example.com</td>
+                <td id="fatherEmail">a@gmail.com</td>
               </tr>
               <tr>
                 <th>Father's Occupation</th>
-                <td id="fatherOccupation">Software Engineer</td>
+                <td id="fatherOccupation">dfvb</td>
               </tr>
               <tr>
                 <th>Mother's Name</th>
-                <td id="motherName">Priya Sharma</td>
+                <td id="motherName">jabs</td>
               </tr>
               <tr>
                 <th>Mother's Mobile No.</th>
-                <td id="motherMobile">+91 9876543212</td>
+                <td id="motherMobile">1234567876</td>
               </tr>
               <tr>
                 <th>Mother's Email ID</th>
-                <td id="motherEmail">priya.sharma@example.com</td>
+                <td id="motherEmail">fgb@gmail.com</td>
               </tr>
               <tr>
                 <th>Mother's Occupation</th>
-                <td id="motherOccupation">Teacher</td>
+                <td id="motherOccupation">fgbn</td>
               </tr>
             </table>
           </div>
@@ -604,19 +707,19 @@
             <table class="data-table">
               <tr>
                 <th>SSC (X) Percentage/Grade</th>
-                <td id="sscPercentage">92.5%</td>
+                <td id="sscPercentage">99%</td>
               </tr>
               <tr>
                 <th>SSC Year of Passing</th>
-                <td id="sscYear">2018</td>
+                <td id="sscYear">2023</td>
               </tr>
               <tr>
                 <th>HSSC (XII) Percentage/Grade</th>
-                <td id="hsscPercentage">90%</td>
+                <td id="hsscPercentage">91%</td>
               </tr>
               <tr>
                 <th>HSSC Year of Passing</th>
-                <td id="hsscYear">2020</td>
+                <td id="hsscYear">2024</td>
               </tr>
               <tr>
                 <th>Diploma Percentage/Grade</th>
@@ -640,49 +743,83 @@
             <table class="data-table">
               <tr>
                 <th>Semester 1 SGPA</th>
-                <td id="sem1SGPA">8.2</td>
+                <td id="sem1SGPA">9.1</td>
               </tr>
               <tr>
                 <th>Semester 2 SGPA</th>
-                <td id="sem2SGPA">8.4</td>
+                <td id="sem2SGPA">9.2</td>
               </tr>
               <tr>
                 <th>Semester 3 SGPA</th>
-                <td id="sem3SGPA">8.6</td>
+                <td id="sem3SGPA"><span class="empty-value">N/A</span></td>
               </tr>
               <tr>
                 <th>Semester 4 SGPA</th>
-                <td id="sem4SGPA">8.5</td>
+                <td id="sem4SGPA"><span class="empty-value">N/A</span></td>
               </tr>
               <tr>
                 <th>Semester 5 SGPA</th>
-                <td id="sem5SGPA">8.7</td>
+                <td id="sem5SGPA"><span class="empty-value">N/A</span></td>
               </tr>
               <tr>
                 <th>Semester 6 SGPA</th>
-                <td id="sem6SGPA">8.5</td>
+                <td id="sem6SGPA"><span class="empty-value">N/A</span></td>
               </tr>
               <tr>
                 <th>Semester 7 SGPA</th>
-                <td><span class="empty-value">N/A</span></td>
+                <td id="sem7SGPA"><span class="empty-value">N/A</span></td>
               </tr>
               <tr>
                 <th>Semester 8 SGPA</th>
-                <td><span class="empty-value">N/A</span></td>
+                <td id="sem8SGPA"><span class="empty-value">N/A</span></td>
               </tr>
               <tr>
                 <th>Current Semester</th>
-                <td id="currentSemester">6</td>
+                <td id="currentSemester">3</td>
               </tr>
               <tr>
                 <th>Number of Active Backlogs</th>
-                <td id="backlogCount">0</td>
+                <td id="backlogCount">2</td>
               </tr>
               <tr>
                 <th>Backlog Subject Names</th>
-                <td id="backlogSubjects"><span class="empty-value">None</span></td>
+                <td id="backlogSubjects">maths, english (Sem 1), Maths (Sem 2)</td>
+              </tr>
+              <tr>
+                <th>Current SGPA</th>
+                <td id="currentSGPA">9.2</td>
+              </tr>
+              <tr>
+                <th>Current CGPA</th>
+                <td id="currentCGPA">9.15</td>
               </tr>
             </table>
+          </div>
+        </div>
+
+        <!-- Detailed Past Education Records -->
+        <div class="section">
+          <div class="section-header" onclick="toggleSection(this)">
+            <span class="section-title">Detailed Past Education Records</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="section-content">
+            <div id="pastEducationDetails">
+              <!-- This will be populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Detailed Semester Performance -->
+        <div class="section">
+          <div class="section-header" onclick="toggleSection(this)">
+            <span class="section-title">Detailed Semester Performance</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="section-content">
+            <div id="semesterPerformanceDetails">
+              <!-- This will be populated by JavaScript -->
+            </div>
           </div>
         </div>
 
@@ -695,42 +832,55 @@
           <div class="section-content">
             <table class="data-table">
               <tr>
-                <th>Aptitude Test Score/Rank</th>
-                <td id="aptitudeScore">85/100</td>
+                <th>Aptitude Score/Rank</th>
+                <td id="aptitudeScore">N/A</td>
               </tr>
               <tr>
-                <th>Aptitude Test Date</th>
-                <td id="aptitudeDate">2023-10-15</td>
+                <th>Aptitude Date</th>
+                <td id="aptitudeDate">N/A</td>
               </tr>
               <tr>
-                <th>Co-Cubes Score/Rank</th>
-                <td id="cocubesScore">720/1000</td>
+                <th>Cocubes Score/Rank</th>
+                <td id="cocubesScore">N/A</td>
               </tr>
               <tr>
-                <th>Co-Cubes Date</th>
-                <td id="cocubesDate">2023-11-20</td>
+                <th>Cocubes Date</th>
+                <td id="cocubesDate">N/A</td>
               </tr>
               <tr>
-                <th>GATE/CAT Score/Rank</th>
-                <td id="gateScore">650 (GATE)</td>
+                <th>Gate Score/Rank</th>
+                <td id="gateScore">N/A</td>
               </tr>
               <tr>
-                <th>GATE/CAT Date</th>
-                <td id="gateDate">2024-02-10</td>
+                <th>Gate Date</th>
+                <td id="gateDate">N/A</td>
               </tr>
               <tr>
                 <th>Other Exam Name</th>
-                <td id="otherExamName">Google Data Analytics</td>
+                <td id="otherExamName"><span class="empty-value">N/A</span></td>
               </tr>
               <tr>
                 <th>Other Exam Score/Rank</th>
-                <td id="otherExamScore">Certified</td>
+                <td id="otherExamScore"><span class="empty-value">N/A</span></td>
               </tr>
               <tr>
                 <th>Other Exam Date</th>
-                <td id="otherExamDate">2023-08-05</td>
+                <td id="otherExamDate"><span class="empty-value">N/A</span></td>
               </tr>
             </table>
+          </div>
+        </div>
+
+        <!-- Detailed Career Activities -->
+        <div class="section">
+          <div class="section-header" onclick="toggleSection(this)">
+            <span class="section-title">Detailed Career Activities</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="section-content">
+            <div id="allCareerActivitiesDetails">
+              <!-- This will be populated by JavaScript -->
+            </div>
           </div>
         </div>
 
@@ -743,62 +893,88 @@
           <div class="section-content">
             <table class="data-table">
               <tr>
-                <th>Micro Project Title</th>
-                <td id="microProjectTitle">AI-powered Chatbot</td>
+                <th>Project 1 Title</th>
+                <td id="project1Title">N/A</td>
               </tr>
               <tr>
-                <th>Micro Project Guide</th>
-                <td id="microProjectGuide">Prof. Anil Kumar</td>
+                <th>Project 1 Description</th>
+                <td id="project1Description">N/A</td>
               </tr>
               <tr>
-                <th>Major Project Title</th>
-                <td id="majorProjectTitle">Inventory Management System</td>
+                <th>Project 2 Title</th>
+                <td id="project2Title">N/A</td>
               </tr>
               <tr>
-                <th>Major Project Guide</th>
-                <td id="majorProjectGuide">Prof. Sunita Verma</td>
+                <th>Project 2 Description</th>
+                <td id="project2Description">N/A</td>
               </tr>
               <tr>
                 <th>Internship 1 Company</th>
-                <td id="internship1Company">TechCorp Solutions</td>
+                <td id="internship1Company">N/A</td>
               </tr>
               <tr>
                 <th>Internship 1 Domain</th>
-                <td id="internship1Domain">Web Development</td>
+                <td id="internship1Domain">N/A</td>
               </tr>
               <tr>
                 <th>Internship 1 Type</th>
-                <td id="internship1Type">Physical</td>
+                <td id="internship1Type">N/A</td>
               </tr>
               <tr>
                 <th>Internship 1 Paid/Unpaid</th>
-                <td id="internship1Paid">Paid</td>
+                <td id="internship1Paid">N/A</td>
               </tr>
               <tr>
                 <th>Internship 1 Duration</th>
-                <td id="internship1Duration">2023-06-01 to 2023-08-01</td>
+                <td id="internship1Duration">N/A</td>
               </tr>
               <tr>
                 <th>Internship 2 Company</th>
-                <td id="internship2Company">DataTech Inc.</td>
+                <td id="internship2Company">N/A</td>
               </tr>
               <tr>
                 <th>Internship 2 Domain</th>
-                <td id="internship2Domain">Data Science</td>
+                <td id="internship2Domain">N/A</td>
               </tr>
               <tr>
                 <th>Internship 2 Type</th>
-                <td id="internship2Type">Online</td>
+                <td id="internship2Type">N/A</td>
               </tr>
               <tr>
                 <th>Internship 2 Paid/Unpaid</th>
-                <td id="internship2Paid">Unpaid</td>
+                <td id="internship2Paid">N/A</td>
               </tr>
               <tr>
                 <th>Internship 2 Duration</th>
-                <td id="internship2Duration">2023-12-01 to 2024-01-15</td>
+                <td id="internship2Duration">N/A</td>
               </tr>
             </table>
+          </div>
+        </div>
+
+        <!-- Detailed Projects -->
+        <div class="section">
+          <div class="section-header" onclick="toggleSection(this)">
+            <span class="section-title">Detailed Projects</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="section-content">
+            <div id="allProjectsDetails">
+              <!-- This will be populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Detailed Internships -->
+        <div class="section">
+          <div class="section-header" onclick="toggleSection(this)">
+            <span class="section-title">Detailed Internships</span>
+            <span class="expand-icon">▼</span>
+          </div>
+          <div class="section-content">
+            <div id="allInternshipsDetails">
+              <!-- This will be populated by JavaScript -->
+            </div>
           </div>
         </div>
 
@@ -814,10 +990,9 @@
                 <th>Participation Activities</th>
                 <td>
                   <div class="activity-list">
-                    <p>Name: CodeChef Monthly Contest, Date: 2023-09-10, Level: International,
-                      Awards: Rank 150</p>
-                    <p>Name: Smart India Hackathon, Date: 2023-12-15, Level: National, Awards:
-                      Finalist</p>
+                    <p>N/A</p>
+                    <p>N/A</p>
+                    <p>N/A</p>
                   </div>
                 </td>
               </tr>
@@ -825,10 +1000,9 @@
                 <th>Organized Activities</th>
                 <td>
                   <div class="activity-list">
-                    <p>Name: Tech Fest 2023, Date: 2023-03-20, Level: Institute, Remark: Coordinator
-                    </p>
-                    <p>Name: Coding Workshop, Date: 2023-05-10, Level: Department, Remark:
-                      Co-Coordinator</p>
+                    <p>N/A</p>
+                    <p>N/A</p>
+                    <p>N/A</p>
                   </div>
                 </td>
               </tr>
@@ -846,21 +1020,19 @@
             <table class="data-table">
               <tr>
                 <th>Strengths</th>
-                <td id="strengths">Strong problem-solving skills, Team leadership, Quick learner, Good communication
-                </td>
+                <td id="strengths">N/A</td>
               </tr>
               <tr>
                 <th>Weaknesses</th>
-                <td id="weaknesses">Time management, Public speaking anxiety</td>
+                <td id="weaknesses">N/A</td>
               </tr>
               <tr>
                 <th>Opportunities</th>
-                <td id="opportunities">Growing AI/ML industry, Remote work opportunities, Startup ecosystem</td>
+                <td id="opportunities">N/A</td>
               </tr>
               <tr>
                 <th>Challenges</th>
-                <td id="challenges">Balancing academics with skill development, Staying updated with latest technologies
-                </td>
+                <td id="challenges">N/A</td>
               </tr>
             </table>
           </div>
@@ -876,45 +1048,49 @@
             <table class="data-table">
               <tr>
                 <th>Career Objectives</th>
-                <td id="careerObjectives">Job, Higher studies</td>
+                <td id="careerObjectives">N/A</td>
               </tr>
               <tr>
                 <th>Specific Details</th>
-                <td id="careerDetails">Software engineer role in tech industry, Pursue MS in Computer Science</td>
+                <td id="careerDetails">N/A</td>
               </tr>
               <tr>
                 <th>Clarity and Preparedness</th>
-                <td id="clarityPreparedness">Good</td>
+                <td id="clarityPreparedness">N/A</td>
               </tr>
               <tr>
                 <th>Interested in Campus Placement</th>
-                <td id="campusPlacement">Yes</td>
+                <td id="campusPlacement">N/A</td>
               </tr>
               <tr>
-                <th>Interpersonal Skills (1-5)</th>
-                <td id="interpersonalSkills">4</td>
+                <th>Campus Placement Reasons</th>
+                <td id="campusPlacementReasons">N/A</td>
               </tr>
               <tr>
-                <th>Soft Skills</th>
-                <td id="softSkills">Presentation Skills, Writing</td>
+                <th>Programming Languages</th>
+                <td id="programmingLanguages">N/A</td>
+              </tr>
+              <tr>
+                <th>Technologies/Frameworks</th>
+                <td id="technologiesFrameworks">N/A</td>
+              </tr>
+              <tr>
+                <th>Familiar Tools/Platforms</th>
+                <td id="familiarToolsPlatforms">N/A</td>
               </tr>
               <tr>
                 <th>Domain of Interest</th>
                 <td id="domainOfInterest">
                   <div class="tags">
-                    <span class="tag">Web Development</span>
-                    <span class="tag">Machine Learning</span>
-                    <span class="tag">Data Science</span>
+                    <span class="tag">N/A</span>
+                    <span class="tag">N/A</span>
+                    <span class="tag">N/A</span>
                   </div>
                 </td>
               </tr>
               <tr>
-                <th>Additional Technical Skills Desired</th>
-                <td id="additionalSkills">Cloud Computing, Advanced Machine Learning</td>
-              </tr>
-              <tr>
                 <th>Expectations from Institute/Department</th>
-                <td id="expectations">Industry mentorship, Advanced technical workshops, Placement preparation</td>
+                <td id="expectations"><span class="empty-value">N/A</span></td>
               </tr>
             </table>
           </div>
@@ -941,7 +1117,53 @@
       </div>
     </div>
   </div>
+
+  <!-- Change Password Modal -->
+  <div id="changePasswordModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">🔐 Change My Password</h3>
+        <button class="close-btn" onclick="closeChangePasswordModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="adminChangePasswordForm">
+          <div class="form-group">
+            <label for="adminOldPassword">Current Password</label>
+            <div style="position: relative;">
+              <input type="password" id="adminOldPassword" placeholder="Enter your current password" required>
+              <span class="toggle-password" onclick="togglePasswordVisibility('adminOldPassword', this)">👁</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="adminNewPassword">New Password</label>
+            <div style="position: relative;">
+              <input type="password" id="adminNewPassword" placeholder="Enter new password (min 8 characters)" required
+                onkeyup="checkPasswordStrength(this.value)" onfocus="showPasswordStrength()"
+                onblur="hidePasswordStrength()">
+              <span class="toggle-password" onclick="togglePasswordVisibility('adminNewPassword', this)">👁</span>
+            </div>
+            <div id="passwordStrength" style="margin-top: 5px; font-size: 12px;"></div>
+          </div>
+          <div class="form-group">
+            <label for="adminConfirmPassword">Confirm New Password</label>
+            <div style="position: relative;">
+              <input type="password" id="adminConfirmPassword" placeholder="Confirm new password" required>
+              <span class="toggle-password" onclick="togglePasswordVisibility('adminConfirmPassword', this)">👁</span>
+            </div>
+          </div>
+          <div id="changePasswordMessage"
+            style="display: none; margin-top: 15px; padding: 10px; border-radius: 6px; text-align: center;"></div>
+          <div class="form-buttons">
+            <button type="submit" class="btn-save">💾 Update Password</button>
+            <button type="button" class="btn-cancel" onclick="closeChangePasswordModal()">❌ Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="./reports.js"></script>
   <script src="./adm.js"></script>
 </body>
