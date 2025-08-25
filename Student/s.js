@@ -11,8 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const reviewContent = document.getElementById('reviewContent');
     const campusPlacement = document.getElementById('campusPlacement');
     const placementReasonRow = document.getElementById('placementReasonRow');
-    const domainOtherCheckbox = document.getElementById('domainOtherCheckbox');
-    const domainOtherText = document.getElementById('domainOtherText');
+    const semesterSelect = document.getElementById('semester');
 
     // State variables
     let currentStep = 1;
@@ -29,16 +28,14 @@ document.addEventListener('DOMContentLoaded', () => {
         campusPlacement.addEventListener('change', togglePlacementReason);
     }
 
-    if (domainOtherCheckbox && domainOtherText) {
-        domainOtherCheckbox.addEventListener('change', toggleDomainOtherText);
+    if (semesterSelect) {
+        semesterSelect.addEventListener('change', updateSemesterVisibility);
     }
 
     // Add real-time validation
     form.querySelectorAll('input, select, textarea').forEach(field => {
         field.addEventListener('blur', () => {
-            if (field.hasAttribute('required')) {
-                validateField(field);
-            }
+            validateField(field);
         });
 
         field.addEventListener('input', () => {
@@ -52,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function initializeForm() {
         await loadStudentData();
         updateFormState();
+        updateSemesterVisibility();
     }
 
     async function loadStudentData() {
@@ -72,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (response.ok) {
                 const studentData = await response.json();
+                console.log(studentData);
                 populateFormWithData(studentData);
             } else if (response.status === 401) {
                 // Unauthorized - redirect to login
@@ -90,62 +89,181 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.full_name) document.getElementById('fullName').value = data.full_name;
         if (data.section) document.getElementById('section').value = data.section;
         if (data.semester) document.getElementById('semester').value = data.semester;
-        if (data.uid) document.getElementById('rollNo').value = data.uid;
         if (data.year_of_admission) document.getElementById('yearOfAdmission').value = data.year_of_admission;
 
         // Personal information
         if (data.personal_info) {
             const pi = data.personal_info;
-            if (pi.mobile_no) document.getElementById('mobile').value = pi.mobile_no;
-            if (pi.personal_email) document.getElementById('email').value = pi.personal_email;
+            if (pi.mobile_no) document.getElementById('mobileNo').value = pi.mobile_no;
+            if (pi.personal_email) document.getElementById('personalEmail').value = pi.personal_email;
             if (pi.college_email) document.getElementById('collegeEmail').value = pi.college_email;
-            if (pi.linked_in_id) document.getElementById('linkedinId').value = pi.linked_in_id;
+            if (pi.linked_in_id) document.getElementById('linkedInId').value = pi.linked_in_id;
             if (pi.permanent_address) document.getElementById('permanentAddress').value = pi.permanent_address;
             if (pi.dob) document.getElementById('dob').value = pi.dob;
             if (pi.gender) document.getElementById('gender').value = pi.gender;
             if (pi.father_name) document.getElementById('fatherName').value = pi.father_name;
-            if (pi.father_mobile_no) document.getElementById('fatherMobile').value = pi.father_mobile_no;
+            if (pi.father_mobile_no) document.getElementById('fatherMobileNo').value = pi.father_mobile_no;
             if (pi.father_email) document.getElementById('fatherEmail').value = pi.father_email;
             if (pi.father_occupation) document.getElementById('fatherOccupation').value = pi.father_occupation;
             if (pi.mother_name) document.getElementById('motherName').value = pi.mother_name;
-            if (pi.mother_mobile_no) document.getElementById('motherMobile').value = pi.mother_mobile_no;
+            if (pi.mother_mobile_no) document.getElementById('motherMobileNo').value = pi.mother_mobile_no;
             if (pi.mother_email) document.getElementById('motherEmail').value = pi.mother_email;
             if (pi.mother_occupation) document.getElementById('motherOccupation').value = pi.mother_occupation;
+            if (pi.emergency_contact_name) document.getElementById('emergencyContactName').value = pi.emergency_contact_name;
+            if (pi.emergency_contact_number) document.getElementById('emergencyContactNumber').value = pi.emergency_contact_number;
         }
 
         // Past education records
         if (data.past_education_records && data.past_education_records.length > 0) {
             const pastEd = data.past_education_records;
-            // Populate past education fields based on degree type
+
             pastEd.forEach(record => {
-                if (record.degree === 'SSC' || record.degree === 'X') {
-                    document.getElementById('sscPercentage').value = record.percentage || '';
-                    document.getElementById('sscYear').value = record.year_of_passing || '';
-                } else if (record.degree === 'HSSC' || record.degree === 'XII') {
-                    document.getElementById('hsscPercentage').value = record.percentage || '';
-                    document.getElementById('hsscYear').value = record.year_of_passing || '';
-                } else if (record.degree === 'Diploma') {
-                    document.getElementById('diplomaPercentage').value = record.percentage || '';
-                    document.getElementById('diplomaYear').value = record.year_of_passing || '';
+
+                if (record.exam_name === 'SSC' || record.degree === 'X') {
+                    console.log(record.percentage)
+                    if (record.percentage) document.getElementById('sscPercentage').value = record.percentage;
+                    if (record.year_of_passing) document.getElementById('sscYear').value = record.year_of_passing;
+                } else if (record.exam_name === 'HSSC' || record.degree === 'XII') {
+                    if (record.percentage) document.getElementById('hsscPercentage').value = record.percentage;
+                    if (record.year_of_passing) document.getElementById('hsscYear').value = record.year_of_passing;
                 }
             });
         }
 
+        // Post admission records
+        if (data.post_admission_records && data.post_admission_records.length > 0) {
+            const postEd = data.post_admission_records;
+            postEd.forEach(record => {
+                const semesterNum = record.semester;
+                if (semesterNum >= 1 && semesterNum <= 8) {
+                    const sgpaField = document.getElementById(`sem${semesterNum}SGPA`);
+                    const backlogField = document.getElementById(`sem${semesterNum}Backlog`);
+                    if (sgpaField && record.sgpa) sgpaField.value = record.sgpa;
+                    if (backlogField && record.backlog_subjects) backlogField.value = record.backlog_subjects;
+                }
+            });
+        }
+
+        // Career activities
+        if (data.career_activities && data.career_activities.length > 0) {
+            const activities = data.career_activities;
+            activities.forEach((activity, index) => {
+                if (index < 3) {
+                    const nameField = document.querySelector(`input[name="activity${index + 1}Name"]`);
+                    const scoreField = document.querySelector(`input[name="activity${index + 1}Score"]`);
+                    const dateField = document.querySelector(`input[name="activity${index + 1}Date"]`);
+                    if (nameField && activity.activity_name) nameField.value = activity.activity_name;
+                    if (scoreField && activity.score_rank) scoreField.value = activity.score_rank;
+                    if (dateField && activity.exam_date) dateField.value = activity.exam_date;
+                }
+            });
+        }
+
+        // Projects
+        if (data.projects && data.projects.length > 0) {
+            const projects = data.projects;
+            if (projects[0]) {
+                if (projects[0].title) document.getElementById('project1Title').value = projects[0].title;
+                if (projects[0].description) document.getElementById('project1Description').value = projects[0].description;
+            }
+            if (projects[1]) {
+                if (projects[1].title) document.getElementById('project2Title').value = projects[1].title;
+                if (projects[1].description) document.getElementById('project2Description').value = projects[1].description;
+            }
+        }
+
+        // Internships
+        if (data.internships && data.internships.length > 0) {
+            const internships = data.internships;
+            if (internships[0]) {
+                if (internships[0].company_name) document.getElementById('internship1Company').value = internships[0].company_name;
+                if (internships[0].domain) document.getElementById('internship1Domain').value = internships[0].domain;
+                if (internships[0].internship_type) document.getElementById('internship1Type').value = internships[0].internship_type;
+                if (internships[0].paid_unpaid) document.getElementById('internship1Paid').value = internships[0].paid_unpaid;
+                if (internships[0].start_date) document.getElementById('internship1Start').value = internships[0].start_date;
+                if (internships[0].end_date) document.getElementById('internship1End').value = internships[0].end_date;
+            }
+            if (internships[1]) {
+                if (internships[1].company_name) document.getElementById('internship2Company').value = internships[1].company_name;
+                if (internships[1].domain) document.getElementById('internship2Domain').value = internships[1].domain;
+                if (internships[1].internship_type) document.getElementById('internship2Type').value = internships[1].internship_type;
+                if (internships[1].paid_unpaid) document.getElementById('internship2Paid').value = internships[1].paid_unpaid;
+                if (internships[1].start_date) document.getElementById('internship2Start').value = internships[1].start_date;
+                if (internships[1].end_date) document.getElementById('internship2End').value = internships[1].end_date;
+            }
+        }
+
+        // Co-curricular participations
+        if (data.cocurricular_participations && data.cocurricular_participations.length > 0) {
+            const participations = data.cocurricular_participations;
+            participations.forEach((participation, index) => {
+                if (index < 3) {
+                    const nameField = document.querySelector(`input[name="participation${index + 1}Name"]`);
+                    const dateField = document.querySelector(`input[name="participation${index + 1}Date"]`);
+                    const levelField = document.querySelector(`select[name="participation${index + 1}Level"]`);
+                    const awardsField = document.querySelector(`input[name="participation${index + 1}Awards"]`);
+                    if (nameField && participation.name) nameField.value = participation.name;
+                    if (dateField && participation.date) dateField.value = participation.date;
+                    if (levelField && participation.level) levelField.value = participation.level;
+                    if (awardsField && participation.awards) awardsField.value = participation.awards;
+                }
+            });
+        }
+
+        // Co-curricular organizations
+        if (data.cocurricular_organizations && data.cocurricular_organizations.length > 0) {
+            const organizations = data.cocurricular_organizations;
+            organizations.forEach((org, index) => {
+                if (index < 3) {
+                    const nameField = document.querySelector(`input[name="organization${index + 1}Name"]`);
+                    const dateField = document.querySelector(`input[name="organization${index + 1}Date"]`);
+                    const levelField = document.querySelector(`select[name="organization${index + 1}Level"]`);
+                    const remarkField = document.querySelector(`input[name="organization${index + 1}Remark"]`);
+                    if (nameField && org.name) nameField.value = org.name;
+                    if (dateField && org.date) dateField.value = org.date;
+                    if (levelField && org.level) levelField.value = org.level;
+                    if (remarkField && org.remark) remarkField.value = org.remark;
+                }
+            });
+        }
+
+        // SWOC
+        if (data.swoc) {
+            if (data.swoc.strengths) document.getElementById('strengths').value = data.swoc.strengths;
+            if (data.swoc.weaknesses) document.getElementById('weaknesses').value = data.swoc.weaknesses;
+            if (data.swoc.opportunities) document.getElementById('opportunities').value = data.swoc.opportunities;
+            if (data.swoc.challenges) document.getElementById('challenges').value = data.swoc.challenges;
+        }
+
         // Career objective
         if (data.career_objective) {
-            const co = data.career_objective;
-            if (co.career_objective) document.getElementById('careerObjectives').value = co.career_objective;
-            if (co.domain_of_interest) document.getElementById('domainOfInterest').value = co.domain_of_interest;
-            if (co.additional_skills) document.getElementById('additionalSkills').value = co.additional_skills;
-            if (co.expectations) document.getElementById('expectations').value = co.expectations;
+            if (data.career_objective.career_goal) document.getElementById('careerGoal').value = data.career_objective.career_goal;
+            if (data.career_objective.specific_details) document.getElementById('specificDetails').value = data.career_objective.specific_details;
+            if (data.career_objective.clarity_preparedness) document.getElementById('clarityPreparedness').value = data.career_objective.clarity_preparedness;
+            if (data.career_objective.interested_in_campus_placement !== undefined) {
+
+                document.getElementById('campusPlacement').value = data.career_objective.interested_in_campus_placement ? 'true' : 'false';
+                togglePlacementReason();
+            }
+            if (data.career_objective.placement_reasons) document.getElementById('placementReasons').value = data.career_objective.placement_reasons;
         }
 
         // Skills
         if (data.skills) {
-            const skills = data.skills;
-            if (skills.technical_skills) document.getElementById('technicalSkills').value = skills.technical_skills;
-            if (skills.soft_skills) document.getElementById('softSkills').value = skills.soft_skills;
-            if (skills.interpersonal_skills) document.getElementById('interpersonalSkills').value = skills.interpersonal_skills;
+            if (data.skills.programming_languages) document.getElementById('programmingLanguages').value = data.skills.programming_languages;
+            if (data.skills.technologies_frameworks) document.getElementById('technologiesFrameworks').value = data.skills.technologies_frameworks;
+            if (data.skills.familiar_tools_platforms) document.getElementById('familiarToolsPlatforms').value = data.skills.familiar_tools_platforms;
+        }
+
+        // Domains of interest (checkboxes)
+
+        if (data.skills && data.skills.domains_of_interest) {
+            const domains = data.skills.domains_of_interest.split(',').map(d => d.trim());
+            document.querySelectorAll('input[name^="domain"]').forEach(checkbox => {
+                if (domains.includes(checkbox.value)) {
+                    checkbox.checked = true;
+                }
+            });
         }
 
         console.log('Form populated with existing student data');
@@ -199,35 +317,78 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function updateSemesterVisibility() {
+        const currentSemester = parseInt(semesterSelect.value) || 0;
+
+        // Hide all semester rows first
+        document.querySelectorAll('.semester-row').forEach((row, index) => {
+            const semesterNum = index + 1;
+            if (semesterNum >= currentSemester) {
+                row.style.display = 'none';
+            } else {
+                row.style.display = 'block';
+            }
+        });
+    }
+
     function validateStep(step) {
         const currentStepContent = document.querySelector(`.step-content[data-step="${step}"]`);
         const requiredFields = currentStepContent.querySelectorAll('[required]');
         let isValid = true;
 
-        // Set dynamic required attributes for step 8
+        // Special validation for step 8 (SWOC) - all fields required
         if (step === 8) {
-            if (campusPlacement) {
-                const reason = document.getElementById('placementReason');
-                if (reason) reason.required = (campusPlacement.value === 'no');
-            }
+            const swocFields = ['strengths', 'weaknesses', 'opportunities', 'challenges'];
+            swocFields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field && !field.value.trim()) {
+                    field.required = true;
+                    if (!validateField(field)) {
+                        isValid = false;
+                    }
+                }
+            });
+        }
 
-            if (domainOtherCheckbox && domainOtherText) {
-                domainOtherText.required = domainOtherCheckbox.checked;
+        // Special validation for step 9 (Career Objectives) - all fields required
+        if (step === 9) {
+            const careerFields = ['careerGoal', 'clarityPreparedness', 'campusPlacement'];
+            careerFields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field && !field.value.trim()) {
+                    field.required = true;
+                    if (!validateField(field)) {
+                        isValid = false;
+                    }
+                }
+            });
+
+            // Validate domains checkboxes - at least one must be selected
+            const domainCheckboxes = document.querySelectorAll('input[name^="domain"]');
+            const checkedDomains = Array.from(domainCheckboxes).filter(cb => cb.checked);
+            if (checkedDomains.length === 0) {
+                isValid = false;
+                // Show error for domains
+                const domainsContainer = document.querySelector('label[for="domainsOfInterest"]').parentElement;
+                const errorDiv = domainsContainer.querySelector('.error-message') || document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = 'Please select at least one domain of interest';
+                errorDiv.style.display = 'block';
+                if (!domainsContainer.querySelector('.error-message')) {
+                    domainsContainer.appendChild(errorDiv);
+                }
             }
         }
 
+        // Validate required fields
         for (let field of requiredFields) {
             if (!validateField(field)) {
                 isValid = false;
-
                 // Scroll to first error field
                 field.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                break; // Only scroll to the first error
+                break;
             }
         }
-
-        // Special validation for step 8 (career objectives) - removed checkbox validation since using select dropdown
-        // The required validation for the select dropdown is handled by the standard required field validation above
 
         return isValid;
     }
@@ -252,24 +413,30 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             // Field-specific validation
             switch (field.id) {
-                case 'mobile':
-                case 'fatherMobile':
-                case 'motherMobile':
+                case 'mobileNo':
+                case 'fatherMobileNo':
+                case 'motherMobileNo':
+                case 'emergencyContactNumber':
                     if (!isValidPhone(field.value)) {
                         fieldValid = false;
                         errorMsg = 'Please enter a valid 10-digit mobile number';
                     }
                     break;
-                case 'email':
+                case 'personalEmail':
                 case 'fatherEmail':
                 case 'motherEmail':
-                case 'collegeEmail':
                     if (!isValidEmail(field.value)) {
                         fieldValid = false;
                         errorMsg = 'Please enter a valid email address';
                     }
                     break;
-                case 'admissionYear':
+                case 'collegeEmail':
+                    if (!isValidCollegeEmail(field.value)) {
+                        fieldValid = false;
+                        errorMsg = 'Please enter a valid college email address ending with @stvincentngp.edu.in';
+                    }
+                    break;
+                case 'yearOfAdmission':
                     if (!isValidYear(field.value)) {
                         fieldValid = false;
                         errorMsg = 'Please enter a valid year between 2000 and current year';
@@ -277,34 +444,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 case 'sscPercentage':
                 case 'hsscPercentage':
-                case 'diplomaPercentage':
                     if (!isValidPercentage(field.value)) {
                         fieldValid = false;
                         errorMsg = 'Please enter a valid percentage (0-100)';
                     }
                     break;
                 case 'sscYear':
-                    if (!isValidPassingYear(field.value, 'ssc')) {
-                        fieldValid = false;
-                        errorMsg = 'Please enter a valid passing year for SSC';
-                    }
-                    break;
                 case 'hsscYear':
-                    if (!isValidPassingYear(field.value, 'hssc')) {
+                    if (!isValidPassingYear(field.value)) {
                         fieldValid = false;
-                        errorMsg = 'Please enter a valid passing year for HSSC';
+                        errorMsg = 'Please enter a valid passing year (less than current year)';
                     }
-                    break;
-                case 'placementReason':
-                    errorMsg = 'Please specify the reasons';
-                    break;
-                case 'domainOtherText':
-                    errorMsg = 'Please specify the other domain';
                     break;
                 case 'semester':
                     if (!isValidSemester(field.value)) {
                         fieldValid = false;
                         errorMsg = 'Semester must be between 1 and 8';
+                    }
+                    break;
+                case 'sem1SGPA':
+                case 'sem2SGPA':
+                case 'sem3SGPA':
+                case 'sem4SGPA':
+                case 'sem5SGPA':
+                case 'sem6SGPA':
+                case 'sem7SGPA':
+                case 'sem8SGPA':
+                    if (!isValidSGPA(field.value)) {
+                        fieldValid = false;
+                        errorMsg = 'SGPA must be between 0 and 10';
                     }
                     break;
             }
@@ -330,12 +498,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const errorMessage = formGroup.querySelector('.error-message');
 
         field.classList.remove('error');
-        errorMessage.style.display = 'none';
+        if (errorMessage) {
+            errorMessage.style.display = 'none';
+        }
     }
 
     // Validation helper functions
     function isValidEmail(email) {
         const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email.trim());
+    }
+
+    function isValidCollegeEmail(email) {
+        const re = /^[^\s@]+@stvincentngp\.edu\.in$/;
         return re.test(email.trim());
     }
 
@@ -352,7 +527,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function isValidPercentage(value) {
         const numValue = parseFloat(value);
-        return !isNaN(numValue) && numValue >= 0 && numValue <= 100;
+        return !isNaN(numValue) && numValue >= 0 && numValue < 100;
     }
 
     function isValidSemester(semester) {
@@ -360,35 +535,27 @@ document.addEventListener('DOMContentLoaded', () => {
         return !isNaN(numSemester) && numSemester >= 1 && numSemester <= 8;
     }
 
-    function isValidPassingYear(year, type) {
+    function isValidPassingYear(year) {
         const numYear = parseInt(year);
         const currentYear = new Date().getFullYear();
+        return !isNaN(numYear) && numYear >= 2000 && numYear < currentYear;
+    }
 
-        if (isNaN(numYear)) return false;
-
-        // SSC should be at least 5 years before current year
-        if (type === 'ssc') {
-            return numYear >= 2000 && numYear <= currentYear - 5;
-        }
-
-        // HSSC can be up to current year (allowing current year students)
-        if (type === 'hssc') {
-            return numYear >= 2000 && numYear <= currentYear;
-        }
-
-        return numYear >= 2000 && numYear <= currentYear;
+    function isValidSGPA(sgpa) {
+        const numSGPA = parseFloat(sgpa);
+        return !isNaN(numSGPA) && numSGPA >= 0 && numSGPA <= 10;
     }
 
     function togglePlacementReason() {
-        if (campusPlacement.value === 'no') {
+
+
+        if (campusPlacement === 'false') {
             placementReasonRow.style.display = 'block';
+            document.getElementById('placementReasons').required = true;
         } else {
             placementReasonRow.style.display = 'none';
+            document.getElementById('placementReasons').required = false;
         }
-    }
-
-    function toggleDomainOtherText() {
-        domainOtherText.style.display = domainOtherCheckbox.checked ? 'inline-block' : 'none';
     }
 
     function populateReviewContent() {
@@ -399,35 +566,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const sections = [
             {
                 title: 'Student\'s Personal Information',
-                fields: ['department', 'fullName', 'semesterSection', 'rollNo', 'admissionYear', 'mobile', 'email', 'linkedin', 'permanentAddress']
+                fields: ['fullName', 'section', 'semester', 'yearOfAdmission', 'mobileNo', 'personalEmail', 'collegeEmail', 'linkedInId', 'permanentAddress', 'dob', 'gender']
             },
             {
                 title: 'Parent\'s Information',
-                fields: ['fatherName', 'fatherMobile', 'fatherEmail', 'fatherOccupation', 'motherName', 'motherMobile', 'motherEmail', 'motherOccupation']
+                fields: ['fatherName', 'fatherMobileNo', 'fatherEmail', 'fatherOccupation', 'motherName', 'motherMobileNo', 'motherEmail', 'motherOccupation', 'emergencyContactName', 'emergencyContactNumber']
             },
             {
                 title: 'Academic Information (Before Admission)',
-                fields: ['sscPercentage', 'sscYear', 'hsscPercentage', 'hsscYear', 'diplomaPercentage', 'diplomaYear', 'entranceExam', 'entranceScore', 'entranceYear', 'otherQualification', 'otherPercentage', 'otherYear']
+                fields: ['sscPercentage', 'sscYear', 'hsscPercentage', 'hsscYear']
             },
             {
                 title: 'Academic Information (After Admission)',
-                fields: ['sem1Year', 'sem1SGPA', 'sem1Rank', 'sem1Awards', 'sem2Year', 'sem2SGPA', 'sem2Rank', 'sem2Awards', 'sem3Year', 'sem3SGPA', 'sem3Rank', 'sem3Awards', 'sem1Backlogs', 'sem2Backlogs', 'sem3Backlogs']
+                fields: ['sem1SGPA', 'sem1Backlog', 'sem2SGPA', 'sem2Backlog', 'sem3SGPA', 'sem3Backlog', 'sem4SGPA', 'sem4Backlog', 'sem5SGPA', 'sem5Backlog', 'sem6SGPA', 'sem6Backlog', 'sem7SGPA', 'sem7Backlog', 'sem8SGPA', 'sem8Backlog']
             },
             {
-                title: 'Performance in Career Development Activities',
-                fields: ['aptitudeScore', 'aptitudeDate', 'cocubesScore', 'cocubesDate', 'gatecatScore', 'gatecatDate', 'otherExamName', 'otherExamScore', 'otherExamDate']
+                title: 'Career Development Activities',
+                fields: ['activity1Name', 'activity1Score', 'activity1Date', 'activity2Name', 'activity2Score', 'activity2Date', 'activity3Name', 'activity3Score', 'activity3Date']
             },
             {
                 title: 'Project and Internship Details',
-                fields: ['microProjectTitle', 'microProjectGuide', 'majorProjectTitle', 'majorProjectGuide', 'internship1Company', 'internship1Domain', 'internship1Type', 'internship1Paid', 'internship1Start', 'internship1End', 'internship2Company', 'internship2Domain', 'internship2Type', 'internship2Paid', 'internship2Start', 'internship2End']
+                fields: ['project1Title', 'project1Description', 'project2Title', 'project2Description', 'internship1Company', 'internship1Domain', 'internship1Type', 'internship1Paid', 'internship1Start', 'internship1End', 'internship2Company', 'internship2Domain', 'internship2Type', 'internship2Paid', 'internship2Start', 'internship2End']
             },
             {
                 title: 'Co-Curricular Activities',
                 fields: [] // Will be handled separately
             },
             {
+                title: 'SWOC Analysis',
+                fields: ['strengths', 'weaknesses', 'opportunities', 'challenges']
+            },
+            {
                 title: 'Career Objectives and Skills',
-                fields: ['careerObjectives', 'careerDetails', 'careerPreparedness', 'campusPlacement', 'placementReason', 'interpersonalSkills', 'softSkills', 'additionalSkills', 'expectations', 'mentorSignature']
+                fields: ['careerGoal', 'specificDetails', 'clarityPreparedness', 'campusPlacement', 'placementReasons', 'programmingLanguages', 'technologiesFrameworks', 'familiarToolsPlatforms']
             }
         ];
 
@@ -436,22 +607,26 @@ document.addEventListener('DOMContentLoaded', () => {
             let sectionHTML = `<h4>${section.title}</h4><div class="review-section">`;
 
             section.fields.forEach(field => {
-                if (field === 'careerObjectives') {
-                    const value = formData.get('careerObjectives');
-                    if (value) {
-                        sectionHTML += `<p><strong>Career Objectives:</strong> ${value}</p>`;
-                        sectionHasContent = true;
-                    }
-                } else {
-                    const value = formData.get(field);
-                    if (value) {
-                        const label = document.querySelector(`label[for="${field}"]`)?.textContent?.replace(' *', '') ||
-                            document.querySelector(`label[for="${field}"]`)?.textContent || field;
-                        sectionHTML += `<p><strong>${label}:</strong> ${value}</p>`;
-                        sectionHasContent = true;
-                    }
+                const value = formData.get(field);
+                if (value) {
+                    const label = document.querySelector(`label[for="${field}"]`)?.textContent?.replace(' *', '') ||
+                        document.querySelector(`label[for="${field}"]`)?.textContent || field;
+                    sectionHTML += `<p><strong>${label}:</strong> ${value}</p>`;
+                    sectionHasContent = true;
                 }
             });
+
+            // Handle domains checkboxes
+            if (section.title === 'Career Objectives and Skills') {
+                const selectedDomains = [];
+                document.querySelectorAll('input[name^="domain"]:checked').forEach(checkbox => {
+                    selectedDomains.push(checkbox.value);
+                });
+                if (selectedDomains.length > 0) {
+                    sectionHTML += `<p><strong>Domains of Interest:</strong> ${selectedDomains.join(', ')}</p>`;
+                    sectionHasContent = true;
+                }
+            }
 
             sectionHTML += '</div>';
 
@@ -532,43 +707,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function transformFormDataToAPI(rawData) {
-        // Collect co-curricular activities
-        const activities = [];
-        document.querySelectorAll('.activity-row').forEach(row => {
-            const activityData = {};
-            row.querySelectorAll('input, select').forEach(input => {
-                if (input.value) {
-                    activityData[input.name || input.getAttribute('placeholder')] = input.value;
-                }
-            });
-            if (Object.keys(activityData).length > 0) {
-                activities.push(activityData);
-            }
+        // Helper function to set default value
+        const setDefault = (value) => value && value.trim() ? value.trim() : "N/A";
+
+        // Collect selected domains
+        const selectedDomains = [];
+        document.querySelectorAll('input[name^="domain"]:checked').forEach(checkbox => {
+            selectedDomains.push(checkbox.value);
         });
 
         // Transform data to match API schema
         const apiData = {
-            // Basic student info
+            // Basic student info (only semester and section allowed for students)
             semester: rawData.semester ? parseInt(rawData.semester) : null,
             section: rawData.section || null,
 
             // Personal information
             personal_info: {
-                mobile_no: rawData.mobile || '',
-                personal_email: rawData.email || '',
-                college_email: rawData.collegeEmail || '',
-                linked_in_id: rawData.linkedinId || '',
-                permanent_address: rawData.permanentAddress || '',
+                mobile_no: setDefault(rawData.mobileNo),
+                personal_email: setDefault(rawData.personalEmail),
+                college_email: setDefault(rawData.collegeEmail),
+                linked_in_id: setDefault(rawData.linkedInId),
+                permanent_address: setDefault(rawData.permanentAddress),
                 dob: rawData.dob || null,
-                gender: rawData.gender || '',
-                father_name: rawData.fatherName || '',
-                father_mobile_no: rawData.fatherMobile || '',
-                father_email: rawData.fatherEmail || '',
-                father_occupation: rawData.fatherOccupation || '',
-                mother_name: rawData.motherName || '',
-                mother_mobile_no: rawData.motherMobile || '',
-                mother_email: rawData.motherEmail || '',
-                mother_occupation: rawData.motherOccupation || ''
+                gender: setDefault(rawData.gender),
+                father_name: setDefault(rawData.fatherName),
+                father_mobile_no: setDefault(rawData.fatherMobileNo),
+                father_email: setDefault(rawData.fatherEmail),
+                father_occupation: setDefault(rawData.fatherOccupation),
+                mother_name: setDefault(rawData.motherName),
+                mother_mobile_no: setDefault(rawData.motherMobileNo),
+                mother_email: setDefault(rawData.motherEmail),
+                mother_occupation: setDefault(rawData.motherOccupation),
+                emergency_contact_name: setDefault(rawData.emergencyContactName),
+                emergency_contact_number: setDefault(rawData.emergencyContactNumber)
             },
 
             // Past education records
@@ -587,73 +759,110 @@ document.addEventListener('DOMContentLoaded', () => {
             internships: [],
 
             // Co-curricular participations
-            cocurricular_participations: activities,
+            cocurricular_participations: [],
+
+            // Co-curricular organizations
+            cocurricular_organizations: [],
+
+            // SWOC
+            swoc: {
+                strengths: setDefault(rawData.strengths),
+                weaknesses: setDefault(rawData.weaknesses),
+                opportunities: setDefault(rawData.opportunities),
+                challenges: setDefault(rawData.challenges)
+            },
 
             // Career objective
             career_objective: {
-                career_objective: rawData.careerObjectives || '',
-                domain_of_interest: rawData.domainOfInterest || '',
-                additional_skills: rawData.additionalSkills || '',
-                expectations: rawData.expectations || ''
+                career_goal: setDefault(rawData.careerGoal),
+                specific_details: setDefault(rawData.specificDetails),
+                clarity_preparedness: setDefault(rawData.clarityPreparedness),
+                interested_in_campus_placement: rawData.campusPlacement === 'true',
+                campus_placement_reasons: setDefault(rawData.placementReasons),
+
             },
 
             // Skills
             skills: {
-                technical_skills: rawData.technicalSkills || '',
-                soft_skills: rawData.softSkills || '',
-                interpersonal_skills: rawData.interpersonalSkills || ''
+                programming_languages: setDefault(rawData.programmingLanguages),
+                technologies_frameworks: setDefault(rawData.technologiesFrameworks),
+                familiar_tools_platforms: setDefault(rawData.familiarToolsPlatforms),
+                domains_of_interest: selectedDomains.length > 0 ? selectedDomains.join(', ') : "N/A"
             }
         };
 
         // Add past education records
-        if (rawData.sscPercentage || rawData.sscYear) {
-            apiData.past_education_records.push({
-                degree: 'SSC',
-                percentage: parseFloat(rawData.sscPercentage) || null,
-                year_of_passing: parseInt(rawData.sscYear) || null
-            });
+        if (rawData.sscYear && rawData.sscYear.trim() !== '') {
+            const sscYear = parseInt(rawData.sscYear);
+            if (!isNaN(sscYear) && sscYear > 0) {
+                apiData.past_education_records.push({
+                    exam_name: 'SSC',
+                    percentage: parseFloat(rawData.sscPercentage) || null,
+                    year_of_passing: sscYear
+                });
+            }
         }
 
-        if (rawData.hsscPercentage || rawData.hsscYear) {
-            apiData.past_education_records.push({
-                degree: 'HSSC',
-                percentage: parseFloat(rawData.hsscPercentage) || null,
-                year_of_passing: parseInt(rawData.hsscYear) || null
-            });
+        if (rawData.hsscYear && rawData.hsscYear.trim() !== '') {
+            const hsscYear = parseInt(rawData.hsscYear);
+            if (!isNaN(hsscYear) && hsscYear > 0) {
+                apiData.past_education_records.push({
+                    exam_name: 'HSSC',
+                    percentage: parseFloat(rawData.hsscPercentage) || null,
+                    year_of_passing: hsscYear
+                });
+            }
         }
 
-        if (rawData.diplomaPercentage || rawData.diplomaYear) {
-            apiData.past_education_records.push({
-                degree: 'Diploma',
-                percentage: parseFloat(rawData.diplomaPercentage) || null,
-                year_of_passing: parseInt(rawData.diplomaYear) || null
-            });
+        // Add post admission records
+        for (let i = 1; i <= 8; i++) {
+            const sgpa = rawData[`sem${i}SGPA`];
+            const backlog = rawData[`sem${i}Backlog`];
+            if (sgpa || backlog) {
+                apiData.post_admission_records.push({
+                    semester: i,
+                    sgpa: parseFloat(sgpa) || null,
+                    backlog_subjects: setDefault(backlog)
+                });
+            }
+        }
+
+        // Add career activities
+        for (let i = 1; i <= 3; i++) {
+            const name = rawData[`activity${i}Name`];
+            const score = rawData[`activity${i}Score`];
+            const date = rawData[`activity${i}Date`];
+            if (name || score || date) {
+                apiData.career_activities.push({
+                    activity_name: setDefault(name),
+                    score_rank: setDefault(score),
+                    exam_date: date || null
+                });
+            }
         }
 
         // Add projects
-        if (rawData.microProjectTitle) {
+        if (rawData.project1Title) {
             apiData.projects.push({
-                title: rawData.microProjectTitle,
-                description: 'Micro Project',
-                guide: rawData.microProjectGuide || ''
+                title: setDefault(rawData.project1Title),
+                description: setDefault(rawData.project1Description)
             });
         }
 
-        if (rawData.majorProjectTitle) {
+        if (rawData.project2Title) {
             apiData.projects.push({
-                title: rawData.majorProjectTitle,
-                description: 'Major Project',
-                guide: rawData.majorProjectGuide || ''
+                title: setDefault(rawData.project2Title),
+                description: setDefault(rawData.project2Description)
             });
         }
 
         // Add internships
         if (rawData.internship1Company) {
             apiData.internships.push({
-                company: rawData.internship1Company,
-                domain: rawData.internship1Domain || '',
-                type: rawData.internship1Type || '',
-                is_paid: rawData.internship1Paid === 'paid',
+                company_name: setDefault(rawData.internship1Company),
+                domain: setDefault(rawData.internship1Domain),
+                internship_type: setDefault(rawData.internship1Type),
+                paid_unpaid: rawData.internship1Paid === 'Paid' ? 'Paid' : 'Unpaid',
                 start_date: rawData.internship1Start || null,
                 end_date: rawData.internship1End || null
             });
@@ -661,13 +870,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (rawData.internship2Company) {
             apiData.internships.push({
-                company: rawData.internship2Company,
-                domain: rawData.internship2Domain || '',
-                type: rawData.internship2Type || '',
-                is_paid: rawData.internship2Paid === 'paid',
+                company_name: setDefault(rawData.internship2Company),
+                domain: setDefault(rawData.internship2Domain),
+                internship_type: setDefault(rawData.internship2Type),
+                paid_unpaid: rawData.internship2Paid === 'Paid' ? 'Paid' : 'Unpaid',
                 start_date: rawData.internship2Start || null,
                 end_date: rawData.internship2End || null
             });
+        }
+
+        // Add co-curricular participations
+        for (let i = 1; i <= 3; i++) {
+            const name = rawData[`participation${i}Name`];
+            const date = rawData[`participation${i}Date`];
+            const level = rawData[`participation${i}Level`];
+            const awards = rawData[`participation${i}Awards`];
+            if (name || date || level || awards) {
+                apiData.cocurricular_participations.push({
+                    name: setDefault(name),
+                    date: date || null,
+                    level: setDefault(level),
+                    awards: setDefault(awards)
+                });
+            }
+        }
+
+        // Add co-curricular organizations
+        for (let i = 1; i <= 3; i++) {
+            const name = rawData[`organization${i}Name`];
+            const date = rawData[`organization${i}Date`];
+            const level = rawData[`organization${i}Level`];
+            const remark = rawData[`organization${i}Remark`];
+            if (name || date || level || remark) {
+                apiData.cocurricular_organizations.push({
+                    name: setDefault(name),
+                    date: date || null,
+                    level: setDefault(level),
+                    remark: setDefault(remark)
+                });
+            }
         }
 
         // Remove empty arrays and null values
@@ -678,6 +919,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 delete apiData[key];
             }
         });
+
+        // Debug logging
+        console.log('Sending data to backend:', JSON.stringify(apiData, null, 2));
 
         return apiData;
     }

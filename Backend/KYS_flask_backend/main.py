@@ -14,6 +14,7 @@ from flask_jwt_extended import (
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import timedelta
+import jwt
 
 # --------------------------------------
 # App & Config
@@ -26,7 +27,59 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
-CORS(app)
+# CORS configuration
+from flask_cors import CORS
+
+# Enable CORS for all routes
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+
+
+# Test endpoint to verify server is working
+@app.route("/test", methods=["GET", "OPTIONS"])
+def test_endpoint():
+    if request.method == "OPTIONS":
+        response = jsonify({"message": "OK"})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        return response
+    return jsonify({"message": "Server is running!"})
+
+# Simple CORS test endpoint
+@app.route("/cors-test", methods=["GET", "POST", "OPTIONS"])
+def cors_test():
+    if request.method == "OPTIONS":
+        response = jsonify({"message": "CORS preflight OK"})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        return response
+    return jsonify({"message": "CORS test successful", "method": request.method})
+
+# Health check endpoint
+@app.route("/health", methods=["GET", "OPTIONS"])
+def health_check():
+    if request.method == "OPTIONS":
+        response = jsonify({"status": "healthy"})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        return response
+    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
+
+# Error handlers
+@app.errorhandler(404)
+def not_found(error):
+    response = jsonify({"error": "Not found"})
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response, 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    response = jsonify({"error": "Internal server error"})
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response, 500
 # --------------------------------------
 # Models
 # --------------------------------------
@@ -37,10 +90,12 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False)  # admin, student, faculty
 
     # relation one-to-one
-    student_profile = db.relationship("Student", backref="user", uselist=False)
-    faculty_profile = db.relationship("Faculty", backref="user", uselist=False)
+    student_profile = db.relationship("Student", backref="user", uselist=False, cascade="all, delete-orphan")
+    faculty_profile = db.relationship("Faculty", backref="user", uselist=False, cascade="all, delete-orphan")
 
     def check_password(self, password):
+        print(self.password_hash)
+        print(password)
         return check_password_hash(self.password_hash, password)
 
 
@@ -249,21 +304,38 @@ def generate_password(length=8):
     return ''.join(random.choice(chars) for _ in range(length))
 
 
+
 def role_required(roles):
     """Decorator factory for role based access"""
     def wrapper(fn):
         from functools import wraps
         @wraps(fn)
-        @jwt_required()
         def decorated(*args, **kwargs):
-            current_user_id = get_jwt_identity()
-            user = db.session.get(User, current_user_id)
-            if user and user.role in roles:
+            # Handle OPTIONS requests first (before JWT verification)
+            if request.method == 'OPTIONS':
+                print("DEBUG: Handling OPTIONS preflight request")
                 return fn(*args, **kwargs)
-            return jsonify({"error": "Forbidden"}), 403
+            
+            # For non-OPTIONS requests, apply JWT verification
+            @jwt_required()
+            def jwt_protected_function():
+                current_user_id = get_jwt_identity()
+                user = db.session.get(User, current_user_id)
+                
+                if not user:
+                    return jsonify({"error": "User not found"}), 404
+                
+                if user.role not in roles:
+                    return jsonify({"error": "Forbidden: Insufficient permissions"}), 403
+                
+                return fn(*args, **kwargs)
+            
+            return jwt_protected_function()
+            
         return decorated
     return wrapper
 
+    
 def split_full_name(full_name):
     parts = full_name.strip().split()
     first_name = parts[0] if len(parts) > 0 else ""
@@ -389,14 +461,17 @@ def serialize_model(obj):
 # Auth Endpoints
 # --------------------------------------
 
-@app.route("/api/test", methods=["GET"])
-def test_endpoint():
-    """Test endpoint to check API connectivity"""
-    return jsonify({
-        "status": "success", 
-        "message": "API is working!",
-        "timestamp": datetime.now().isoformat()
-    }), 200
+
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        response = jsonify()
+        response.headers.add("Access-Control-Allow-Origin", "http://127.0.0.1:5501")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        response.headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+        response.headers.add("Access-Control-Allow-Credentials", "true")
+        return response
+
 
 @app.route("/api/auth/login", methods=["POST"])
 def login():
@@ -620,11 +695,13 @@ def bulk_register_students():
 #     return jsonify({"error": "Direct student creation disabled. Use User Management."}), 400
 
 @app.route("/api/auth/change-password", methods=["POST"])
-@role_required(["student", "faculty"])
+@role_required(["student", "faculty", "admin"])
 def change_password():
     data = request.get_json()
+    print(data)
     old_password, new_password = data.get("old_password"), data.get("new_password")
     user = db.session.get(User, get_jwt_identity())
+    print(type(user))
     
     if not user.check_password(old_password):
         return jsonify({"error": "Old password incorrect"}), 400
@@ -833,23 +910,23 @@ def search_students():
     results = query.all()
     
     return jsonify([{
-        "id": s.id,
         "uid": s.uid,
-        "firstName": s.first_name,
-        "middleName": s.middle_name,
-        "lastName": s.last_name,
-        "fullName": s.full_name,
+        "full_name": s.full_name,
         "semester": s.semester,
         "section": s.section,
-        "year": s.year_of_admission,
-        "mentorId": s.mentor_id,
-        "profile_url": f"/students/{s.uid}",
-        "post_admission_records": [serialize_model(rec) for rec in s.post_admission_records] if s.post_admission_records else [], 
-        "backlogs": sum(1 for rec in s.post_admission_records if rec.backlog_subjects) if s.post_admission_records else 0,
-        "backlogSubjects": [subject for rec in s.post_admission_records if rec.backlog_subjects for subject in (rec.backlog_subjects.split(',') if rec.backlog_subjects else [])],
-        "domain": s.skills.domains_of_interest if s.skills else (s.internships[0].domain if s.internships else ""),
-        "careerGoal": s.career_objective.career_goal if s.career_objective else "",
-        "semesterGrades": {}  # Empty since sgpa is not used
+        "year_of_admission": s.year_of_admission,
+        "personal_info": serialize_model(s.personal_info) if s.personal_info else None,
+        "past_education_records": [serialize_model(rec) for rec in s.past_education_records] if s.past_education_records else [],
+        "post_admission_records": [serialize_model(rec) for rec in s.post_admission_records] if s.post_admission_records else [],
+        "career_activities": [serialize_model(rec) for rec in s.career_activities] if s.career_activities else [],
+        "projects": [serialize_model(rec) for rec in s.projects] if s.projects else [],
+        "internships": [serialize_model(rec) for rec in s.internships] if s.internships else [],
+        "cocurricular_participations": [serialize_model(rec) for rec in s.cocurricular_participations] if s.cocurricular_participations else [],
+        "cocurricular_organizations": [serialize_model(rec) for rec in s.cocurricular_organizations] if s.cocurricular_organizations else [],
+        "career_objective": serialize_model(s.career_objective) if s.career_objective else None,
+        "skills": serialize_model(s.skills) if s.skills else None,
+        "swoc": serialize_model(s.swoc) if s.swoc else None,
+        "mentor_id": s.mentor_id,
     } for s in results])
 
 @app.route("/api/students/<int:student_id>", methods=["PUT"])
@@ -921,6 +998,19 @@ def get_my_student_profile():
     }
     return jsonify(response)
 
+
+
+def parse_date(date_str):
+    """Safely parse ISO 8601 date strings into Python date objects"""
+    if not date_str:
+        return None
+    try:
+        # Handle strings like "2025-08-04T00:00:00.000Z"
+        return datetime.fromisoformat(date_str.replace("Z", "")).date()
+    except Exception:
+        return None
+
+
 @app.route("/student/me", methods=["PUT"])
 @role_required(["student"])
 def update_my_student_profile():
@@ -963,7 +1053,23 @@ def update_my_student_profile():
                 rel_payload = data[data_key]
                 if rel_payload is None:
                     continue
-                
+
+                # Special handling for dates inside payload
+                if isinstance(rel_payload, dict):
+                    for field, value in rel_payload.items():
+                        # Only parse actual date fields, not year_of_passing or other year fields
+                        if (("date" in field or "dob" in field) and 
+                            field not in ["year_of_passing", "year_of_admission"]):
+                            rel_payload[field] = parse_date(value)
+
+                if isinstance(rel_payload, list):
+                    for item in rel_payload:
+                        for field, value in item.items():
+                            # Only parse actual date fields, not year_of_passing or other year fields
+                            if (("date" in field or "dob" in field) and 
+                                field not in ["year_of_passing", "year_of_admission"]):
+                                item[field] = parse_date(value)
+
                 # Handle one-to-one relationships
                 if rel_name in ["personal_info", "career_objective", "skills", "swoc"]:
                     existing_record = getattr(student, rel_name)
@@ -1179,62 +1285,108 @@ def get_all_users():
 @app.route("/api/admin/users", methods=["POST"])
 @role_required(["admin"])
 def create_user():
-    """Create a new user"""
+    """Create a new user with detailed profile information"""
     data = request.get_json()
     if not data:
         return jsonify({"error": "No data provided"}), 400
 
+    # Common required fields for all users
     required_fields = ["username", "password", "role"]
     for field in required_fields:
         if field not in data:
             return jsonify({"error": f"Missing field: {field}"}), 400
+
+    # Validate role
+    if data["role"] not in ["admin", "faculty", "student"]:
+        return jsonify({"error": "Invalid role. Must be admin, faculty, or student"}), 400
+
+    # Role-specific validation
+    if data["role"] == "student":
+        student_fields = ["uid", "first_name", "semester", "section", "year_of_admission"]
+        for field in student_fields:
+            if field not in data:
+                return jsonify({"error": f"Missing student field: {field}"}), 400
+    
+    elif data["role"] == "faculty":
+        faculty_fields = ["email", "first_name", "last_name", "contact_number"]
+        for field in faculty_fields:
+            if field not in data:
+                return jsonify({"error": f"Missing faculty field: {field}"}), 400
 
     # Check if username already exists
     existing_user = User.query.filter_by(username=data["username"]).first()
     if existing_user:
         return jsonify({"error": "Username already exists"}), 400
 
-    # Validate role
-    if data["role"] not in ["admin", "faculty", "student"]:
-        return jsonify({"error": "Invalid role. Must be admin, faculty, or student"}), 400
+    # Check if UID already exists for students
+    if data["role"] == "student":
+        existing_student = Student.query.filter_by(uid=data["uid"]).first()
+        if existing_student:
+            return jsonify({"error": "Student UID already exists"}), 400
+
+    # Check if email already exists for faculty
+    if data["role"] == "faculty":
+        existing_faculty = Faculty.query.filter_by(email=data["email"]).first()
+        if existing_faculty:
+            return jsonify({"error": "Faculty email already exists"}), 400
 
     try:
         new_user = User(
             username=data["username"],
-            password_hash=generate_password_hash(data["password"]),  # Hash the password properly
+            password_hash=generate_password_hash(data["password"]),
             role=data["role"]
         )
         db.session.add(new_user)
         db.session.flush()  # Get the user ID
 
-        # Automatically create Student or Faculty profile based on role
         profile_created = None
+        profile_data = {}
+        
         if data["role"] == "student":
-            # Create basic student profile
+            # Create student profile with all provided data
             student = Student(
-                uid=data["username"],  # Use username as UID
-                first_name=data["username"],  # Default name, can be updated later
-                middle_name="",
-                last_name="",
-                semester=1,  # Default semester
-                section="A",  # Default section
-                year_of_admission=2024,  # Default year
+                uid=data["uid"],
+                first_name=data["first_name"],
+                middle_name=data.get("middle_name", ""),
+                last_name=data.get("last_name", ""),
+                semester=data["semester"],
+                section=data["section"],
+                year_of_admission=data["year_of_admission"],
                 user_id=new_user.id
             )
             db.session.add(student)
             profile_created = "student"
+            profile_data = {
+                "uid": student.uid,
+                "first_name": student.first_name,
+                "middle_name": student.middle_name,
+                "last_name": student.last_name,
+                "semester": student.semester,
+                "section": student.section,
+                "year_of_admission": student.year_of_admission
+            }
             
         elif data["role"] == "faculty":
-            # Create basic faculty profile
+            # Create faculty profile with all provided data
             faculty = Faculty(
-                email=f"{data['username']}@example.com" if "@" not in data["username"] else data["username"],
-                first_name=data["username"],  # Default name, can be updated later
-                last_name="",
-                contact_number="+91 9999999999",  # Default contact
+                email=data["email"],
+                first_name=data["first_name"],
+                last_name=data["last_name"],
+                contact_number=data["contact_number"],
                 user_id=new_user.id
             )
             db.session.add(faculty)
             profile_created = "faculty"
+            profile_data = {
+                "email": faculty.email,
+                "first_name": faculty.first_name,
+                "last_name": faculty.last_name,
+                "contact_number": faculty.contact_number
+            }
+        
+        elif data["role"] == "admin":
+            # For admin, we only create the user, no additional profile
+            profile_created = "admin"
 
         db.session.commit()
 
@@ -1247,11 +1399,12 @@ def create_user():
             }
         }
         
-        if profile_created:
+        if profile_created and profile_created != "admin":
             response_data["message"] += f" with {profile_created} profile"
-            response_data[f"{profile_created}_profile"] = "created"
+            response_data[f"{profile_created}_profile"] = profile_data
 
         return jsonify(response_data), 201
+        
     except Exception as e:
         db.session.rollback()
         print(f"❌ Database error in create_user: {str(e)}")
@@ -1259,7 +1412,7 @@ def create_user():
         import traceback
         traceback.print_exc()
         return jsonify({"error": "Database error", "details": str(e)}), 500
-    
+
 # Update user endpoint
 
 @app.route("/api/admin/users/<int:user_id>", methods=["PUT"])
@@ -1424,77 +1577,129 @@ def get_all_faculties_for_admin():
         })
     return jsonify(result), 200
 
-@app.route("/admin/faculty/<int:faculty_id>/mentees", methods=["GET"])
+@app.route("/api/admin/faculty/<int:faculty_id>/mentees", methods=["GET"])
 @role_required(["admin"])
 def get_faculty_mentees(faculty_id):
-    faculty = Faculty.query.get(faculty_id)
-    if not faculty:
-        return jsonify({"error": "Faculty not found"}), 404
+    print(f"DEBUG: Accessing faculty mentees endpoint for faculty_id: {faculty_id}")
+    try:
+        faculty = Faculty.query.get(faculty_id)
+        if not faculty:
+            print(f"DEBUG: Faculty not found for ID: {faculty_id}")
+            return jsonify({"error": "Faculty not found"}), 404
 
-    # Get all students assigned to this faculty
-    mentees = Student.query.filter_by(mentor_id=faculty_id).all()
+        # Get all students assigned to this faculty
+        mentees = Student.query.filter_by(mentor_id=faculty_id).all()
+        print(f"DEBUG: Found {len(mentees)} mentees for faculty {faculty_id}")
 
-    # Build mentee info list
-    mentees_data = []
-    for s in mentees:
-        mentee_info = {
-            "id": s.id,
-            "uid": s.uid,
-            "full_name": s.full_name,
-            "semester": s.semester,
-            "section": s.section,
-            "year_of_admission": s.year_of_admission,
-        }
-        mentees_data.append(mentee_info)
+        # Build mentee info list
+        mentees_data = []
+        for s in mentees:
+            mentee_info = {
+                "id": s.id,
+                "uid": s.uid,
+                "full_name": s.full_name,
+                "semester": s.semester,
+                "section": s.section,
+                "year_of_admission": s.year_of_admission,
+            }
+            mentees_data.append(mentee_info)
 
-    return jsonify(mentees_data), 200
+        print(f"DEBUG: Returning {len(mentees_data)} mentees")
+        return jsonify(mentees_data), 200
+    except Exception as e:
+        print(f"DEBUG: Error in get_faculty_mentees: {str(e)}")
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
-@app.route("/admin/faculty/<int:faculty_id>/mentees/generate", methods=["POST"])
+
+@app.route("/api/admin/faculty/<int:faculty_id>/mentees/generate", methods=["POST"])
 @role_required(["admin"])
 def generate_faculty_mentees(faculty_id):
-    faculty = Faculty.query.get(faculty_id)
-    if not faculty:
-        return jsonify({"error": "Faculty not found"}), 404
-
-    # Get current mentees count for this faculty
-    current_mentees = Student.query.filter_by(mentor_id=faculty_id).count()
-    max_mentees = 10  # Maximum students per faculty
+    print(f"DEBUG: Random generation request for faculty_id: {faculty_id}")
     
-    if current_mentees >= max_mentees:
-        return jsonify({"error": f"Faculty already has maximum number of mentees ({max_mentees})"}), 400
+    try:
+        # Validate faculty exists
+        faculty = Faculty.query.get(faculty_id)
+        if not faculty:
+            print(f"DEBUG: Faculty not found for ID: {faculty_id}")
+            return jsonify({"error": "Faculty not found"}), 404
 
-    # Calculate how many more students this faculty can take
-    remaining_slots = max_mentees - current_mentees
-    
-    # Get unassigned students
-    unassigned_students = Student.query.filter_by(mentor_id=None).all()
-    
-    if not unassigned_students:
-        return jsonify({"error": "No unassigned students available"}), 400
+        # Get current mentees count for this faculty
+        current_mentees_count = Student.query.filter_by(mentor_id=faculty_id).count()
+        max_mentees = 20
+        
+        print(f"DEBUG: Faculty {faculty_id} has {current_mentees_count} current mentees, max: {max_mentees}")
+        
+        # Check if faculty has reached maximum capacity
+        if current_mentees_count >= max_mentees:
+            return jsonify({
+                "error": f"Faculty already has maximum number of mentees ({max_mentees})",
+                "current_count": current_mentees_count,
+                "max_capacity": max_mentees
+            }), 400
 
-    # Shuffle for random distribution
-    random.shuffle(unassigned_students)
-    
-    # Select up to the remaining slots (but at least 1, at most 5 at a time for review)
-    suggested_count = min(remaining_slots, len(unassigned_students), 5)
-    selected_students = unassigned_students[:suggested_count]
+        # Calculate available slots
+        remaining_slots = max_mentees - current_mentees_count
+        
+        # Get unassigned students with efficient query
+        unassigned_students = Student.query.filter_by(mentor_id=None).all()
+        
+        print(f"DEBUG: Found {len(unassigned_students)} unassigned students")
+        
+        # Check if any unassigned students exist
+        if not unassigned_students:
+            return jsonify({
+                "error": "No unassigned students available",
+                "suggestion": "All students are currently assigned to mentors"
+            }), 400
 
-    mentees_to_assign = []
-    for student in selected_students:
-        mentees_to_assign.append({
-            "id": student.id,
-            "uid": student.uid,
-            "full_name": student.full_name,
-            "semester": student.semester,
-            "section": student.section,
-            "year_of_admission": student.year_of_admission
-        })
+        # Shuffle for random distribution
+        random.shuffle(unassigned_students)
+        
+        # Determine how many students to suggest (1-5, but not more than available)
+        suggested_count = min(remaining_slots, len(unassigned_students), 5)
+        selected_students = unassigned_students[:suggested_count]
 
-    # Return preview of selected mentees for this faculty (do NOT commit here)
-    return jsonify(mentees_to_assign), 200
+        print(f"DEBUG: Selected {suggested_count} students for random allocation")
 
+        # Prepare response data
+        mentees_to_assign = []
+        for student in selected_students:
+            mentees_to_assign.append({
+                "id": student.id,
+                "uid": student.uid,
+                "full_name": student.full_name,
+                "semester": student.semester,
+                "section": student.section,
+                "year_of_admission": student.year_of_admission,
+                "currently_assigned": False  # Explicitly state they're unassigned
+            })
 
-@app.route("/admin/faculty/<int:faculty_id>/mentees/confirm", methods=["POST"])
+        # Return comprehensive response
+        response_data = {
+            "faculty_id": faculty_id,
+            "faculty_name": f"{faculty.first_name} {faculty.last_name}",
+            "current_mentees_count": current_mentees_count,
+            "max_capacity": max_mentees,
+            "remaining_slots": remaining_slots,
+            "available_unassigned": len(unassigned_students),
+            "suggested_allocation": suggested_count,
+            "students": mentees_to_assign,
+            "is_preview": True  # Indicate this is a preview, not final assignment
+        }
+
+        print(f"DEBUG: Returning {len(mentees_to_assign)} students for allocation preview")
+        return jsonify(response_data), 200
+        
+    except Exception as e:
+        print(f"ERROR: Exception in generate_faculty_mentees: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "error": "Internal server error during mentee generation",
+            "details": str(e)
+        }), 500
+
+@app.route("/api/admin/faculty/<int:faculty_id>/mentees/confirm", methods=["POST"])
 @role_required(["admin"])
 def confirm_faculty_mentees(faculty_id):
     faculty = Faculty.query.get(faculty_id)
@@ -1528,7 +1733,9 @@ def confirm_faculty_mentees(faculty_id):
 
     return jsonify({"message": f"Assigned {len(students)} mentees to faculty {faculty_id} successfully."}), 200
 
-@app.route("/admin/faculty/<int:faculty_id>/mentees/remove", methods=["POST"])
+
+
+@app.route("/api/admin/faculty/<int:faculty_id>/mentees/remove", methods=["POST"])
 @role_required(["admin"])
 def remove_faculty_mentees(faculty_id):
     faculty = Faculty.query.get(faculty_id)
@@ -1536,6 +1743,7 @@ def remove_faculty_mentees(faculty_id):
         return jsonify({"error": "Faculty not found"}), 404
 
     data = request.get_json()
+    print("data", data)
     if not data or "student_ids" not in data:
         return jsonify({"error": "Missing student_ids list"}), 400
 
@@ -1545,12 +1753,12 @@ def remove_faculty_mentees(faculty_id):
 
     # Query all students specified who are currently assigned to this faculty
     students = Student.query.filter(
-        Student.id.in_(student_ids),
+        Student.uid.in_(student_ids),
         Student.mentor_id == faculty_id
     ).all()
-
+    print("students", students)
     if len(students) != len(student_ids):
-        return jsonify({"error": "One or more students not found or not assigned to this faculty"}), 404
+        return jsonify({"error": "One or more student IDs not found"}), 404
 
     # Remove mentor assignment
     for student in students:
@@ -1558,11 +1766,14 @@ def remove_faculty_mentees(faculty_id):
 
     try:
         db.session.commit()
+        return jsonify({
+            "message": f"Removed {len(students)} mentee assignments from faculty {faculty_id} successfully.",
+            "removed_student_ids": student_ids
+        }), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": "Database error during removal", "details": str(e)}), 500
 
-    return jsonify({"message": f"Removed {len(students)} mentee assignments from faculty {faculty_id} successfully."}), 200
 
 
 @app.route("/admin/student/<uid>", methods=["DELETE"])
@@ -1600,9 +1811,13 @@ app.register_blueprint(students_bp)
 # Run
 # --------------------------------------
 if __name__ == "__main__":
+    print("DEBUG: Starting Flask server...")
+    print("DEBUG: CORS enabled with origins:", ["http://127.0.0.1:5501", "http://localhost:5501", "http://127.0.0.1:3000", "http://localhost:3000"])
     with app.app_context():
         # Create all database tables
+        print("DEBUG: Creating database tables...")
         db.create_all()
         print("✅ Database tables created successfully")
     
+    print("DEBUG: Server starting on port 5002...")
     app.run(debug=True, port=5002)

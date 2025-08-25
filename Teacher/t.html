@@ -2,98 +2,91 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Dashboard</title>
-    <link rel="stylesheet" href="t.css">
-    <script src="../js/auth.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            if (window.AuthGuard) { window.AuthGuard.guardRoute(['faculty']); }
-        });
-    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher Dashboard</title>
+  <link rel="stylesheet" href="t.css">
+  <script src="../js/auth.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.AuthGuard) { window.AuthGuard.guardRoute(['faculty']); }
+    });
+  </script>
 </head>
 
 <body>
-    <div class="dashboard-container">
-        <header class="dashboard-header">
-            <h1>Teacher Dashboard</h1>
-            <!-- ...existing code... -->
-            <div class="sid">
-                <a href="../forgot.html" class="logout-btn" style="text-decoration:none;">Change Password</a>
-                <button class="logout-btn" onclick="logout()">↗ Logout</button>
-            </div>
+  <div class="dashboard-container">
+    <header class="dashboard-header">
+      <h1>Teacher Dashboard</h1>
+      <div class="sid">
+        <a href="../forgot.html" class="logout-btn" style="text-decoration:none;">Change Password</a>
+        <button class="logout-btn" onclick="logout()">↗ Logout</button>
+      </div>
+    </header>
 
-        </header>
-
-        <div class="metrics-container">
-            <div class="metric-card">
-                <h3>Total Students</h3>
-                <div class="metric-value" id="totalStudents">0</div>
-            </div>
-            <div class="metric-card">
-                <h3>Programs</h3>
-                <div class="metric-value" id="totalPrograms">0</div>
-            </div>
-            <div class="metric-card">
-                <h3>Avg CGPA</h3>
-                <div class="metric-value" id="avgCGPA">N/A</div>
-            </div>
-            <div class="metric-card">
-                <h3>Domains</h3>
-                <div class="metric-value" id="totalDomains">0</div>
-            </div>
-        </div>
-
-        <div class="divider"></div>
-
-
-
-        <div class="search-section">
-            <h2>Search & Filter Students</h2>
-            <div class="search-filters">
-                <div class="search-input">
-                    <input type="text" id="searchInput" placeholder="Search students...">
-                </div>
-                <div class="filter-options">
-                    <select id="semesterFilter">
-                        <option value="">All Semesters</option>
-                        <!-- Options will be populated dynamically -->
-                    </select>
-                    <select id="batchFilter">
-                        <option value="">All Batches</option>
-                        <!-- Options will be populated dynamically -->
-                    </select>
-                    <select id="domainFilter">
-                        <option value="">All Domains</option>
-                        <!-- Options will be populated dynamically -->
-                    </select>
-                    <select id="sectionFilter">
-                        <option value="">All Sections</option>
-                        <!-- Options will be populated dynamically -->
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="students-section">
-            <div class="section-header">
-                <h2>Students (<span id="studentCount">0</span>)</h2>
-                <div class="view-options">
-                    <button class="active">Student Details</button>
-                </div>
-            </div>
-
-            <div id="studentsContainer">
-                <!-- Students will be loaded dynamically -->
-            </div>
-        </div>
+    <div class="metrics-container">
+      <div class="metric-card">
+        <h3>Total Students</h3>
+        <div class="metric-value" id="totalStudents">0</div>
+      </div>
+      <div class="metric-card">
+        <h3>Programs</h3>
+        <div class="metric-value" id="totalPrograms">0</div>
+      </div>
+      <div class="metric-card">
+        <h3>Avg CGPA</h3>
+        <div class="metric-value" id="avgCGPA">N/A</div>
+      </div>
+      <div class="metric-card">
+        <h3>Domains</h3>
+        <div class="metric-value" id="totalDomains">0</div>
+      </div>
     </div>
 
-    <!-- Student Details Modal -->
-    <div class="details-container hidden" id="studentModal">
+    <div class="divider"></div>
+
+    <div class="search-section">
+      <h2>Search & Filter Students</h2>
+      <div class="search-filters">
+        <div class="search-input">
+          <input type="text" id="searchInput" placeholder="Search students...">
+        </div>
+        <div class="filter-options">
+          <select id="semesterFilter">
+            <option value="">All Semesters</option>
+          </select>
+          <select id="batchFilter">
+            <option value="">All Batches</option>
+          </select>
+          <select id="domainFilter">
+            <option value="">All Domains</option>
+          </select>
+          <select id="sectionFilter">
+            <option value="">All Sections</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="students-section">
+      <div class="section-header">
+        <h2>Students (<span id="studentCount">0</span>)</h2>
+        <div class="view-options">
+          <button class="active">Student Details</button>
+        </div>
+      </div>
+
+      <div id="studentsContainer">
+        <!-- Students will be loaded dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Student Details Modal -->
+  <div class="details-container hidden" id="studentModal">
     <div class="dialog-container hidden">
       <div class="dialog-header">
         <button class="close-button" onclick="closeDialog()">×</button>
@@ -116,39 +109,59 @@
               </tr>
               <tr>
                 <th>Full Name</th>
-                <td id="studentFullName">Rahul Sharma</td>
+                <td id="studentFullName">N/A</td>
               </tr>
               <tr>
                 <th>Section</th>
-                <td id="studentSection">A</td>
+                <td id="studentSection">N/A</td>
               </tr>
               <tr>
                 <th>Semester</th>
-                <td id="studentSemester">6</td>
+                <td id="studentSemester">N/A</td>
               </tr>
               <tr>
                 <th>Roll No./UID</th>
-                <td id="studentUID">21CE001234</td>
+                <td id="studentUID">N/A</td>
               </tr>
               <tr>
                 <th>Year of Admission</th>
-                <td id="studentYear">2021</td>
+                <td id="studentYear">N/A</td>
+              </tr>
+              <tr>
+                <th>Date of Birth</th>
+                <td id="studentDOB">N/A</td>
+              </tr>
+              <tr>
+                <th>Gender</th>
+                <td id="studentGender">N/A</td>
               </tr>
               <tr>
                 <th>Mobile No.</th>
-                <td id="studentMobile">+91 9876543210</td>
+                <td id="studentMobile">N/A</td>
               </tr>
               <tr>
-                <th>Email ID</th>
-                <td id="studentEmail">rahul.sharma@example.com</td>
+                <th>Personal Email ID</th>
+                <td id="studentPersonalEmail">N/A</td>
+              </tr>
+              <tr>
+                <th>College Email ID</th>
+                <td id="studentCollegeEmail">N/A</td>
               </tr>
               <tr>
                 <th>LinkedIn ID</th>
-                <td id="studentLinkedIn">linkedin.com/in/rahulsharma</td>
+                <td id="studentLinkedIn">N/A</td>
               </tr>
               <tr>
                 <th>Permanent Address</th>
-                <td id="studentAddress">123, MG Road, Sector 15, New Delhi - 110001</td>
+                <td id="studentAddress">N/A</td>
+              </tr>
+              <tr>
+                <th>Emergency Contact Name</th>
+                <td id="emergencyContactName">N/A</td>
+              </tr>
+              <tr>
+                <th>Emergency Contact Number</th>
+                <td id="emergencyContactNumber">N/A</td>
               </tr>
             </table>
           </div>
@@ -164,35 +177,35 @@
             <table class="data-table">
               <tr>
                 <th>Father's Name</th>
-                <td id="fatherName">Vikash Sharma</td>
+                <td id="fatherName">N/A</td>
               </tr>
               <tr>
                 <th>Father's Mobile No.</th>
-                <td id="fatherMobile">+91 9876543211</td>
+                <td id="fatherMobile">N/A</td>
               </tr>
               <tr>
                 <th>Father's Email ID</th>
-                <td id="fatherEmail">vikash.sharma@example.com</td>
+                <td id="fatherEmail">N/A</td>
               </tr>
               <tr>
                 <th>Father's Occupation</th>
-                <td id="fatherOccupation">Software Engineer</td>
+                <td id="fatherOccupation">N/A</td>
               </tr>
               <tr>
                 <th>Mother's Name</th>
-                <td id="motherName">Priya Sharma</td>
+                <td id="motherName">N/A</td>
               </tr>
               <tr>
                 <th>Mother's Mobile No.</th>
-                <td id="motherMobile">+91 9876543212</td>
+                <td id="motherMobile">N/A</td>
               </tr>
               <tr>
                 <th>Mother's Email ID</th>
-                <td id="motherEmail">priya.sharma@example.com</td>
+                <td id="motherEmail">N/A</td>
               </tr>
               <tr>
                 <th>Mother's Occupation</th>
-                <td id="motherOccupation">Teacher</td>
+                <td id="motherOccupation">N/A</td>
               </tr>
             </table>
           </div>
@@ -208,19 +221,19 @@
             <table class="data-table">
               <tr>
                 <th>SSC (X) Percentage/Grade</th>
-                <td id="sscPercentage">92.5%</td>
+                <td id="sscPercentage">N/A</td>
               </tr>
               <tr>
                 <th>SSC Year of Passing</th>
-                <td id="sscYear">2018</td>
+                <td id="sscYear">N/A</td>
               </tr>
               <tr>
                 <th>HSSC (XII) Percentage/Grade</th>
-                <td id="hsscPercentage">90%</td>
+                <td id="hsscPercentage">N/A</td>
               </tr>
               <tr>
                 <th>HSSC Year of Passing</th>
-                <td id="hsscYear">2020</td>
+                <td id="hsscYear">N/A</td>
               </tr>
               <tr>
                 <th>Diploma Percentage/Grade</th>
@@ -244,39 +257,39 @@
             <table class="data-table">
               <tr>
                 <th>Semester 1 SGPA</th>
-                <td id="sem1SGPA">8.2</td>
+                <td id="sem1SGPA">N/A</td>
               </tr>
               <tr>
                 <th>Semester 2 SGPA</th>
-                <td id="sem2SGPA">8.4</td>
+                <td id="sem2SGPA">N/A</td>
               </tr>
               <tr>
                 <th>Semester 3 SGPA</th>
-                <td id="sem3SGPA">8.6</td>
+                <td id="sem3SGPA">N/A</td>
               </tr>
               <tr>
                 <th>Semester 4 SGPA</th>
-                <td id="sem4SGPA">8.5</td>
+                <td id="sem4SGPA">N/A</td>
               </tr>
               <tr>
                 <th>Semester 5 SGPA</th>
-                <td id="sem5SGPA">8.7</td>
+                <td id="sem5SGPA">N/A</td>
               </tr>
               <tr>
                 <th>Semester 6 SGPA</th>
-                <td id="sem6SGPA">8.5</td>
+                <td id="sem6SGPA">N/A</td>
               </tr>
               <tr>
                 <th>Semester 7 SGPA</th>
-                <td><span class="empty-value">N/A</span></td>
+                <td id="sem7SGPA"><span class="empty-value">N/A</span></td>
               </tr>
               <tr>
                 <th>Semester 8 SGPA</th>
-                <td><span class="empty-value">N/A</span></td>
+                <td id="sem8SGPA"><span class="empty-value">N/A</span></td>
               </tr>
               <tr>
                 <th>Current Semester</th>
-                <td id="currentSemester">6</td>
+                <td id="currentSemester">N/A</td>
               </tr>
               <tr>
                 <th>Number of Active Backlogs</th>
@@ -300,39 +313,39 @@
             <table class="data-table">
               <tr>
                 <th>Aptitude Test Score/Rank</th>
-                <td id="aptitudeScore">85/100</td>
+                <td id="aptitudeScore">N/A</td>
               </tr>
               <tr>
                 <th>Aptitude Test Date</th>
-                <td id="aptitudeDate">2023-10-15</td>
+                <td id="aptitudeDate">N/A</td>
               </tr>
               <tr>
                 <th>Co-Cubes Score/Rank</th>
-                <td id="cocubesScore">720/1000</td>
+                <td id="cocubesScore">N/A</td>
               </tr>
               <tr>
                 <th>Co-Cubes Date</th>
-                <td id="cocubesDate">2023-11-20</td>
+                <td id="cocubesDate">N/A</td>
               </tr>
               <tr>
                 <th>GATE/CAT Score/Rank</th>
-                <td id="gateScore">650 (GATE)</td>
+                <td id="gateScore">N/A</td>
               </tr>
               <tr>
                 <th>GATE/CAT Date</th>
-                <td id="gateDate">2024-02-10</td>
+                <td id="gateDate">N/A</td>
               </tr>
               <tr>
                 <th>Other Exam Name</th>
-                <td id="otherExamName">Google Data Analytics</td>
+                <td id="otherExamName"><span class="empty-value">N/A</span></td>
               </tr>
               <tr>
                 <th>Other Exam Score/Rank</th>
-                <td id="otherExamScore">Certified</td>
+                <td id="otherExamScore"><span class="empty-value">N/A</span></td>
               </tr>
               <tr>
                 <th>Other Exam Date</th>
-                <td id="otherExamDate">2023-08-05</td>
+                <td id="otherExamDate"><span class="empty-value">N/A</span></td>
               </tr>
             </table>
           </div>
@@ -348,59 +361,59 @@
             <table class="data-table">
               <tr>
                 <th>Micro Project Title</th>
-                <td id="microProjectTitle">AI-powered Chatbot</td>
+                <td id="microProjectTitle">N/A</td>
               </tr>
               <tr>
-                <th>Micro Project Guide</th>
-                <td id="microProjectGuide">Prof. Anil Kumar</td>
+                <th>Micro Project Description</th>
+                <td id="microProjectDescription">N/A</td>
               </tr>
               <tr>
                 <th>Major Project Title</th>
-                <td id="majorProjectTitle">Inventory Management System</td>
+                <td id="majorProjectTitle">N/A</td>
               </tr>
               <tr>
-                <th>Major Project Guide</th>
-                <td id="majorProjectGuide">Prof. Sunita Verma</td>
+                <th>Major Project Description</th>
+                <td id="majorProjectDescription">N/A</td>
               </tr>
               <tr>
                 <th>Internship 1 Company</th>
-                <td id="internship1Company">TechCorp Solutions</td>
+                <td id="internship1Company">N/A</td>
               </tr>
               <tr>
                 <th>Internship 1 Domain</th>
-                <td id="internship1Domain">Web Development</td>
+                <td id="internship1Domain">N/A</td>
               </tr>
               <tr>
                 <th>Internship 1 Type</th>
-                <td id="internship1Type">Physical</td>
+                <td id="internship1Type">N/A</td>
               </tr>
               <tr>
                 <th>Internship 1 Paid/Unpaid</th>
-                <td id="internship1Paid">Paid</td>
+                <td id="internship1Paid">N/A</td>
               </tr>
               <tr>
                 <th>Internship 1 Duration</th>
-                <td id="internship1Duration">2023-06-01 to 2023-08-01</td>
+                <td id="internship1Duration">N/A</td>
               </tr>
               <tr>
                 <th>Internship 2 Company</th>
-                <td id="internship2Company">DataTech Inc.</td>
+                <td id="internship2Company">N/A</td>
               </tr>
               <tr>
                 <th>Internship 2 Domain</th>
-                <td id="internship2Domain">Data Science</td>
+                <td id="internship2Domain">N/A</td>
               </tr>
               <tr>
                 <th>Internship 2 Type</th>
-                <td id="internship2Type">Online</td>
+                <td id="internship2Type">N/A</td>
               </tr>
               <tr>
                 <th>Internship 2 Paid/Unpaid</th>
-                <td id="internship2Paid">Unpaid</td>
+                <td id="internship2Paid">N/A</td>
               </tr>
               <tr>
                 <th>Internship 2 Duration</th>
-                <td id="internship2Duration">2023-12-01 to 2024-01-15</td>
+                <td id="internship2Duration">N/A</td>
               </tr>
             </table>
           </div>
@@ -418,10 +431,7 @@
                 <th>Participation Activities</th>
                 <td>
                   <div class="activity-list">
-                    <p>Name: CodeChef Monthly Contest, Date: 2023-09-10, Level: International,
-                      Awards: Rank 150</p>
-                    <p>Name: Smart India Hackathon, Date: 2023-12-15, Level: National, Awards:
-                      Finalist</p>
+                    <p>No participation activities</p>
                   </div>
                 </td>
               </tr>
@@ -429,10 +439,7 @@
                 <th>Organized Activities</th>
                 <td>
                   <div class="activity-list">
-                    <p>Name: Tech Fest 2023, Date: 2023-03-20, Level: Institute, Remark: Coordinator
-                    </p>
-                    <p>Name: Coding Workshop, Date: 2023-05-10, Level: Department, Remark:
-                      Co-Coordinator</p>
+                    <p>No organized activities</p>
                   </div>
                 </td>
               </tr>
@@ -450,21 +457,19 @@
             <table class="data-table">
               <tr>
                 <th>Strengths</th>
-                <td id="strengths">Strong problem-solving skills, Team leadership, Quick learner, Good communication
-                </td>
+                <td id="strengths">N/A</td>
               </tr>
               <tr>
                 <th>Weaknesses</th>
-                <td id="weaknesses">Time management, Public speaking anxiety</td>
+                <td id="weaknesses">N/A</td>
               </tr>
               <tr>
                 <th>Opportunities</th>
-                <td id="opportunities">Growing AI/ML industry, Remote work opportunities, Startup ecosystem</td>
+                <td id="opportunities">N/A</td>
               </tr>
               <tr>
                 <th>Challenges</th>
-                <td id="challenges">Balancing academics with skill development, Staying updated with latest technologies
-                </td>
+                <td id="challenges">N/A</td>
               </tr>
             </table>
           </div>
@@ -480,45 +485,43 @@
             <table class="data-table">
               <tr>
                 <th>Career Objectives</th>
-                <td id="careerObjectives">Job, Higher studies</td>
+                <td id="careerObjectives">N/A</td>
               </tr>
               <tr>
                 <th>Specific Details</th>
-                <td id="careerDetails">Software engineer role in tech industry, Pursue MS in Computer Science</td>
+                <td id="careerDetails">N/A</td>
               </tr>
               <tr>
                 <th>Clarity and Preparedness</th>
-                <td id="clarityPreparedness">Good</td>
+                <td id="clarityPreparedness">N/A</td>
               </tr>
               <tr>
                 <th>Interested in Campus Placement</th>
-                <td id="campusPlacement">Yes</td>
+                <td id="campusPlacement">N/A</td>
               </tr>
               <tr>
-                <th>Interpersonal Skills (1-5)</th>
-                <td id="interpersonalSkills">4</td>
+                <th>Campus Placement Reasons</th>
+                <td id="campusPlacementReasons">N/A</td>
               </tr>
               <tr>
-                <th>Soft Skills</th>
-                <td id="softSkills">Presentation Skills, Writing</td>
+                <th>Programming Languages</th>
+                <td id="programmingLanguages">N/A</td>
+              </tr>
+              <tr>
+                <th>Technologies/Frameworks</th>
+                <td id="technologiesFrameworks">N/A</td>
+              </tr>
+              <tr>
+                <th>Familiar Tools/Platforms</th>
+                <td id="familiarToolsPlatforms">N/A</td>
               </tr>
               <tr>
                 <th>Domain of Interest</th>
-                <td id="domainOfInterest">
-                  <div class="tags">
-                    <span class="tag">Web Development</span>
-                    <span class="tag">Machine Learning</span>
-                    <span class="tag">Data Science</span>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <th>Additional Technical Skills Desired</th>
-                <td id="additionalSkills">Cloud Computing, Advanced Machine Learning</td>
+                <td id="domainOfInterest">N/A</td>
               </tr>
               <tr>
                 <th>Expectations from Institute/Department</th>
-                <td id="expectations">Industry mentorship, Advanced technical workshops, Placement preparation</td>
+                <td id="expectations">N/A</td>
               </tr>
             </table>
           </div>
@@ -531,122 +534,161 @@
         <button class="btn" onclick="closeDialog()">Close</button>
       </div>
     </div>
-    </div>
+  </div>
 
-    <script>
-        // Global variables
-        let allStudents = [];
-        let filteredStudents = [];
+  <script>
+    // Global variables
+    let allStudents = [];
+    let filteredStudents = [];
 
-        document.addEventListener('DOMContentLoaded', function () {
-            // Initialize the dashboard
-            loadStudentsData();
+    document.addEventListener('DOMContentLoaded', function () {
+      // Initialize the dashboard
+      loadStudentsData();
 
-            // Event listeners for filtering
-            document.getElementById('searchInput').addEventListener('input', filterStudents);
-            document.getElementById('semesterFilter').addEventListener('change', filterStudents);
-            document.getElementById('batchFilter').addEventListener('change', filterStudents);
-            document.getElementById('domainFilter').addEventListener('change', filterStudents);
-            document.getElementById('sectionFilter').addEventListener('change', filterStudents);
+      // Event listeners for filtering
+      document.getElementById('searchInput').addEventListener('input', filterStudents);
+      document.getElementById('semesterFilter').addEventListener('change', filterStudents);
+      document.getElementById('batchFilter').addEventListener('change', filterStudents);
+      document.getElementById('domainFilter').addEventListener('change', filterStudents);
+      document.getElementById('sectionFilter').addEventListener('change', filterStudents);
+    });
+
+    async function loadStudentsData() {
+      try {
+        const token = localStorage.getItem("access_token");
+        if (!token) {
+          window.location.href = "../login.html";
+          return;
+        }
+
+        const response = await fetch("http://localhost:5002/faculty/me/mentees", {
+          method: "GET",
+          headers: {
+            "Authorization": "Bearer " + token,
+            "Content-Type": "application/json"
+          }
         });
 
-        async function loadStudentsData() {
-            try {
-                const token = localStorage.getItem("access_token");
-                if (!token) {
-                    window.location.href = "../login.html";
-                    return;
-                }
+        if (response.ok) {
+          allStudents = await response.json();
+          filteredStudents = [...allStudents];
 
-                const response = await fetch("http://localhost:5002/faculty/me/mentees", {
-                    method: "GET",
-                    headers: {
-                        "Authorization": "Bearer " + token,
-                        "Content-Type": "application/json"
-                    }
-                });
+          // Update metrics
+          updateMetrics();
 
-                if (response.ok) {
-                    allStudents = await response.json();
-                    filteredStudents = [...allStudents];
-                    
-                    // Update metrics
-                    updateMetrics();
-                    
-                    // Populate filter options
-                    populateFilterOptions();
-                    
-                    // Display students
-                    displayStudents(filteredStudents);
-                } else {
-                    console.error('Failed to fetch students:', await response.text());
-                    showError('Failed to load student data. Please try again.');
-                }
-            } catch (error) {
-                console.error('Error loading students:', error);
-                showError('Error loading student data. Please check your connection.');
+          // Populate filter options
+          populateFilterOptions();
+
+          // Display students
+          displayStudents(filteredStudents);
+        } else {
+          console.error('Failed to fetch students:', await response.text());
+          showError('Failed to load student data. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error loading students:', error);
+        showError('Error loading student data. Please check your connection.');
+      }
+    }
+
+    function updateMetrics() {
+      // Total students
+      document.getElementById('totalStudents').textContent = allStudents.length;
+
+      // Calculate unique values for metrics
+      const semesters = new Set(allStudents.map(s => s.semester));
+      const sections = new Set(allStudents.map(s => s.section));
+      const years = new Set(allStudents.map(s => s.year_of_admission));
+
+      document.getElementById('totalPrograms').textContent = semesters.size;
+      document.getElementById('totalDomains').textContent = sections.size;
+
+      // For now, set CGPA as N/A since we don't have that data
+      const avgSGPA = calculateAverageSGPA();
+      document.getElementById('avgCGPA').textContent = avgSGPA !== null ? avgSGPA.toFixed(2) : 'N/A'
+    }
+
+    function calculateAverageSGPA() {
+      let totalSGPA = 0;
+      let totalRecords = 0;
+
+      allStudents.forEach(student => {
+        if (student.post_admission_records) {
+          student.post_admission_records.forEach(record => {
+            if (record.sgpa !== null && record.sgpa !== undefined) {
+              totalSGPA += record.sgpa;
+              totalRecords++;
             }
+          });
         }
+      });
 
-        function updateMetrics() {
-            // Total students
-            document.getElementById('totalStudents').textContent = allStudents.length;
-            
-            // Calculate unique values for metrics
-            const semesters = new Set(allStudents.map(s => s.semester));
-            const sections = new Set(allStudents.map(s => s.section));
-            const years = new Set(allStudents.map(s => s.year_of_admission));
-            
-            document.getElementById('totalPrograms').textContent = semesters.size;
-            document.getElementById('totalDomains').textContent = sections.size;
-            
-            // For now, set CGPA as N/A since we don't have that data
-            document.getElementById('avgCGPA').textContent = 'N/A';
+      return totalRecords > 0 ? totalSGPA / totalRecords : null;
+    }
+
+    function populateFilterOptions() {
+      // Get unique values for filters
+      const semesters = [...new Set(allStudents.map(s => s.semester))].sort();
+      const years = [...new Set(allStudents.map(s => s.year_of_admission))].sort();
+      const sections = [...new Set(allStudents.map(s => s.section))].sort();
+      const allDomains = [];
+
+      allStudents.forEach(student => {
+        if (student.skills && student.skills.domains_of_interest) {
+          // Split comma-separated domains and trim whitespace
+          const domains = student.skills.domains_of_interest.split(',')
+            .map(domain => domain.trim())
+            .filter(domain => domain !== '');
+          allDomains.push(...domains);
         }
+      });
+      const domains = [...new Set(allDomains)].sort();
 
-        function populateFilterOptions() {
-            // Get unique values for filters
-            const semesters = [...new Set(allStudents.map(s => s.semester))].sort();
-            const years = [...new Set(allStudents.map(s => s.year_of_admission))].sort();
-            const sections = [...new Set(allStudents.map(s => s.section))].sort();
+      const domainFilter = document.getElementById('domainFilter');
+      domains.forEach(domain => {
+        const option = document.createElement('option');
+        option.value = domain;
+        option.textContent = domain;
+        domainFilter.appendChild(option);
+      });
 
-            // Populate semester filter
-            const semesterFilter = document.getElementById('semesterFilter');
-            semesters.forEach(sem => {
-                const option = document.createElement('option');
-                option.value = sem;
-                option.textContent = `Sem ${sem}`;
-                semesterFilter.appendChild(option);
-            });
+      // Populate semester filter
+      const semesterFilter = document.getElementById('semesterFilter');
+      semesters.forEach(sem => {
+        const option = document.createElement('option');
+        option.value = sem;
+        option.textContent = `Sem ${sem}`;
+        semesterFilter.appendChild(option);
+      });
 
-            // Populate batch filter
-            const batchFilter = document.getElementById('batchFilter');
-            years.forEach(year => {
-                const option = document.createElement('option');
-                option.value = year;
-                option.textContent = year;
-                batchFilter.appendChild(option);
-            });
+      // Populate batch filter
+      const batchFilter = document.getElementById('batchFilter');
+      years.forEach(year => {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        batchFilter.appendChild(option);
+      });
 
-            // Populate section filter
-            const sectionFilter = document.getElementById('sectionFilter');
-            sections.forEach(section => {
-                const option = document.createElement('option');
-                option.value = section;
-                option.textContent = section;
-                sectionFilter.appendChild(option);
-            });
-        }
+      // Populate section filter
+      const sectionFilter = document.getElementById('sectionFilter');
+      sections.forEach(section => {
+        const option = document.createElement('option');
+        option.value = section;
+        option.textContent = section;
+        sectionFilter.appendChild(option);
+      });
+    }
 
-        function displayStudents(students) {
-            const container = document.getElementById('studentsContainer');
-            
-            if (students.length === 0) {
-                container.innerHTML = '<div class="no-students">No students found matching your criteria.</div>';
-                return;
-            }
+    function displayStudents(students) {
+      const container = document.getElementById('studentsContainer');
 
-            const studentsHTML = students.map(student => `
+      if (students.length === 0) {
+        container.innerHTML = '<div class="no-students">No students found matching your criteria.</div>';
+        return;
+      }
+
+      const studentsHTML = students.map(student => `
                 <div class="student-card" 
                      data-semester="${student.semester}" 
                      data-batch="${student.year_of_admission}"
@@ -667,308 +709,351 @@
                 </div>
             `).join('');
 
-            container.innerHTML = studentsHTML;
+      container.innerHTML = studentsHTML;
 
-            // Update count
-            document.getElementById('studentCount').textContent = students.length;
+      // Update count
+      document.getElementById('studentCount').textContent = students.length;
+    }
+
+    function filterStudents() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const selectedSemester = document.getElementById('semesterFilter').value;
+      const selectedBatch = document.getElementById('batchFilter').value;
+      const selectedSection = document.getElementById('sectionFilter').value;
+      const selectedDomain = document.getElementById('domainFilter').value; // Add this line
+
+      filteredStudents = allStudents.filter(student => {
+        let matches = true;
+
+        // Search filter
+        if (searchTerm && !student.full_name.toLowerCase().includes(searchTerm)) {
+          matches = false;
         }
 
-        function filterStudents() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const selectedSemester = document.getElementById('semesterFilter').value;
-            const selectedBatch = document.getElementById('batchFilter').value;
-            const selectedSection = document.getElementById('sectionFilter').value;
-
-            filteredStudents = allStudents.filter(student => {
-                let matches = true;
-
-                // Search filter
-                if (searchTerm && !student.full_name.toLowerCase().includes(searchTerm)) {
-                    matches = false;
-                }
-
-                // Semester filter
-                if (selectedSemester && student.semester.toString() !== selectedSemester) {
-                    matches = false;
-                }
-
-                // Batch filter
-                if (selectedBatch && student.year_of_admission.toString() !== selectedBatch) {
-                    matches = false;
-                }
-
-                // Section filter
-                if (selectedSection && student.section !== selectedSection) {
-                    matches = false;
-                }
-
-                return matches;
-            });
-
-            displayStudents(filteredStudents);
-            document.getElementById('totalStudents').textContent = filteredStudents.length;
+        // Semester filter
+        if (selectedSemester && student.semester.toString() !== selectedSemester) {
+          matches = false;
         }
 
+        // Batch filter
+        if (selectedBatch && student.year_of_admission.toString() !== selectedBatch) {
+          matches = false;
+        }
 
-        <!-- View Students -->
+        // Section filter
+        if (selectedSection && student.section !== selectedSection) {
+          matches = false;
+        }
 
-         function viewStudentDetails(studentId) {
-      
-                const student = filteredStudents.find(s => s.uid == studentId);
-                
-                if (!student) return;
+        if (selectedDomain) {
+          if (!student.skills || !student.skills.domains_of_interest) {
+            matches = false;
+          } else {
+            const studentDomains = student.skills.domains_of_interest.split(',')
+              .map(domain => domain.trim())
+              .filter(domain => domain !== '');
 
-                console.log(student);
-
-                // Populate the detailed student information
-                document.getElementById("studentFullName").textContent = `${student.first_name} ${student.middle_name || ''} ${student.last_name}`;
-                document.getElementById("studentSection").textContent = student.section;
-                document.getElementById("studentSemester").textContent = student.semester;
-                document.getElementById("studentUID").textContent = student.uid;
-                document.getElementById("studentYear").textContent = student.year_of_admission;
-                document.getElementById("studentMobile").textContent = student.personal_info.mobile;
-                document.getElementById("studentEmail").textContent = student.email;
-                document.getElementById("studentLinkedIn").textContent = student.linkedInId;
-                document.getElementById("studentAddress").textContent = student.permanentAddress;
-
-                // Parent information
-                document.getElementById("fatherName").textContent = student.fatherName;
-                document.getElementById("fatherMobile").textContent = student.mobile.replace(student.mobile.slice(-1), (parseInt(student.mobile.slice(-1)) + 1).toString());
-                document.getElementById("fatherEmail").textContent = student.email.replace('@', '.father@');
-                document.getElementById("fatherOccupation").textContent = "Software Engineer";
-                document.getElementById("motherName").textContent = student.motherName;
-                document.getElementById("motherMobile").textContent = student.mobile.replace(student.mobile.slice(-1), (parseInt(student.mobile.slice(-1)) + 2).toString());
-                document.getElementById("motherEmail").textContent = student.email.replace('@', '.mother@');
-                document.getElementById("motherOccupation").textContent = "Teacher";
-
-                // Academic information
-                document.getElementById("currentSemester").textContent = student.semester;
-                document.getElementById("backlogCount").textContent = student.backlogSubjects === "None" ? "0" : "1";
-                document.getElementById("backlogSubjects").innerHTML = student.backlogSubjects === "None" ? '<span class="empty-value">None</span>' : student.backlogSubjects;
-
-                // Career development activities
-                document.getElementById("aptitudeScore").textContent = "85/100";
-                document.getElementById("aptitudeDate").textContent = "2023-10-15";
-                document.getElementById("cocubesScore").textContent = "720/1000";
-                document.getElementById("cocubesDate").textContent = "2023-11-20";
-                document.getElementById("gateScore").textContent = "650 (GATE)";
-                document.getElementById("gateDate").textContent = "2024-02-10";
-                document.getElementById("otherExamName").textContent = "Google Data Analytics";
-                document.getElementById("otherExamScore").textContent = "Certified";
-                document.getElementById("otherExamDate").textContent = "2023-08-05";
-
-                // Project and internship details
-                document.getElementById("microProjectTitle").textContent = student.projects? student.projects[0] : "NULL";
-                document.getElementById("microProjectGuide").textContent = "Prof. Anil Kumar";
-                document.getElementById("majorProjectTitle").textContent = student.projects? student.projects[1] : "NULL";
-                document.getElementById("majorProjectGuide").textContent = "Prof. Sunita Verma";
-                document.getElementById("internship1Company").textContent = student.internships? student.internships[0] : "NULL";
-                document.getElementById("internship1Domain").textContent = student.domain? student.domain[0]: "Not entered yet";
-                document.getElementById("internship1Type").textContent = "Physical";
-                document.getElementById("internship1Paid").textContent = "Paid";
-                document.getElementById("internship1Duration").textContent = "2023-06-01 to 2023-08-01";
-                document.getElementById("internship2Company").textContent = student.internships? student.internships[1] : "Not done";
-                document.getElementById("internship2Domain").textContent = student.domain? student.domain[1] : "NULL";
-                document.getElementById("internship2Type").textContent = "Online";
-                document.getElementById("internship2Paid").textContent = "Unpaid";
-                document.getElementById("internship2Duration").textContent = "2023-12-01 to 2024-01-15";
-
-                // SWOC Analysis
-                document.getElementById("strengths").textContent = student.strengths;
-                document.getElementById("weaknesses").textContent = student.weaknesses;
-                document.getElementById("opportunities").textContent = student.opportunities;
-                document.getElementById("challenges").textContent = student.challenges;
-
-                // Career objectives and skills
-                document.getElementById("careerObjectives").textContent = student.careerGoal === "Placement" ? "Job" : "Higher studies";
-                document.getElementById("careerDetails").textContent = student.careerGoal === "Placement" ?
-                    "Software engineer role in tech industry" : "Pursue MS in Computer Science";
-                document.getElementById("clarityPreparedness").textContent = "Good";
-                document.getElementById("campusPlacement").textContent = student.careerGoal === "Placement" ? "Yes" : "No";
-                document.getElementById("interpersonalSkills").textContent = student.softSkillsRating;
-                document.getElementById("softSkills").textContent = "Presentation Skills, Writing";
-                document.getElementById("additionalSkills").textContent = "Cloud Computing, Advanced Machine Learning";
-                document.getElementById("expectations").textContent = "Industry mentorship, Advanced technical workshops, Placement preparation";
-
-                // Update domain tags
-                const domainContainer = document.getElementById("domainOfInterest");
-                domainContainer.innerHTML = student.domain.map(d => `<span class="tag">${d}</span>`).join('');
-
-                // Show the modal
-                document.querySelector('.dialog-container').classList.remove('hidden');
-                document.querySelector('.details-container').classList.remove('hidden');
-                document.getElementsByTagName('body')[0].classList.add('overflow-hidden');
-         }
-
-        function populateStudentModal(student) {
-            const content = document.getElementById('studentDetailsContent');
-            
-            // Build the modal content dynamically
-            let modalHTML = `
-                <!-- Student's Personal Information -->
-                <div class="section expanded">
-                    <div class="section-header" onclick="toggleSection(this)">
-                        <span class="section-title">Student's Personal Information</span>
-                        <span class="expand-icon">▲</span>
-                    </div>
-                    <div class="section-content">
-                        <table class="data-table">
-                            <tr><th>Department</th><td>Computer Engineering</td></tr>
-                            <tr><th>Full Name</th><td>${student.full_name || 'N/A'}</td></tr>
-                            <tr><th>UID</th><td>${student.uid || 'N/A'}</td></tr>
-                            <tr><th>Section</th><td>${student.section || 'N/A'}</td></tr>
-                            <tr><th>Semester</th><td>${student.semester || 'N/A'}</td></tr>
-                            <tr><th>Year of Admission</th><td>${student.year_of_admission || 'N/A'}</td></tr>`;
-            
-            // Add personal info if available
-            if (student.personal_info) {
-                const pi = student.personal_info;
-                modalHTML += `
-                            <tr><th>Mobile No.</th><td>${pi.contact_number || 'N/A'}</td></tr>
-                            <tr><th>Email ID</th><td>${pi.email || 'N/A'}</td></tr>
-                            <tr><th>LinkedIn ID</th><td>${pi.linkedin || 'N/A'}</td></tr>
-                            <tr><th>Permanent Address</th><td>${pi.permanent_address || 'N/A'}</td></tr>`;
+            if (!studentDomains.includes(selectedDomain)) {
+              matches = false;
             }
-            
-            modalHTML += `
-                        </table>
-                    </div>
-                </div>`;
-
-            // Add sections based on available data
-            modalHTML += buildModalSection('Past Education Records', student.past_education_records, (records) => 
-                records.map(rec => `<p>${rec.degree || 'Unknown'}: ${rec.percentage || 'N/A'}% (${rec.year_of_passing || 'N/A'})</p>`).join('')
-            );
-
-            modalHTML += buildModalSection('Post Admission Records', student.post_admission_records, (records) => 
-                records.map(rec => `<p>Semester ${rec.semester || 'N/A'}: SGPA ${rec.sgpa || 'N/A'}</p>`).join('')
-            );
-
-            modalHTML += buildModalSection('Projects', student.projects, (projects) => 
-                projects.map(proj => `<p><strong>${proj.title || 'Untitled'}</strong>: ${proj.description || 'No description'}</p>`).join('')
-            );
-
-            modalHTML += buildModalSection('Internships', student.internships, (internships) => 
-                internships.map(intern => `<p><strong>${intern.company || 'Unknown Company'}</strong>: ${intern.domain || 'N/A'} (${intern.start_date || 'N/A'} - ${intern.end_date || 'N/A'})</p>`).join('')
-            );
-
-            if (student.career_objective) {
-                modalHTML += `
-                <div class="section">
-                    <div class="section-header" onclick="toggleSection(this)">
-                        <span class="section-title">Career Objective</span>
-                        <span class="expand-icon">▼</span>
-                    </div>
-                    <div class="section-content">
-                        <table class="data-table">
-                            <tr><th>Career Objective</th><td>${student.career_objective.career_objective || 'N/A'}</td></tr>
-                            <tr><th>Domain of Interest</th><td>${student.career_objective.domain_of_interest || 'N/A'}</td></tr>
-                        </table>
-                    </div>
-                </div>`;
-            }
-
-            if (student.skills) {
-                modalHTML += `
-                <div class="section">
-                    <div class="section-header" onclick="toggleSection(this)">
-                        <span class="section-title">Skills</span>
-                        <span class="expand-icon">▼</span>
-                    </div>
-                    <div class="section-content">
-                        <table class="data-table">
-                            <tr><th>Technical Skills</th><td>${student.skills.technical_skills || 'N/A'}</td></tr>
-                            <tr><th>Soft Skills</th><td>${student.skills.soft_skills || 'N/A'}</td></tr>
-                        </table>
-                    </div>
-                </div>`;
-            }
-
-            content.innerHTML = modalHTML;
+          }
         }
 
-        function buildModalSection(title, data, formatter) {
-            if (!data || data.length === 0) return '';
-            
-            return `
-                <div class="section">
-                    <div class="section-header" onclick="toggleSection(this)">
-                        <span class="section-title">${title}</span>
-                        <span class="expand-icon">▼</span>
-                    </div>
-                    <div class="section-content">
-                        <div class="activity-list">
-                            ${formatter(data)}
-                        </div>
-                    </div>
-                </div>`;
+
+        return matches;
+      });
+
+      displayStudents(filteredStudents);
+      document.getElementById('totalStudents').textContent = filteredStudents.length;
+    }
+
+    function viewStudentDetails(studentId) {
+      const student = filteredStudents.find(s => s.uid == studentId);
+      if (!student) return;
+
+      console.log("Student data:", student);
+
+      // Helper function to handle null/undefined values
+      const getValue = (value, defaultValue = 'N/A') => {
+        return value !== null && value !== undefined && value !== '' ? value : defaultValue;
+      };
+
+      // Helper function to format date
+      const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        try {
+          return new Date(dateString).toLocaleDateString('en-CA'); // YYYY-MM-DD format
+        } catch (e) {
+          return dateString;
+        }
+      };
+
+      // Populate the detailed student information with correct field names
+      document.getElementById("studentFullName").textContent = getValue(student.full_name);
+      document.getElementById("studentSection").textContent = getValue(student.section);
+      document.getElementById("studentSemester").textContent = getValue(student.semester);
+      document.getElementById("studentUID").textContent = getValue(student.uid);
+      document.getElementById("studentYear").textContent = getValue(student.year_of_admission);
+
+      // Personal info
+      if (student.personal_info) {
+        const pi = student.personal_info;
+        document.getElementById("studentMobile").textContent = getValue(pi.mobile_no);
+        document.getElementById("studentPersonalEmail").textContent = getValue(pi.personal_email);
+        document.getElementById("studentCollegeEmail").textContent = getValue(pi.college_email);
+        document.getElementById("studentLinkedIn").textContent = getValue(pi.linked_in_id);
+        document.getElementById("studentAddress").textContent = getValue(pi.permanent_address);
+        document.getElementById("studentDOB").textContent = formatDate(pi.dob);
+        document.getElementById("studentGender").textContent = getValue(pi.gender);
+        document.getElementById("emergencyContactName").textContent = getValue(pi.emergency_contact_name);
+        document.getElementById("emergencyContactNumber").textContent = getValue(pi.emergency_contact_number);
+
+        // Parent information
+        document.getElementById("fatherName").textContent = getValue(pi.father_name);
+        document.getElementById("fatherMobile").textContent = getValue(pi.father_mobile_no);
+        document.getElementById("fatherEmail").textContent = getValue(pi.father_email);
+        document.getElementById("fatherOccupation").textContent = getValue(pi.father_occupation);
+        document.getElementById("motherName").textContent = getValue(pi.mother_name);
+        document.getElementById("motherMobile").textContent = getValue(pi.mother_mobile_no);
+        document.getElementById("motherEmail").textContent = getValue(pi.mother_email);
+        document.getElementById("motherOccupation").textContent = getValue(pi.mother_occupation);
+      }
+
+      // Academic information - Before Admission
+      const pastEducation = student.past_education_records || [];
+      const sscRecord = pastEducation.find(record => record.exam_name === 'SSC');
+      const hsscRecord = pastEducation.find(record => record.exam_name === 'HSSC');
+
+      document.getElementById("sscPercentage").textContent = sscRecord ? getValue(sscRecord.percentage + '%') : 'N/A';
+      document.getElementById("sscYear").textContent = sscRecord ? getValue(sscRecord.year_of_passing) : 'N/A';
+      document.getElementById("hsscPercentage").textContent = hsscRecord ? getValue(hsscRecord.percentage + '%') : 'N/A';
+      document.getElementById("hsscYear").textContent = hsscRecord ? getValue(hsscRecord.year_of_passing) : 'N/A';
+
+      // Academic information - After Admission
+      const postAdmission = student.post_admission_records || [];
+
+      // Calculate backlog count and subjects
+      let backlogCount = 0;
+      let backlogSubjects = [];
+
+      postAdmission.forEach(record => {
+        // Update semester SGPA
+        const sgpaElement = document.getElementById(`sem${record.semester}SGPA`);
+        if (sgpaElement) {
+          sgpaElement.textContent = getValue(record.sgpa);
         }
 
-        function showError(message) {
-            // Simple error display - you can enhance this
-            alert(message);
+        // Check for backlogs
+        if (record.backlog_subjects && record.backlog_subjects !== 'N/A' && record.backlog_subjects !== 'None') {
+          backlogCount++;
+          backlogSubjects.push(`Sem ${record.semester}: ${record.backlog_subjects}`);
+        }
+      });
+
+      document.getElementById("currentSemester").textContent = getValue(student.semester);
+      document.getElementById("backlogCount").textContent = backlogCount;
+      document.getElementById("backlogSubjects").innerHTML = backlogSubjects.length > 0 ?
+        backlogSubjects.join('; ') : '<span class="empty-value">None</span>';
+
+      // Performance in Career Development Activities
+      const careerActivities = student.career_activities || [];
+
+      if (careerActivities.length > 0) {
+        document.getElementById("aptitudeScore").textContent = getValue(careerActivities[0].score_rank);
+        document.getElementById("aptitudeDate").textContent = formatDate(careerActivities[0].exam_date);
+
+        if (careerActivities.length > 1) {
+          document.getElementById("cocubesScore").textContent = getValue(careerActivities[1].score_rank);
+          document.getElementById("cocubesDate").textContent = formatDate(careerActivities[1].exam_date);
         }
 
-        function toggleSection(header) {
-            const section = header.parentElement;
-            section.classList.toggle('expanded');
-            const icon = header.querySelector('.expand-icon');
-            icon.textContent = section.classList.contains('expanded') ? '▲' : '▼';
+        if (careerActivities.length > 2) {
+          document.getElementById("gateScore").textContent = getValue(careerActivities[2].score_rank);
+          document.getElementById("gateDate").textContent = formatDate(careerActivities[2].exam_date);
         }
+      }
 
-        function closeDialog() {
-            if (confirm('Are you sure you want to close?')) {
-                document.querySelector('.dialog-container').classList.add('hidden');
-                document.querySelector('.details-container').classList.add('hidden');
-                document.getElementsByTagName('body')[0].classList.remove('overflow-hidden');
-            }
-        }
+      // Project and Internship Details
+      const projects = student.projects || [];
+      const internships = student.internships || [];
 
-        function printDialog() {
-            window.print();
-        }
+      if (projects.length > 0) {
+        document.getElementById("microProjectTitle").textContent = getValue(projects[0].title);
+        document.getElementById("microProjectDescription").textContent = getValue(projects[0].description);
+      }
 
-        function downloadData() {
-            // Get current student data from modal
-            alert('Download functionality would be implemented here.');
-        }
+      if (projects.length > 1) {
+        document.getElementById("majorProjectTitle").textContent = getValue(projects[1].title);
+        document.getElementById("majorProjectDescription").textContent = getValue(projects[1].description);
+      }
 
-        async function logout() {
-            const token = localStorage.getItem("access_token");
-            if (!token) {
-                console.log("No token found, already logged out.");
-                window.location.href = "../login.html";
-                return;
-            }
-            try {
-                const response = await fetch("http://localhost:5002/api/auth/logout", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": "Bearer " + token
-                    }
-                });
-                if (response.ok) {
-                    console.log("Successfully logged out");
-                } else {
-                    console.error("Logout failed:", await response.json());
-                }
-            } catch (error) {
-                console.error("Error during logout:", error);
-            }
-            localStorage.removeItem("access_token");
-            window.location.href = "../login.html";
-        }
+      if (internships.length > 0) {
+        document.getElementById("internship1Company").textContent = getValue(internships[0].company_name);
+        document.getElementById("internship1Domain").textContent = getValue(internships[0].domain);
+        document.getElementById("internship1Type").textContent = getValue(internships[0].internship_type);
+        document.getElementById("internship1Paid").textContent = getValue(internships[0].paid_unpaid);
+        document.getElementById("internship1Duration").textContent =
+          `${formatDate(internships[0].start_date)} to ${formatDate(internships[0].end_date)}`;
+      }
 
-        function clearFilters() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('semesterFilter').value = '';
-            document.getElementById('batchFilter').value = '';
-            document.getElementById('domainFilter').value = '';
-            document.getElementById('sectionFilter').value = '';
-            filterStudents();
+      if (internships.length > 1) {
+        document.getElementById("internship2Company").textContent = getValue(internships[1].company_name);
+        document.getElementById("internship2Domain").textContent = getValue(internships[1].domain);
+        document.getElementById("internship2Type").textContent = getValue(internships[1].internship_type);
+        document.getElementById("internship2Paid").textContent = getValue(internships[1].paid_unpaid);
+        document.getElementById("internship2Duration").textContent =
+          `${formatDate(internships[1].start_date)} to ${formatDate(internships[1].end_date)}`;
+      }
+
+      // Co-Curricular Activities
+      const participations = student.cocurricular_participations || [];
+      const organizations = student.cocurricular_organizations || [];
+
+      let participationHTML = '';
+      participations.forEach(activity => {
+        participationHTML += `<p>Name: ${getValue(activity.name)}, Date: ${formatDate(activity.date)}, Level: ${getValue(activity.level)}, Awards: ${getValue(activity.awards)}</p>`;
+      });
+      document.querySelector(".activity-list").innerHTML = participationHTML || '<p>No participation activities</p>';
+
+      let organizationHTML = '';
+      organizations.forEach(activity => {
+        organizationHTML += `<p>Name: ${getValue(activity.name)}, Date: ${formatDate(activity.date)}, Level: ${getValue(activity.level)}, Remark: ${getValue(activity.remark)}</p>`;
+      });
+      document.querySelectorAll(".activity-list")[1].innerHTML = organizationHTML || '<p>No organized activities</p>';
+
+      // SWOC Analysis
+      if (student.swoc) {
+        document.getElementById("strengths").textContent = getValue(student.swoc.strengths);
+        document.getElementById("weaknesses").textContent = getValue(student.swoc.weaknesses);
+        document.getElementById("opportunities").textContent = getValue(student.swoc.opportunities);
+        document.getElementById("challenges").textContent = getValue(student.swoc.challenges);
+      }
+
+      // Career Objectives and Skills
+      if (student.career_objective) {
+        const co = student.career_objective;
+        document.getElementById("careerObjectives").textContent = getValue(co.career_goal);
+        document.getElementById("careerDetails").textContent = getValue(co.specific_details);
+        document.getElementById("clarityPreparedness").textContent = getValue(co.clarity_preparedness);
+        document.getElementById("campusPlacement").textContent = co.interested_in_campus_placement ? "Yes" : "No";
+        document.getElementById("campusPlacementReasons").textContent = getValue(co.campus_placement_reasons);
+      }
+
+      if (student.skills) {
+        document.getElementById("programmingLanguages").textContent = getValue(student.skills.programming_languages);
+        document.getElementById("technologiesFrameworks").textContent = getValue(student.skills.technologies_frameworks);
+        document.getElementById("familiarToolsPlatforms").textContent = getValue(student.skills.familiar_tools_platforms);
+        document.getElementById("domainOfInterest").textContent = getValue(student.skills.domains_of_interest);
+      }
+
+      // Show the modal
+      document.querySelector('.dialog-container').classList.remove('hidden');
+      document.querySelector('.details-container').classList.remove('hidden');
+      document.getElementsByTagName('body')[0].classList.add('overflow-hidden');
+    }
+
+    function showError(message) {
+      // Simple error display - you can enhance this
+      alert(message);
+    }
+
+    function toggleSection(header) {
+      const section = header.parentElement;
+      section.classList.toggle('expanded');
+      const icon = header.querySelector('.expand-icon');
+      icon.textContent = section.classList.contains('expanded') ? '▲' : '▼';
+    }
+
+    function closeDialog() {
+      if (confirm('Are you sure you want to close?')) {
+        document.querySelector('.dialog-container').classList.add('hidden');
+        document.querySelector('.details-container').classList.add('hidden');
+        document.getElementsByTagName('body')[0].classList.remove('overflow-hidden');
+      }
+    }
+
+    function printDialog() {
+      window.print();
+    }
+
+    function downloadData() {
+      // Get the student details modal content
+      const modalContent = document.querySelector('.dialog-container');
+      if (!modalContent) {
+        alert('No student data available for download.');
+        return;
+      }
+
+      // Create a clean version for PDF export
+      const content = document.createElement('div');
+      content.innerHTML = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px;">
+          <h1 style="color: #2563eb; text-align: center; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">
+            🎓 Student Information Report
+          </h1>
+          
+          <div style="margin: 20px 0;">
+            <h2 style="color: #1e40af;">📋 Student Details</h2>
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              ${modalContent.querySelector('.dialog-content').innerHTML}
+            </div>
+          </div>
+          
+          <div style="text-align: center; margin-top: 30px; color: #6b7280; font-size: 12px;">
+            Generated on: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
+          </div>
+        </div>
+      `;
+
+      // Configure PDF options
+      const opt = {
+        margin: 10,
+        filename: 'student_information_report.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      // Generate and download PDF
+      html2pdf().set(opt).from(content).save();
+    }
+
+    async function logout() {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        console.log("No token found, already logged out.");
+        window.location.href = "../login.html";
+        return;
+      }
+      try {
+        const response = await fetch("http://localhost:5002/api/auth/logout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          }
+        });
+        if (response.ok) {
+          console.log("Successfully logged out");
+        } else {
+          console.error("Logout failed:", await response.json());
         }
-    </script>
+      } catch (error) {
+        console.error("Error during logout:", error);
+      }
+      localStorage.removeItem("access_token");
+      window.location.href = "../login.html";
+    }
+
+    function clearFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('semesterFilter').value = '';
+      document.getElementById('batchFilter').value = '';
+      document.getElementById('domainFilter').value = '';
+      document.getElementById('sectionFilter').value = '';
+      filterStudents();
+    }
+  </script>
 </body>
 
 </html>

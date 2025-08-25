@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -71,6 +72,7 @@
                 opacity: 0;
                 transform: translateY(20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -491,6 +493,7 @@
 
         /* High contrast mode */
         @media (prefers-contrast: high) {
+
             .welcome-container,
             .role-card {
                 border: 2px solid currentColor;
@@ -502,6 +505,7 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Welcome Page -->
     <div class="page welcome-page active" id="welcomePage">
@@ -509,18 +513,19 @@
             <div class="logo-container">
                 <img src="./Images/apple-touch-icon (1).png" alt="Know Your Student System Logo" class="logo">
             </div>
-            
+
             <div class="welcome-header">
                 <h1>Welcome to</h1>
                 <h2>Know Your Student System</h2>
             </div>
-            
+
             <div class="welcome-description">
-                <p>Streamline student monitoring, enhance class organization, and manage students and faculty with our comprehensive educational platform.</p>
+                <p>Streamline student monitoring, enhance class organization, and manage students and faculty with our
+                    comprehensive educational system.</p>
             </div>
-            
+
             <div class="divider"></div>
-            
+
             <button class="login-button" onclick="showRoleSelection()" aria-label="Proceed to login and role selection">
                 Get Started
             </button>
@@ -535,35 +540,41 @@
                     <span>←</span>
                     Back
                 </button>
-                
+
                 <h2 class="page-title">Choose Your Role</h2>
-                
+
                 <div style="width: 80px;"></div> <!-- Spacer for centering -->
             </div>
         </div>
-        
+
         <div class="main-content">
-            <div class="role-card admin" onclick="selectRole('admin')" tabindex="0" role="button" aria-label="Select Administrator role">
+            <div class="role-card admin" onclick="selectRole('admin')" tabindex="0" role="button"
+                aria-label="Select Administrator role">
                 <div class="role-icon">A</div>
                 <h3 class="role-title">Administrator</h3>
                 <p class="role-description">
-                    Comprehensive system management with full access to user administration, system settings, and advanced analytics.
+                    Comprehensive system management with full access to user administration, system settings, and
+                    advanced analytics.
                 </p>
             </div>
 
-            <div class="role-card student" onclick="selectRole('student')" tabindex="0" role="button" aria-label="Select Student role">
+            <div class="role-card student" onclick="selectRole('student')" tabindex="0" role="button"
+                aria-label="Select Student role">
                 <div class="role-icon">S</div>
                 <h3 class="role-title">Student</h3>
                 <p class="role-description">
-                    Access your personal dashboard, view grades, manage assignments, and track your academic progress effectively.
+                    Streamline your acadamic journey with our comprehensive system.
+                    Form Submission, Mentoring, and more.
                 </p>
             </div>
 
-            <div class="role-card teacher" onclick="selectRole('teacher')" tabindex="0" role="button" aria-label="Select Teacher role">
+            <div class="role-card teacher" onclick="selectRole('teacher')" tabindex="0" role="button"
+                aria-label="Select Teacher role">
                 <div class="role-icon">T</div>
                 <h3 class="role-title">Teacher</h3>
                 <p class="role-description">
-                    Manage your classes, track student performance, create assessments, and communicate with students and parents.
+                    Manage your classes, track student performance, create assessments, and communicate with students
+                    and parents.
                 </p>
             </div>
         </div>
@@ -574,7 +585,7 @@
         function showRoleSelection() {
             const welcomePage = document.getElementById('welcomePage');
             const roleSelectionPage = document.getElementById('roleSelectionPage');
-            
+
             welcomePage.style.opacity = '0';
             setTimeout(() => {
                 welcomePage.classList.remove('active');
@@ -586,7 +597,7 @@
         function showWelcome() {
             const welcomePage = document.getElementById('welcomePage');
             const roleSelectionPage = document.getElementById('roleSelectionPage');
-            
+
             roleSelectionPage.style.opacity = '0';
             setTimeout(() => {
                 roleSelectionPage.classList.remove('active');
@@ -600,7 +611,7 @@
             const selectedCard = event.target.closest('.role-card');
             selectedCard.style.opacity = '0.7';
             selectedCard.style.pointerEvents = 'none';
-            
+
             // Simulate loading then redirect
             setTimeout(() => {
                 window.location.href = "login.html";
@@ -608,19 +619,19 @@
         }
 
         // Enhanced keyboard navigation
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             const focusedElement = document.activeElement;
-            
+
             if (focusedElement.classList.contains('role-card') && (e.key === 'Enter' || e.key === ' ')) {
                 e.preventDefault();
                 focusedElement.click();
             }
-            
+
             // Arrow key navigation for role cards
             if (document.getElementById('roleSelectionPage').classList.contains('active')) {
                 const roleCards = document.querySelectorAll('.role-card');
                 const currentIndex = Array.from(roleCards).indexOf(focusedElement);
-                
+
                 if (e.key === 'ArrowLeft' && currentIndex > 0) {
                     e.preventDefault();
                     roleCards[currentIndex - 1].focus();
@@ -632,19 +643,19 @@
         });
 
         // Add smooth page transitions
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const pages = document.querySelectorAll('.page');
             pages.forEach(page => {
                 page.style.transition = 'opacity 0.3s ease-in-out';
                 page.style.opacity = page.classList.contains('active') ? '1' : '0';
             });
-            
+
             // Add intersection observer for animations
             const observerOptions = {
                 threshold: 0.1,
                 rootMargin: '0px 0px -50px 0px'
             };
-            
+
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
@@ -653,7 +664,7 @@
                     }
                 });
             }, observerOptions);
-            
+
             // Observe elements for animation
             document.querySelectorAll('.role-card').forEach(card => {
                 card.style.opacity = '0';
@@ -670,10 +681,11 @@
         }
 
         // Preload images for better performance
-        window.addEventListener('load', function() {
+        window.addEventListener('load', function () {
             const img = new Image();
             img.src = './Images/apple-touch-icon (1).png';
         });
     </script>
 </body>
+
 </html>
