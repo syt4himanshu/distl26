@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#667eea">
+    <title>Student Dashboard - Know Your Student</title>
+    <link rel="stylesheet" href="./dashboard.css">
+    <script src="../js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.AuthGuard) { window.AuthGuard.guardRoute(['student']); }
+        });
+    </script>
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <h2>Student Dashboard</h2>
+            </div>
+
+            <div class="nav-menu" id="nav-menu">
+                <div class="nav-greeting">
+                    <span class="greeting-text">Hello!</span>
+                    <span class="student-name" id="student-name">Student</span>
+                </div>
+
+                <div class="nav-actions">
+                    <button class="nav-btn change-password-btn" id="changePasswordBtn">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z">
+                            </path>
+                        </svg>
+                        Change Password
+                    </button>
+
+                    <button class="nav-btn logout-btn" id="logoutBtn">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
+                            </path>
+                        </svg>
+                        Logout
+                    </button>
+
+                    <button class="nav-btn theme-toggle" id="themeToggle">
+                        <svg class="btn-icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                            </path>
+                        </svg>
+                        <svg class="btn-icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="nav-toggle" id="nav-toggle">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Dashboard Header -->
+            <div class="dashboard-header">
+                <h1>Welcome to Your Dashboard</h1>
+                <p>Manage your profile, view mentoring sessions, and track your progress</p>
+            </div>
+
+            <!-- Dashboard Grid -->
+            <div class="dashboard-grid">
+                <!-- Update Profile Section -->
+                <section class="dashboard-section profile-section">
+                    <div class="section-header">
+                        <h2>Update Profile</h2>
+                        <p>Keep your information current and complete</p>
+                    </div>
+                    <div class="section-content">
+                        <div class="profile-card">
+                            <div class="card-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                            </div>
+                            <div class="card-content">
+                                <h3>Student Information Form</h3>
+                                <p>Complete your academic and personal details</p>
+                                <a href="./s.html" class="btn btn-primary">Update Profile</a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Remarks Section -->
+                <section class="dashboard-section remarks-section">
+                    <div class="section-header">
+                        <h2>Mentoring Remarks</h2>
+                        <p>View feedback and suggestions from your mentors</p>
+                    </div>
+                    <div class="section-content">
+                        <div class="remarks-container" id="remarksContainer">
+                            <!-- Remarks will be populated by JavaScript -->
+                            <div class="loading-spinner">
+                                <div class="spinner"></div>
+                                <p>Loading mentoring data...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Mentor Info Section -->
+                <section class="dashboard-section mentor-section">
+                    <div class="section-header">
+                        <h2>Mentor Information</h2>
+                        <p>Details about your assigned faculty mentor</p>
+                    </div>
+                    <div class="section-content">
+                        <div class="mentor-container" id="mentorContainer">
+                            <!-- Mentor info will be populated by JavaScript -->
+                            <div class="loading-spinner">
+                                <div class="spinner"></div>
+                                <p>Loading mentor information...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <!-- Change Password Modal -->
+    <div class="modal" id="changePasswordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Change Password</h3>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="changePasswordForm">
+                    <div class="form-group">
+                        <label for="currentPassword">Current Password</label>
+                        <input type="password" id="currentPassword" name="currentPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">New Password</label>
+                        <input type="password" id="newPassword" name="newPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm New Password</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" required>
+                    </div>
+                    <p class="error" id="errorMsg"></p>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="cancelChangePassword">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Change Password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="./dashboard.js"></script>
+</body>
+
+</html>

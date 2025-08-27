@@ -166,6 +166,7 @@
         const errorMsg = document.getElementById("errorMsg");
         const popup = document.getElementById("popup");
 
+
         function toggleView(id, el) {
             const input = document.getElementById(id);
             if (input.type === "password") {
@@ -184,50 +185,100 @@
             const newPassword = document.getElementById("newPassword").value;
             const confirmPassword = document.getElementById("confirmPassword").value;
 
+            // Clear previous messages
+            errorMsg.textContent = "";
+            errorMsg.style.display = "none";
+
+            // Validation
             if (!oldPassword || !newPassword || !confirmPassword) {
-                errorMsg.textContent = "All fields are required.";
+                showError("All fields are required.");
                 return;
             }
 
             if (newPassword !== confirmPassword) {
-                errorMsg.textContent = "New passwords do not match.";
+                showError("New passwords do not match.");
                 return;
             }
 
-            errorMsg.textContent = "";
+            if (newPassword.length < 6) {
+                showError("New password must be at least 6 characters long.");
+                return;
+            }
 
             try {
-                const res = await fetch("http://localhost:5002/api/auth/change-password", { // adjust your API URL
+                const res = await fetch("http://localhost:5002/api/auth/change-password", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": "Bearer " + localStorage.getItem("access_token") // must have token
+                        "Authorization": "Bearer " + localStorage.getItem("access_token")
                     },
                     body: JSON.stringify({
-                        oldPassword,
-                        newPassword
+                        "old_password": oldPassword,
+                        "new_password": newPassword
                     })
                 });
 
                 const data = await res.json();
 
                 if (!res.ok) {
-                    errorMsg.textContent = data.message || "Something went wrong.";
+                    // Handle different error scenarios
+                    if (res.status === 401) {
+                        showError("Invalid old password. Please try again.");
+                    } else if (res.status === 400) {
+                        showError(data.error || "Invalid request. Please check your input.");
+                    } else if (res.status === 500) {
+                        showError("Server error. Please try again later.");
+                    } else {
+                        showError(data.error || "Something went wrong. Please try again.");
+                    }
                     return;
                 }
 
-                // Success
-                popup.style.display = "block";
+                // Success scenario
+                showSuccess(data.message || "Password changed successfully!");
+
+
+                // Hide success message after 5 seconds
                 setTimeout(() => {
-                    popup.style.display = "none";
+                    hideSuccess();
                     form.reset();
-                }, 2000);
+                }, 5000);
 
             } catch (err) {
-                errorMsg.textContent = "Network error. Please try again later.";
-                console.error(err);
+                console.error("Error:", err);
+                if (err.name === "TypeError" && err.message.includes("fetch")) {
+                    showError("Network error. Please check your connection.");
+                } else {
+                    showError("An unexpected error occurred. Please try again.");
+                }
             }
         });
+
+        function showError(message) {
+            errorMsg.textContent = message;
+            errorMsg.style.display = "block";
+            errorMsg.style.color = "#dc3545";
+            errorMsg.style.backgroundColor = "#f8d7da";
+            errorMsg.style.border = "1px solid #f5c6cb";
+            errorMsg.style.padding = "10px";
+            errorMsg.style.borderRadius = "4px";
+            errorMsg.style.marginBottom = "15px";
+        }
+
+        function showSuccess(message) {
+            errorMsg.textContent = message;
+            errorMsg.style.display = "block";
+            errorMsg.style.color = "#155724";
+            errorMsg.style.backgroundColor = "#d4edda";
+            errorMsg.style.border = "1px solid #c3e6cb";
+            errorMsg.style.padding = "10px";
+            errorMsg.style.borderRadius = "4px";
+            errorMsg.style.marginBottom = "15px";
+        }
+
+        function hideSuccess() {
+            errorMsg.style.display = "none";
+        }
     </script>
 
 </body>

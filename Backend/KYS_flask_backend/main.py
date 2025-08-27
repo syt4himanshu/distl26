@@ -890,6 +890,35 @@ def list_student_mentoring_minutes():
     return jsonify(result), 200
 
 
+@app.route("/students/me/mentor", methods=["GET"])
+@role_required(["student"])
+def get_student_mentor():
+    """Get current student's mentor information"""
+    user = db.session.get(User, get_jwt_identity())
+    student = user.student_profile
+
+    if not student:
+        return jsonify({"error": "Student profile not found"}), 404
+
+    if not student.mentor_id:
+        return jsonify({"error": "No mentor assigned to this student"}), 404
+
+    mentor = Faculty.query.get(student.mentor_id)
+    if not mentor:
+        return jsonify({"error": "Mentor not found"}), 404
+
+    mentor_data = {
+        "id": mentor.id,
+        "email": mentor.email,
+        "first_name": mentor.first_name,
+        "last_name": mentor.last_name,
+        "full_name": f"{mentor.first_name} {mentor.last_name}" if mentor.first_name and mentor.last_name else "Unknown",
+        "contact_number": mentor.contact_number
+    }
+
+    return jsonify(mentor_data), 200
+
+
 # search and lightweight listing
 @app.route("/api/students", methods=["GET"])
 @role_required(["admin", "faculty"])
@@ -1215,6 +1244,49 @@ def add_mentoring_minute(student_uid):
         return jsonify({"error": "Database error while saving mentoring minute", "details": str(e)}), 500
 
     return jsonify({"message": "Mentoring minute added successfully."}), 201
+
+
+@app.route("/faculty/me/mentees/<string:student_uid>/minutes", methods=["GET"])
+@role_required(["faculty"])
+def get_mentee_mentoring_minutes(student_uid):
+    """Get all mentoring minutes for a specific mentee student"""
+    user = db.session.get(User, get_jwt_identity())
+    faculty = user.faculty_profile
+
+    if not faculty:
+        return jsonify({"error": "Faculty profile not found"}), 404
+
+    # Find mentee student by UID
+    student = Student.query.filter_by(uid=student_uid, mentor_id=faculty.id).first()
+    if not student:
+        return jsonify({"error": "Mentee not found or not assigned to this faculty"}), 404
+
+    # Get all mentoring minutes for this student
+    minutes = MentoringMinute.query.filter_by(student_id=student.id).order_by(MentoringMinute.date.desc()).all()
+
+    result = []
+    for m in minutes:
+        result.append({
+            "id": m.id,
+            "semester": m.semester,
+            "date": m.date.isoformat(),
+            "remarks": m.remarks,
+            "suggestion": m.suggestion,
+            "action": m.action,
+            "created_by_faculty": m.faculty_id == faculty.id  # Whether this minute was created by current faculty
+        })
+
+    return jsonify({
+        "student": {
+            "uid": student.uid,
+            "full_name": student.full_name,
+            "semester": student.semester,
+            "section": student.section,
+            "year_of_admission": student.year_of_admission
+        },
+        "mentoring_minutes": result
+    }), 200
+
 
 # --------------------------------------
 # Admin Endpoints
@@ -1614,55 +1686,45 @@ def get_faculty_mentees(faculty_id):
 @app.route("/api/admin/faculty/<int:faculty_id>/mentees/generate", methods=["POST"])
 @role_required(["admin"])
 def generate_faculty_mentees(faculty_id):
-    print(f"DEBUG: Random generation request for faculty_id: {faculty_id}")
-    
-    try:
-        # Validate faculty exists
-        faculty = Faculty.query.get(faculty_id)
-        if not faculty:
-            print(f"DEBUG: Faculty not found for ID: {faculty_id}")
-            return jsonify({"error": "Faculty not found"}), 404
+    faculty = Faculty.query.get(faculty_id)
+    if not faculty:
+        return jsonify({"error": "Faculty not found"}), 404
 
-        # Get current mentees count for this faculty
-        current_mentees_count = Student.query.filter_by(mentor_id=faculty_id).count()
-        max_mentees = 20
-        
-        print(f"DEBUG: Faculty {faculty_id} has {current_mentees_count} current mentees, max: {max_mentees}")
-        
-        # Check if faculty has reached maximum capacity
-        if current_mentees_count >= max_mentees:
-            return jsonify({
-                "error": f"Faculty already has maximum number of mentees ({max_mentees})",
-                "current_count": current_mentees_count,
-                "max_capacity": max_mentees
-            }), 400
+    # Step 1: Count number of faculties with currently zero mentees
+    faculties_without_mentees = Faculty.query.filter(~Faculty.mentees.any()).all()
+    n = len(faculties_without_mentees)
+    if n == 0:
+        return jsonify({"error": "No faculties without mentees to assign"}), 400
 
-        # Calculate available slots
-        remaining_slots = max_mentees - current_mentees_count
-        
-        # Get unassigned students with efficient query
-        unassigned_students = Student.query.filter_by(mentor_id=None).all()
-        
-        print(f"DEBUG: Found {len(unassigned_students)} unassigned students")
-        
-        # Check if any unassigned students exist
-        if not unassigned_students:
-            return jsonify({
-                "error": "No unassigned students available",
-                "suggestion": "All students are currently assigned to mentors"
-            }), 400
+    # Step 2: For each semester and section, find unassigned students and count them
+    # Get distinct semesters and sections from unassigned students
+    query = db.session.query(
+        Student.semester,
+        Student.section
+    ).filter(Student.mentor_id == None).distinct()
 
-        # Shuffle for random distribution
+    mentees_to_assign = []
+
+    for semester, section in query:
+        # Count unassigned students in this semester and section (m)
+        unassigned_students = Student.query.filter_by(
+            semester=semester,
+            section=section,
+            mentor_id=None
+        ).all()
+        m = len(unassigned_students)
+
+        # Calculate k = m // n (floor division)
+        k = m // n
+        if k == 0:
+            # if zero, skip assigning for this semester-section
+            continue
+
+        # Shuffle unassigned students list for random selection
         random.shuffle(unassigned_students)
-        
-        # Determine how many students to suggest (1-5, but not more than available)
-        suggested_count = min(remaining_slots, len(unassigned_students), 5)
-        selected_students = unassigned_students[:suggested_count]
+        # Select first k students for this faculty
+        selected_students = unassigned_students[:k]
 
-        print(f"DEBUG: Selected {suggested_count} students for random allocation")
-
-        # Prepare response data
-        mentees_to_assign = []
         for student in selected_students:
             mentees_to_assign.append({
                 "id": student.id,
@@ -1670,34 +1732,11 @@ def generate_faculty_mentees(faculty_id):
                 "full_name": student.full_name,
                 "semester": student.semester,
                 "section": student.section,
-                "year_of_admission": student.year_of_admission,
-                "currently_assigned": False  # Explicitly state they're unassigned
+                "year_of_admission": student.year_of_admission
             })
 
-        # Return comprehensive response
-        response_data = {
-            "faculty_id": faculty_id,
-            "faculty_name": f"{faculty.first_name} {faculty.last_name}",
-            "current_mentees_count": current_mentees_count,
-            "max_capacity": max_mentees,
-            "remaining_slots": remaining_slots,
-            "available_unassigned": len(unassigned_students),
-            "suggested_allocation": suggested_count,
-            "students": mentees_to_assign,
-            "is_preview": True  # Indicate this is a preview, not final assignment
-        }
-
-        print(f"DEBUG: Returning {len(mentees_to_assign)} students for allocation preview")
-        return jsonify(response_data), 200
-        
-    except Exception as e:
-        print(f"ERROR: Exception in generate_faculty_mentees: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            "error": "Internal server error during mentee generation",
-            "details": str(e)
-        }), 500
+    # Return preview of selected mentees for this faculty (do NOT commit here)
+    return jsonify(mentees_to_assign), 200
 
 @app.route("/api/admin/faculty/<int:faculty_id>/mentees/confirm", methods=["POST"])
 @role_required(["admin"])

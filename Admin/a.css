@@ -946,6 +946,10 @@
         border-color: #2563eb;
     }
 
+    .selected-student-id {
+        display: none;
+    }
+
     /* Allocation Options Styling */
     .allocation-options {
         display: flex;

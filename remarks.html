@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Mentoring System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #1a2530);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s;
+            margin-bottom: 20px;
+            border: none;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .student-card {
+            border-left: 4px solid #4e73df;
+        }
+
+        .btn-remarks {
+            background: linear-gradient(to right, #4e73df, #7a8ee0);
+            border: none;
+            border-radius: 6px;
+            padding: 8px 20px;
+            color: white;
+            font-weight: 500;
+        }
+
+        .btn-remarks:hover {
+            background: linear-gradient(to right, #3a56c4, #6578d0);
+            color: white;
+        }
+
+        .modal-content {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #4e73df, #224abe);
+            color: white;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+        }
+
+        .form-control,
+        .form-select {
+            border-radius: 8px;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: #4e4e4e;
+            margin-bottom: 8px;
+        }
+
+        .btn-submit {
+            background: linear-gradient(to right, #1cc88a, #38d9a9);
+            border: none;
+            padding: 10px 25px;
+            font-weight: 600;
+            border-radius: 8px;
+        }
+
+        .btn-submit:hover {
+            background: linear-gradient(to right, #17a673, #2dc997);
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-radius: 8px;
+        }
+
+        .student-info {
+            background-color: #f8f9fc;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4e73df;
+        }
+
+        .required-field::after {
+            content: "*";
+            color: #e74a3b;
+            margin-left: 4px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .no-records {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .no-records i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .refresh-btn {
+            background: linear-gradient(to right, #6c757d, #868e96);
+            border: none;
+            border-radius: 6px;
+            padding: 8px 20px;
+            color: white;
+            font-weight: 500;
+        }
+
+        .refresh-btn:hover {
+            background: linear-gradient(to right, #5a6268, #6c757d);
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header -->
+    <div class="header text-center mb-4">
+        <div class="container">
+            <h1><i class="fas fa-chalkboard-teacher me-2"></i>Faculty Mentoring Portal</h1>
+            <p class="lead">Manage student mentoring records and provide guidance</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Student Selection -->
+        <div class="row justify-content-center mb-4" id="studentSelectionSection">
+            <div class="col-lg-10">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">Select Student</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="studentUid" class="form-label">Student UID</label>
+                                <input type="text" class="form-control" id="studentUid"
+                                    placeholder="Enter Student UID (e.g., STU2023001)">
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <button class="btn btn-primary me-2" id="loadStudent">
+                                    <i class="fas fa-search me-2"></i>Load Student
+                                </button>
+                                <button class="btn refresh-btn" id="refreshMinutes">
+                                    <i class="fas fa-sync-alt me-2"></i>Refresh
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Info Card -->
+        <div class="row justify-content-center" id="studentInfoSection" style="display: none;">
+            <div class="col-lg-10">
+                <div class="student-info">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h3 id="studentName">Loading...</h3>
+                            <p class="mb-1"><strong>UID:</strong> <span id="studentUidDisplay">-</span></p>
+                            <p class="mb-1"><strong>Program:</strong> <span id="studentProgram">-</span></p>
+                            <p class="mb-0"><strong>Current Semester:</strong> <span id="studentSemester">-</span></p>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <button class="btn btn-remarks mt-2" data-bs-toggle="modal" data-bs-target="#remarksModal"
+                                id="giveRemarksBtn">
+                                <i class="fas fa-comment-dots me-2"></i>Give Remarks
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Previous Mentoring Minutes -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4>Previous Mentoring Records</h4>
+                    <div id="loadingIndicator" style="display: none;">
+                        <span class="loading-spinner me-2"></span>Loading...
+                    </div>
+                </div>
+
+                <div id="mentoringMinutesContainer">
+                    <!-- Minutes will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remarks Modal -->
+    <div class="modal fade" id="remarksModal" tabindex="-1" aria-labelledby="remarksModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="remarksModalLabel"><i class="fas fa-edit me-2"></i>Add Mentoring Remarks
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <h6>Student Information</h6>
+                        <div class="d-flex justify-content-between">
+                            <p class="mb-1"><strong>Name:</strong> <span id="modalStudentName">-</span></p>
+                            <p class="mb-1"><strong>UID:</strong> <span id="modalStudentUid">-</span></p>
+                            <p class="mb-1"><strong>Semester:</strong> <span id="modalStudentSemester">-</span></p>
+                        </div>
+                    </div>
+
+                    <form id="remarksForm">
+                        <div class="mb-3">
+                            <label for="remarks" class="form-label required-field">Remarks</label>
+                            <textarea class="form-control" id="remarks" rows="4"
+                                placeholder="Enter your observations and comments about the student"
+                                required></textarea>
+                            <div class="form-text">Provide detailed feedback about the student's progress, behavior, or
+                                any concerns.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="suggestions" class="form-label">Suggestions</label>
+                            <textarea class="form-control" id="suggestions" rows="3"
+                                placeholder="Provide suggestions for improvement"></textarea>
+                            <div class="form-text">Recommendations for the student to enhance their academic
+                                performance.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="action" class="form-label">Action Plan</label>
+                            <textarea class="form-control" id="action" rows="3"
+                                placeholder="Outline specific actions to be taken"></textarea>
+                            <div class="form-text">Specific steps or measures that should be implemented based on this
+                                discussion.</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-submit" id="submitRemarks">
+                        <span id="submitBtnText">Submit Remarks</span>
+                        <span id="submitBtnSpinner" class="loading-spinner ms-2" style="display: none;"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast for success/error messages -->
+    <div class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive"
+        aria-atomic="true" id="successToast">
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="fas fa-check-circle me-2"></i>
+                <span id="toastMessage">Remarks submitted successfully!</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                aria-label="Close"></button>
+        </div>
+    </div>
+
+    <div class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive"
+        aria-atomic="true" id="errorToast">
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <span id="errorToastMessage">Error submitting remarks. Please try again.</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"
+                aria-label="Close"></button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Initialize variables
+            let currentStudentUid = null;
+            let currentStudentData = null;
+
+            // Get DOM elements
+            const studentUidInput = document.getElementById('studentUid');
+            const loadStudentBtn = document.getElementById('loadStudent');
+            const refreshMinutesBtn = document.getElementById('refreshMinutes');
+            const submitButton = document.getElementById('submitRemarks');
+            const remarksForm = document.getElementById('remarksForm');
+            const successToast = new bootstrap.Toast(document.getElementById('successToast'));
+            const errorToast = new bootstrap.Toast(document.getElementById('errorToast'));
+            const remarksModal = document.getElementById('remarksModal');
+            const bsModal = bootstrap.Modal.getInstance(remarksModal);
+
+            // Check if student UID is provided in URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const studentUidFromUrl = urlParams.get('student_uid');
+
+            if (studentUidFromUrl) {
+                // Hide student selection section and load student directly
+                document.getElementById('studentSelectionSection').style.display = 'none';
+                currentStudentUid = studentUidFromUrl;
+                studentUidInput.value = studentUidFromUrl;
+                loadStudentData();
+            } else {
+                // Show student selection section if no UID provided
+                document.getElementById('studentSelectionSection').style.display = 'block';
+                document.getElementById('studentInfoSection').style.display = 'none';
+            }
+
+            // Event listeners
+            loadStudentBtn.addEventListener('click', loadStudent);
+            refreshMinutesBtn.addEventListener('click', loadMentoringMinutes);
+            submitButton.addEventListener('click', submitRemarks);
+
+            // Load student data
+            function loadStudent() {
+                const uid = studentUidInput.value.trim();
+                if (!uid) {
+                    showError('Please enter a student UID');
+                    return;
+                }
+
+                currentStudentUid = uid;
+                showLoading(true);
+
+                // Fetch student data and mentoring minutes from the new endpoint
+                fetch(`http://localhost:5002/faculty/me/mentees/${uid}/minutes`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getAuthToken()
+                    }
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch student data');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        currentStudentData = {
+                            name: data.student.full_name,
+                            uid: data.student.uid,
+                            program: 'Computer Science', // Default value since not in API
+                            semester: data.student.semester
+                        };
+
+                        displayStudentInfo();
+                        displayMentoringMinutes(data.mentoring_minutes);
+                        showLoading(false);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching student data:', error);
+                        showError('Error loading student data. Please check the UID and try again.');
+                        showLoading(false);
+                    });
+            }
+
+            // Load student data when page loads with UID parameter
+            function loadStudentData() {
+                if (!currentStudentUid) return;
+
+                showLoading(true);
+
+                // Fetch student data and mentoring minutes from the new endpoint
+                fetch(`http://localhost:5002/faculty/me/mentees/${currentStudentUid}/minutes`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getAuthToken()
+                    }
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch student data');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        currentStudentData = {
+                            name: data.student.full_name,
+                            uid: data.student.uid,
+                            program: 'Computer Science', // Default value since not in API
+                            semester: data.student.semester
+                        };
+
+                        displayStudentInfo();
+                        displayMentoringMinutes(data.mentoring_minutes);
+                        showLoading(false);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching student data:', error);
+                        showError('Error loading student data. Please check the UID and try again.');
+                        showLoading(false);
+                    });
+            }
+
+            // Display student information
+            function displayStudentInfo() {
+                if (!currentStudentData) return;
+
+                document.getElementById('studentName').textContent = currentStudentData.name;
+                document.getElementById('studentUidDisplay').textContent = currentStudentData.uid;
+                document.getElementById('studentProgram').textContent = currentStudentData.program;
+                document.getElementById('studentSemester').textContent = currentStudentData.semester;
+
+                // Update modal info
+                document.getElementById('modalStudentName').textContent = currentStudentData.name;
+                document.getElementById('modalStudentUid').textContent = currentStudentData.uid;
+                document.getElementById('modalStudentSemester').textContent = currentStudentData.semester;
+
+                document.getElementById('studentInfoSection').style.display = 'block';
+            }
+
+            // Load mentoring minutes from API
+            function loadMentoringMinutes() {
+                if (!currentStudentUid) return;
+
+                showLoading(true);
+
+                // Call the new API endpoint for faculty to get mentee mentoring minutes
+                fetch(`http://localhost:5002/faculty/me/mentees/${currentStudentUid}/minutes`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getAuthToken()
+                    }
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch mentoring minutes');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        displayMentoringMinutes(data.mentoring_minutes);
+                        showLoading(false);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching mentoring minutes:', error);
+                        // For demo purposes, show sample data
+                        displayMentoringMinutes(getSampleMinutes());
+                        showLoading(false);
+                    });
+            }
+
+            // Display mentoring minutes
+            function displayMentoringMinutes(minutes) {
+                const container = document.getElementById('mentoringMinutesContainer');
+
+                if (!minutes || minutes.length === 0) {
+                    container.innerHTML = `
+                        <div class="no-records">
+                            <i class="fas fa-clipboard-list"></i>
+                            <h5>No mentoring records found</h5>
+                            <p>This student doesn't have any previous mentoring minutes yet.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                minutes.forEach(minute => {
+                    const date = new Date(minute.date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+
+                    // Show indicator if this remark was created by current faculty
+                    const facultyIndicator = minute.created_by_faculty ?
+                        '<span class="badge bg-primary ms-2">Your Remark</span>' : '';
+
+                    html += `
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="card-title">Mentoring Session - ${date}</h5>
+                                    <div>
+                                        <span class="badge bg-success">Semester ${minute.semester}</span>
+                                        ${facultyIndicator}
+                                    </div>
+                                </div>
+                                <p class="card-text"><strong>Remarks:</strong> ${minute.remarks || 'No remarks provided'}</p>
+                                ${minute.suggestion ? `<p class="card-text"><strong>Suggestions:</strong> ${minute.suggestion}</p>` : ''}
+                                ${minute.action ? `<p class="card-text"><strong>Action Plan:</strong> ${minute.action}</p>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+            }
+
+            // Submit new remarks
+            function submitRemarks() {
+                const remarks = document.getElementById('remarks').value.trim();
+                const suggestions = document.getElementById('suggestions').value.trim();
+                const action = document.getElementById('action').value.trim();
+
+                if (!remarks) {
+                    showError('Remarks field is required');
+                    return;
+                }
+
+                // Show loading state
+                document.getElementById('submitBtnText').style.display = 'none';
+                document.getElementById('submitBtnSpinner').style.display = 'inline-block';
+                submitButton.disabled = true;
+
+                // Prepare data for API request
+                const formData = {
+                    remarks: remarks,
+                    suggestion: suggestions,
+                    action: action
+                };
+
+                // Call the API endpoint to add mentoring minute
+                fetch(`http://localhost:5002/faculty/me/mentees/${currentStudentUid}/minutes`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getAuthToken()
+                    },
+                    body: JSON.stringify(formData)
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(err => {
+                                throw new Error(err.error || 'Failed to submit remarks')
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(response => {
+                        showSuccess(response.message || 'Remarks submitted successfully!');
+
+                        // Clear form and close modal
+                        remarksForm.reset();
+                        bsModal.hide();
+
+                        // Refresh the mentoring minutes list
+                        loadMentoringMinutes();
+                    })
+                    .catch(error => {
+                        console.error('Error submitting remarks:', error);
+                        showError(error.message || 'Error submitting remarks. Please try again.');
+                    })
+                    .finally(() => {
+                        // Reset button state
+                        document.getElementById('submitBtnText').style.display = 'inline';
+                        document.getElementById('submitBtnSpinner').style.display = 'none';
+                        submitButton.disabled = false;
+                    });
+            }
+
+            // Utility functions
+            function showLoading(show) {
+                document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+            }
+
+            function showSuccess(message) {
+                document.getElementById('toastMessage').textContent = message;
+                successToast.show();
+            }
+
+            function showError(message) {
+                document.getElementById('errorToastMessage').textContent = message;
+                errorToast.show();
+            }
+
+            function getAuthToken() {
+                // In production, get this from localStorage or your auth system
+                return localStorage.getItem('access_token') || 'demo-token';
+            }
+
+            // Sample data for demo purposes
+            function getSampleMinutes() {
+                return [
+                    {
+                        id: 1,
+                        faculty_name: 'Dr. Sarah Johnson',
+                        semester: 5,
+                        date: '2023-10-15',
+                        remarks: 'John has shown significant improvement in algorithm design but needs to work on time management.',
+                        suggestion: 'Recommended using a time tracking app and breaking projects into smaller tasks.',
+                        action: 'John will submit a weekly progress report and use the Pomodoro technique for study sessions.'
+                    },
+                    {
+                        id: 2,
+                        faculty_name: 'Dr. Sarah Johnson',
+                        semester: 5,
+                        date: '2023-09-05',
+                        remarks: 'John was struggling with data structures concepts but showed willingness to learn.',
+                        suggestion: 'Suggested additional practice problems and attending TA sessions.',
+                        action: 'John will complete 5 practice problems weekly and meet with the TA every Thursday.'
+                    }
+                ];
+            }
+
+            // No default student UID needed - loaded dynamically from URL or user input
+        });
+    </script>
+</body>
+
+</html>

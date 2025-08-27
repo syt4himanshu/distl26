@@ -531,6 +531,7 @@
       <div class="dialog-footer">
         <button class="btn" onclick="printDialog()">Print</button>
         <button class="btn btn-primary" onclick="downloadData()">Download</button>
+        <button class="btn" onclick="goToRemarks()">Give Remarks</button>
         <button class="btn" onclick="closeDialog()">Close</button>
       </div>
     </div>
@@ -1052,6 +1053,16 @@
       document.getElementById('domainFilter').value = '';
       document.getElementById('sectionFilter').value = '';
       filterStudents();
+    }
+
+    function goToRemarks() {
+      // Get the current student UID from the modal
+      const studentUID = document.getElementById("studentUID").textContent;
+      if (studentUID && studentUID !== 'N/A') {
+        window.location.href = `../remarks.html?student_uid=${encodeURIComponent(studentUID)}`;
+      } else {
+        alert('No student selected. Please select a student first.');
+      }
     }
   </script>
 </body>
