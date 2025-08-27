@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Maintenance</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .maintenance-container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            padding: 40px;
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .icon-container {
+            margin-bottom: 30px;
+        }
+
+        .maintenance-icon {
+            width: 100px;
+            height: 100px;
+            animation: pulse 2s infinite ease-in-out;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        p {
+            color: #7f8c8d;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .contact-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 25px;
+            animation: slideUp 1s ease-out;
+        }
+
+        .admin-contact {
+            color: #3498db;
+            font-weight: 500;
+            text-decoration: none;
+            transition: color 0.3s;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .admin-contact:hover {
+            color: #2980b9;
+        }
+
+        .progress-container {
+            height: 6px;
+            background-color: #ecf0f1;
+            border-radius: 3px;
+            margin: 30px 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 30%;
+            background-color: #3498db;
+            border-radius: 3px;
+            animation: progressAnimation 3s infinite ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes progressAnimation {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(350%);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .maintenance-container {
+                padding: 25px;
+            }
+
+            .maintenance-icon {
+                width: 80px;
+                height: 80px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="maintenance-container">
+        <div class="icon-container">
+            <svg class="maintenance-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#3498db" stroke-width="3" />
+                <path d="M50 25 V50 L65 65" fill="none" stroke="#e74c3c" stroke-width="4" stroke-linecap="round" />
+                <circle cx="50" cy="50" r="5" fill="#3498db" />
+                <path d="M30 30 L25 25 M75 25 L70 30 M25 75 L30 70 M75 75 L70 70" stroke="#2c3e50" stroke-width="3"
+                    stroke-linecap="round" />
+            </svg>
+        </div>
+
+        <h1>System Under Maintenance</h1>
+
+        <p>We're currently performing scheduled maintenance to improve our services. The system will be back online
+            shortly. Thank you for your patience.</p>
+
+        <div class="progress-container">
+            <div class="progress-bar"></div>
+        </div>
+
+        <div class="contact-info">
+            <p>If you need immediate assistance, please contact our administrator:</p>
+            <a href="mailto:admin@example.com" class="admin-contact">admin@example.com</a>
+        </div>
+    </div>
+</body>
+
+</html>

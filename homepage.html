@@ -503,6 +503,47 @@
                 border: 2px solid white;
             }
         }
+
+        /* Footer */
+        footer.site-footer {
+            background: var(--bg-primary);
+            border-top: 1px solid var(--border-color);
+            padding: var(--spacing-lg) var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--spacing-md);
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .footer-content .team-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-radius: var(--radius-md);
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .footer-content .team-link:hover {
+            background: var(--bg-tertiary);
+            color: var(--primary-dark);
+        }
+
+        @media (max-width: 640px) {
+            .footer-content {
+                flex-direction: column;
+                justify-content: center;
+                text-align: center;
+            }
+        }
     </style>
 </head>
 
@@ -579,6 +620,12 @@
             </div>
         </div>
     </div>
+    <footer class="site-footer" role="contentinfo">
+        <div class="footer-content">
+            <div>© Know Your Student</div>
+            <a href="team.html" class="team-link" aria-label="View the developer team">Developer Team</a>
+        </div>
+    </footer>
 
     <script>
         // Page navigation functions with smooth transitions

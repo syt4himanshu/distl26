@@ -194,7 +194,7 @@
           <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
         </div>
         <div class="form-buttons">
-          <button class="btn-save" onclick="handleAdminPasswordChange()">💾 Update Password</button>
+          <button class="btn-save" onclick="savePassword()">💾 Update Password</button>
           <button class="btn-cancel" onclick="cancelPasswordEdit()">❌ Cancel</button>
         </div>
       </div>
@@ -287,7 +287,7 @@
             <option value="">All Sections</option>
             <option value="A">Section A</option>
             <option value="B">Section B</option>
-            <option value="C">Section C</option>
+
           </select>
         </div>
         <div class="filter-group">
@@ -377,7 +377,7 @@
         <div class="section-title">📊 Analytics & Reports</div>
         <div class="section-actions">
           <button class="btn btn-primary" onclick="refreshReports()">🔄 Refresh Data</button>
-          <button class="btn btn-success" onclick="exportAllReports()">📥 Export All</button>
+          <button class="btn btn-success" onclick="exportAllReportsBatched()">📥 Export All</button>
         </div>
       </div>
 
@@ -389,7 +389,7 @@
         </div>
         <div class="metric-card cgpa">
           <div class="metric-value" id="avgSGPAMetric">-</div>
-          <div class="metric-label">Average SGPA</div>
+          <div class="metric-label">Average CGPA</div>
         </div>
         <div class="metric-card backlogs">
           <div class="metric-value" id="totalBacklogsMetric">-</div>
@@ -488,85 +488,82 @@
         </div>
       </div>
 
-      <!-- General Report -->
-      <div class="report-card">
-        <h3>📋 General Report - All Students</h3>
 
-        <!-- Export Buttons -->
-        <div class="export-buttons">
-          <button class="btn btn-success" onclick="exportToExcel()">📊 Export to Excel</button>
-          <button class="btn btn-primary" onclick="exportToPDF()">📄 Export to PDF</button>
-          <button class="btn btn-warning" onclick="printReport()">🖨️ Print Report</button>
+
+      <!-- Export Buttons -->
+      <div class="export-buttons">
+        <button class="btn btn-info" onclick="exportFilteredStudentsToPDF()"
+          title="Export only the currently filtered students">📋 Export Filtered Students</button>
+      </div>
+
+      <!-- Filters -->
+      <div class="general-report-filters">
+        <div class="filter-item">
+          <label>Search</label>
+          <input type="text" id="generalSearchInput" placeholder="Search by name or UID..."
+            onkeyup="filterGeneralReport()">
         </div>
-
-        <!-- Filters -->
-        <div class="general-report-filters">
-          <div class="filter-item">
-            <label>Search</label>
-            <input type="text" id="generalSearchInput" placeholder="Search by name or UID..."
-              onkeyup="filterGeneralReport()">
-          </div>
-          <div class="filter-item">
-            <label>Semester</label>
-            <select id="generalSemesterFilter" onchange="filterGeneralReport()">
-              <option value="">All Semesters</option>
-              <option value="1">Semester 1</option>
-              <option value="2">Semester 2</option>
-              <option value="3">Semester 3</option>
-              <option value="4">Semester 4</option>
-              <option value="5">Semester 5</option>
-              <option value="6">Semester 6</option>
-              <option value="7">Semester 7</option>
-              <option value="8">Semester 8</option>
-            </select>
-          </div>
-          <div class="filter-item">
-            <label>CGPA Range</label>
-            <select id="cgpaRangeFilter" onchange="filterGeneralReport()">
-              <option value="">All SGPAs</option>
-              <option value="9-10">9.0 - 10.0</option>
-              <option value="8-9">8.0 - 8.9</option>
-              <option value="7-8">7.0 - 7.9</option>
-              <option value="6-7">6.0 - 6.9</option>
-              <option value="0-6">Below 6.0</option>
-            </select>
-          </div>
-          <div class="filter-item">
-            <label>Backlog Count</label>
-            <select id="backlogCountFilter" onchange="filterGeneralReport()">
-              <option value="">All Students</option>
-              <option value="0">No Backlogs</option>
-              <option value="1-2">1-2 Backlogs</option>
-              <option value="3-5">3-5 Backlogs</option>
-              <option value="5+">5+ Backlogs</option>
-            </select>
-          </div>
+        <div class="filter-item">
+          <label>Semester</label>
+          <select id="generalSemesterFilter" onchange="filterGeneralReport()">
+            <option value="">All Semesters</option>
+            <option value="1">Semester 1</option>
+            <option value="2">Semester 2</option>
+            <option value="3">Semester 3</option>
+            <option value="4">Semester 4</option>
+            <option value="5">Semester 5</option>
+            <option value="6">Semester 6</option>
+            <option value="7">Semester 7</option>
+            <option value="8">Semester 8</option>
+          </select>
         </div>
-
-        <!-- General Report Table -->
-        <div class="table-container">
-          <table class="data-table" id="generalReportTable">
-            <thead>
-              <tr>
-                <th>UID</th>
-                <th>Name</th>
-                <th>Semester</th>
-                <th>SGPA</th>
-                <th>Backlogs</th>
-                <th>Domain</th>
-                <th>Career Goal</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="generalReportTableBody">
-              <tr>
-                <td colspan="8" class="loading">Loading general report...</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="filter-item">
+          <label>CGPA Range</label>
+          <select id="cgpaRangeFilter" onchange="filterGeneralReport()">
+            <option value="">All SGPAs</option>
+            <option value="9-10">9.0 - 10.0</option>
+            <option value="8-9">8.0 - 8.9</option>
+            <option value="7-8">7.0 - 7.9</option>
+            <option value="6-7">6.0 - 6.9</option>
+            <option value="0-6">Below 6.0</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label>Backlog Count</label>
+          <select id="backlogCountFilter" onchange="filterGeneralReport()">
+            <option value="">All Students</option>
+            <option value="0">No Backlogs</option>
+            <option value="1-2">1-2 Backlogs</option>
+            <option value="3-5">3-5 Backlogs</option>
+            <option value="5+">5+ Backlogs</option>
+          </select>
         </div>
       </div>
+
+      <!-- General Report Table -->
+      <div class="table-container">
+        <table class="data-table" id="generalReportTable">
+          <thead>
+            <tr>
+              <th>UID</th>
+              <th>Name</th>
+              <th>Semester</th>
+              <th>SGPA</th>
+              <th>Backlogs</th>
+              <th>Domain</th>
+              <th>Career Goal</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="generalReportTableBody">
+            <tr>
+              <td colspan="8" class="loading">Loading general report...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
+  </div>
 
   </div>
 
@@ -1164,6 +1161,8 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script src="./reports.js"></script>
   <script src="./adm.js"></script>
 </body>

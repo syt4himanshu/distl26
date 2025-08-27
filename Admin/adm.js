@@ -796,6 +796,7 @@ function renderStudents() {
     }
 
     students.forEach(student => {
+
         // Handle both API format and detailed format
         const studentId = student.uid;
         const uid = student.uid || 'N/A';
@@ -1557,8 +1558,12 @@ async function showAllocationInterface(teacherId) {
 async function confirmAllocation() {
     if (!selectedTeacherForAllocation) return;
 
-    const checkboxes = document.querySelectorAll(".student-checkbox:checked");
-    const selectedStudentIds = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute("data-student-id")));
+    const generatedStudentIDs = document.querySelectorAll(".selected-student-id")
+    const makeArray = Array.from(generatedStudentIDs);
+    const selectedStudentIds = [];
+
+    makeArray.forEach(student => selectedStudentIds.push(parseInt(student.innerText)));
+
 
     if (selectedStudentIds.length === 0) {
         alert("Please select at least one student to allocate.");
@@ -1619,12 +1624,8 @@ async function generateRandomAllocation() {
         return;
     }
 
-    // Check if teacher already has maximum students
-    const assignedStudents = teacher.studentsAssigned || [];
-    if (assignedStudents.length >= 20) {
-        alert("This teacher already has the maximum number of students (20).");
-        return;
-    }
+
+
 
     try {
         const token = localStorage.getItem('access_token');
@@ -1656,18 +1657,17 @@ async function generateRandomAllocation() {
                 grid.innerHTML = `
                     <div class="status-message success" style="margin-bottom: 15px;">
                         <p>🎲 <strong>Random Allocation Generated!</strong></p>
-                        <p style="font-size: 14px;">${suggestedStudents.students.length} students have been randomly selected for allocation.</p>
+                        <p style="font-size: 14px;">${suggestedStudents.length} students have been randomly selected for allocation.</p>
                     </div>`;
 
-                console.log(suggestedStudents)
+                console.log("hello", suggestedStudents)
 
-                suggestedStudents.students.forEach(student => {
+                suggestedStudents.forEach(student => {
                     const div = document.createElement("div");
                     div.className = "student-allocation-item selected";
                     div.innerHTML = `
                         <span><strong>${student.full_name}</strong><br>
-                        <small>${student.uid} - Sem ${student.semester}, Sec ${student.section}</small></span>
-                        <input type="checkbox" class="student-checkbox" data-student-id="${student.id}" data-student-uid="${student.uid}" checked>
+                        <small>${student.uid} - Sem ${student.semester}, Sec ${student.section} <span class = "selected-student-id">${student.id}</span></small></span>
                     `;
                     grid.appendChild(div);
                 });
@@ -1772,8 +1772,8 @@ async function loadUnassignedStudents() {
                     div.className = "student-allocation-item";
                     div.innerHTML = `
                         <span><strong>${student.full_name}</strong><br>
-                        <small>${student.uid} - Sem ${student.semester}, Sec ${student.section}</small></span>
-                        <input type="checkbox" class="student-checkbox" data-student-id="${student.id}" data-student-uid="${student.uid}">
+                        <small>${student.uid} - Sem ${student.semester}, Sec ${student.section} <span class = "selected-student-id">${student.id}</span></small></span>
+                        
                     `;
                     grid.appendChild(div);
                 });
