@@ -1,21 +1,25 @@
 import sys
 import os
+import logging
 sys.path.append(os.path.dirname(__file__))
 
 from main import app, db, User
 from werkzeug.security import generate_password_hash, check_password_hash
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 with app.app_context():
-    print("🗑️  Deleting all existing admin users...")
+    logger.info("🗑️  Deleting all existing admin users...")
     User.query.filter_by(username="admin").delete()
     db.session.commit()
     
-    print("👤 Creating fresh admin user...")
+    logger.info("👤 Creating fresh admin user...")
     password = "admin123"
     password_hash = generate_password_hash(password)
     
-    print(f"Generated hash: {password_hash}")
-    print(f"Hash verification test: {check_password_hash(password_hash, password)}")
+    logger.info(f"Generated hash: {password_hash}")
+    logger.info(f"Hash verification test: {check_password_hash(password_hash, password)}")
     
     admin = User(
         username="admin",
@@ -26,20 +30,20 @@ with app.app_context():
     db.session.add(admin)
     db.session.commit()
     
-    print("✅ Admin user created!")
+    logger.info("✅ Admin user created!")
     
     # Verify it works
     fresh_admin = User.query.filter_by(username="admin").first()
     if fresh_admin:
         test_result = fresh_admin.check_password("admin123")
-        print(f"🔐 Password verification: {test_result}")
-        print(f"📋 Username: admin")
-        print(f"🔑 Password: admin123")
-        print(f"👑 Role: {fresh_admin.role}")
+        logger.info(f"🔐 Password verification: {test_result}")
+        logger.info(f"📋 Username: admin")
+        logger.info(f"🔑 Password: admin123")
+        logger.info(f"👑 Role: {fresh_admin.role}")
         
         if test_result:
-            print("🎉 SUCCESS! You can now login with admin/admin123")
+            logger.info("🎉 SUCCESS! You can now login with admin/admin123")
         else:
-            print("❌ Something is still wrong with password verification")
+            logger.info("❌ Something is still wrong with password verification")
     else:
-        print("❌ Failed to create admin user")
+        logger.info("❌ Failed to create admin user")

@@ -1,9 +1,13 @@
+import logging
 from main import app, db, User
 from werkzeug.security import generate_password_hash
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 def fix_admin_password():
     with app.app_context():
-        print("🔧 Fixing admin password...")
+        logger.info("🔧 Fixing admin password...")
         
         # Find the admin user
         admin = User.query.filter_by(username="admin").first()
@@ -15,17 +19,17 @@ def fix_admin_password():
             
             # Test the new password
             test_result = admin.check_password("admin123")
-            print(f"✅ Password updated for user: {admin.username}")
-            print(f"✅ Password test result: {test_result}")
+            logger.info(f"✅ Password updated for user: {admin.username}")
+            logger.info(f"✅ Password test result: {test_result}")
             
             if test_result:
-                print("🎉 SUCCESS! Password fixed!")
-                print("👤 Username: admin")
-                print("🔑 Password: admin123")
+                logger.info("🎉 SUCCESS! Password fixed!")
+                logger.info("👤 Username: admin")
+                logger.info("🔑 Password: admin123")
             else:
-                print("❌ Still having password issues")
+                logger.info("❌ Still having password issues")
         else:
-            print("❌ Admin user not found!")
+            logger.info("❌ Admin user not found!")
 
 if __name__ == "__main__":
     fix_admin_password()

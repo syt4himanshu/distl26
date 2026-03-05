@@ -260,6 +260,41 @@ body {
     box-shadow: var(--shadow-md);
 }
 
+.student-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.profile-photo-btn {
+    width: 38px;
+    height: 38px;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    padding: 0;
+    overflow: hidden;
+    background: #f8fafc;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.profile-photo-btn:hover {
+    border-color: #93c5fd;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.profile-photo-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.student-text {
+    min-width: 0;
+}
+
 .student-name {
     font-size: 16px;
     font-weight: 600;
@@ -352,6 +387,10 @@ body {
         width: 100%;
         justify-content: flex-end;
     }
+
+    .student-info {
+        width: 100%;
+    }
 }
 
 .overflow-hidden {
@@ -377,6 +416,57 @@ body {
     bottom: 0;
     padding: 20px;
     z-index: 9999;
+}
+
+.photo-preview-modal {
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 20px;
+    z-index: 10000;
+}
+
+.photo-preview-dialog {
+    background: #fff;
+    border-radius: 12px;
+    width: min(92vw, 520px);
+    padding: 14px;
+    position: relative;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.photo-preview-close {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    border: none;
+    background: transparent;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    color: #1f2937;
+}
+
+.photo-preview-image {
+    width: 100%;
+    max-height: 72vh;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #f8fafc;
+}
+
+.photo-preview-caption {
+    margin: 10px 4px 4px;
+    font-size: 14px;
+    color: #374151;
+    text-align: center;
 }
 
 

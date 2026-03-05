@@ -1,1054 +1,2624 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Student Mentoring and Career Counselling Form</title>
-    <link rel="stylesheet" href="./s.css">
+    <link rel="stylesheet" href="./s.css" />
     <script src="../js/auth.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            if (window.AuthGuard) { window.AuthGuard.guardRoute(['student']); }
-        });
+      document.addEventListener("DOMContentLoaded", function () {
+        if (window.AuthGuard) {
+          window.AuthGuard.guardRoute(["student"]);
+        }
+      });
     </script>
-</head>
+  </head>
 
-<body>
+  <body>
     <div class="form-container">
-        <!-- Header -->
-        <div class="form-header">
-            <div class="header-content">
-                <div class="header-text">
-                    <h1 class="form-title">Student Mentoring and Career Counselling Form</h1>
-                    <p class="form-subtitle">Department of Computer Engineering</p>
+      <div class="form-header">
+        <div class="header-content">
+          <div class="header-text">
+            <h1 class="form-title">
+              Student Mentoring and Career Counselling Form
+            </h1>
+            <p class="form-subtitle">Department of Computer Engineering</p>
+          </div>        </div>
+      </div>
+
+      <div class="progress-container">
+        <div class="progress-info">
+          <span class="progress-text">Progress</span>
+          <span class="progress-percentage">10%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill"></div>
+        </div>
+        <div class="step-indicators">
+          <div class="step-indicator active">1</div>
+          <div class="step-indicator">2</div>
+          <div class="step-indicator">3</div>
+          <div class="step-indicator">4</div>
+          <div class="step-indicator">5</div>
+          <div class="step-indicator">6</div>
+          <div class="step-indicator">7</div>
+          <div class="step-indicator">8</div>
+          <div class="step-indicator">9</div>
+        </div>
+      </div>
+
+      <div class="form-content">
+        <form id="wizardForm">
+          <div class="step-content active" data-step="1">
+            <h2 class="step-title">Student's Personal Information</h2>
+            <p class="step-description">Please provide your personal details</p>
+
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label for="fullName" class="form-label"
+                  >Full Name <span class="required">*</span></label
+                >
+                <input
+                  type="text"
+                  id="fullName"
+                  name="fullName"
+                  class="form-input"
+                  placeholder="Enter your full name"
+                  required
+                />
+                <div class="error-message">Please enter your full name</div>
+              </div>
+              <div class="form-group">
+                <label for="section" class="form-label">Section</label>
+                <select id="section" name="section" class="form-select">
+                  <option value="">Select Section</option>
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                </select>
+                <div class="error-message">Please select your section</div>
+              </div>
+            </div>
+
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label for="semester" class="form-label">Semester</label>
+                <select id="semester" name="semester" class="form-select">
+                  <option value="">Select Semester</option>
+                  <option value="1">Semester 1</option>
+                  <option value="2">Semester 2</option>
+                  <option value="3">Semester 3</option>
+                  <option value="4">Semester 4</option>
+                  <option value="5">Semester 5</option>
+                  <option value="6">Semester 6</option>
+                  <option value="7">Semester 7</option>
+                  <option value="8">Semester 8</option>
+                </select>
+                <div class="error-message">Please select your semester</div>
+              </div>
+              <div class="form-group">
+                <label for="yearOfAdmission" class="form-label"
+                  >Year of Admission</label
+                >
+                <input
+                  type="number"
+                  id="yearOfAdmission"
+                  name="yearOfAdmission"
+                  class="form-input"
+                  placeholder="2023"
+                />
+                <div class="error-message" id="admissionYearError">
+                  Please enter year of admission
                 </div>
-                <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
-                    <svg class="btn-icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
-                        </path>
-                    </svg>
-                    <svg class="btn-icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
-                        </path>
-                    </svg>
+              </div>
+            </div>
+
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label for="dob" class="form-label"
+                  >Date of Birth <span class="required">*</span></label
+                >
+                <input
+                  type="date"
+                  id="dob"
+                  name="dob"
+                  class="form-input"
+                  required
+                />
+                <div class="error-message">Please enter your date of birth</div>
+              </div>
+              <div class="form-group">
+                <label for="gender" class="form-label"
+                  >Gender <span class="required">*</span></label
+                >
+                <select id="gender" name="gender" class="form-select" required>
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+                <div class="error-message">Please select your gender</div>
+              </div>
+            </div>
+
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label for="bloodGroup" class="form-label">Blood Group</label>
+                <select id="bloodGroup" name="bloodGroup" class="form-select">
+                  <option value="">Select Blood Group</option>
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                </select>
+                <div class="error-message">Please select your blood group</div>
+              </div>
+              <div class="form-group">
+                <label for="category" class="form-label">Category</label>
+                <select id="category" name="category" class="form-select">
+                  <option value="">Select Category</option>
+                  <option value="General">General</option>
+                  <option value="OBC">OBC</option>
+                  <option value="SC">SC</option>
+                  <option value="ST">ST</option>
+                  <option value="NT">NT</option>
+                  <option value="EWS">EWS</option>
+                </select>
+                <div class="error-message">Please select your category</div>
+              </div>
+            </div>
+
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label for="aadharNumber" class="form-label"
+                  >Aadhar Card Number</label
+                >
+                <input
+                  type="text"
+                  id="aadharNumber"
+                  name="aadharNumber"
+                  class="form-input"
+                  placeholder="XXXX XXXX XXXX"
+                  maxlength="14"
+                />
+                <div class="error-message">
+                  Please enter a valid 12-digit Aadhar number
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="misUID" class="form-label">MIS UID</label>
+                <input
+                  type="text"
+                  id="misUID"
+                  name="misUID"
+                  class="form-input"
+                  placeholder="Enter your MIS UID"
+                />
+                <div class="error-message">Please enter your MIS UID</div>
+              </div>
+            </div>
+
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label for="mobileNo" class="form-label"
+                  >WhatsApp Mobile No. <span class="required">*</span></label
+                >
+                <input
+                  type="number"
+                  id="mobileNo"
+                  name="mobileNo"
+                  class="form-input"
+                  placeholder="1234567890"
+                  required
+                />
+                <div class="error-message" id="mobileError">
+                  Please enter a valid 10-digit mobile number
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="personalEmail" class="form-label"
+                  >Personal Email <span class="required">*</span></label
+                >
+                <input
+                  type="email"
+                  id="personalEmail"
+                  name="personalEmail"
+                  class="form-input"
+                  placeholder="your.email@example.com"
+                  required
+                />
+                <div class="error-message">
+                  Please enter a valid email address
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label for="collegeEmail" class="form-label"
+                  >College Email (Professional)
+                  <span class="required">*</span></label
+                >
+                <input
+                  type="email"
+                  id="collegeEmail"
+                  name="collegeEmail"
+                  class="form-input"
+                  placeholder="your.college@stvincentngp.edu.in"
+                  required
+                />
+                <div class="error-message">
+                  Please enter a valid college email address
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="linkedInId" class="form-label">LinkedIn ID</label>
+                <input
+                  type="text"
+                  id="linkedInId"
+                  name="linkedInId"
+                  class="form-input"
+                  placeholder="Enter your LinkedIn profile URL"
+                />
+                <div class="error-message">Please enter your LinkedIn ID</div>
+              </div>
+            </div>
+
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label for="githubId" class="form-label">GitHub ID</label>
+                <input
+                  type="text"
+                  id="githubId"
+                  name="githubId"
+                  class="form-input"
+                  placeholder="Enter your GitHub profile URL or username"
+                />
+                <div class="error-message">Please enter your GitHub ID</div>
+              </div>
+              <div class="form-group"></div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="permanentAddress" class="form-label"
+                  >Permanent Address <span class="required">*</span></label
+                >
+                <textarea
+                  id="permanentAddress"
+                  name="permanentAddress"
+                  class="form-input textarea"
+                  placeholder="Enter your permanent address"
+                  required
+                ></textarea>
+                <div class="error-message">
+                  Please enter your permanent address
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="presentAddress" class="form-label"
+                  >Present Address</label
+                >
+                <textarea
+                  id="presentAddress"
+                  name="presentAddress"
+                  class="form-input textarea"
+                  placeholder="Enter your present / current address (if different from permanent)"
+                ></textarea>
+                <div class="error-message">
+                  Please enter your present address
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="photoUpload" class="form-label"
+                  >Passport Size Photo</label
+                >
+                <div id="photoUploadWrapper">
+                  <input
+                    type="file"
+                    id="photoUpload"
+                    name="photoUpload"
+                    class="form-input"
+                    accept="image/jpeg,image/png,image/jpg"
+                  />
+                  <small class="form-hint"
+                    >Upload a recent passport size photograph (JPG/PNG, max
+                    2MB)</small
+                  >
+                </div>
+                <div
+                  id="uploadedPhotoInfo"
+                  class="form-hint is-hidden mt-8"
+                >
+                  Existing photo:
+                  <a
+                    id="uploadedPhotoLink"
+                    href="#"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >Open Cloudinary image</a
+                  >
+                </div>
+                <div
+                  id="photoStatusMessage"
+                  class="form-hint is-hidden mt-8"
+                ></div>
+                <button
+                  type="button"
+                  id="replacePhotoBtn"
+                  class="btn btn-secondary is-hidden mt-8"
+                >
+                  Replace Photo
                 </button>
+                <div class="error-message">Please upload your photo</div>
+              </div>
             </div>
+          </div>
+
+          <div class="step-content" data-step="2">
+            <h2 class="step-title">Parent's Information</h2>
+            <p class="step-description">Please provide your parent's details</p>
+
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label for="fatherName" class="form-label"
+                  >Father's Name <span class="required">*</span></label
+                >
+                <input
+                  type="text"
+                  id="fatherName"
+                  name="fatherName"
+                  class="form-input"
+                  placeholder="Enter father's name"
+                  required
+                />
+                <div class="error-message">Please enter father's name</div>
+              </div>
+              <div class="form-group">
+                <label for="fatherMobileNo" class="form-label"
+                  >Father's WhatsApp Mobile No.
+                  <span class="required">*</span></label
+                >
+                <input
+                  type="text"
+                  id="fatherMobileNo"
+                  name="fatherMobileNo"
+                  class="form-input"
+                  placeholder="1234567890"
+                  required
+                />
+                <div class="error-message">
+                  Please enter a valid 10-digit mobile number
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label for="fatherEmail" class="form-label"
+                  >Father's Email ID</label
+                >
+                <input
+                  type="email"
+                  id="fatherEmail"
+                  name="fatherEmail"
+                  class="form-input"
+                  placeholder="father.email@example.com"
+                />
+                <div class="error-message">
+                  Please enter a valid email address
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="fatherOccupation" class="form-label"
+                  >Father's Occupation <span class="required">*</span></label
+                >
+                <input
+                  type="text"
+                  id="fatherOccupation"
+                  name="fatherOccupation"
+                  class="form-input"
+                  placeholder="Enter father's occupation"
+                  required
+                />
+                <div class="error-message">
+                  Please enter father's occupation
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label for="motherName" class="form-label"
+                  >Mother's Name <span class="required">*</span></label
+                >
+                <input
+                  type="text"
+                  id="motherName"
+                  name="motherName"
+                  class="form-input"
+                  placeholder="Enter mother's name"
+                  required
+                />
+                <div class="error-message">Please enter mother's name</div>
+              </div>
+              <div class="form-group">
+                <label for="motherMobileNo" class="form-label"
+                  >Mother's WhatsApp Mobile No.
+                  <span class="required">*</span></label
+                >
+                <input
+                  type="text"
+                  id="motherMobileNo"
+                  name="motherMobileNo"
+                  class="form-input"
+                  placeholder="1234567890"
+                  required
+                />
+                <div class="error-message">
+                  Please enter a valid 10-digit mobile number
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label for="motherEmail" class="form-label"
+                  >Mother's Email ID</label
+                >
+                <input
+                  type="email"
+                  id="motherEmail"
+                  name="motherEmail"
+                  class="form-input"
+                  placeholder="mother.email@example.com"
+                />
+                <div class="error-message">
+                  Please enter a valid email address
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="motherOccupation" class="form-label"
+                  >Mother's Occupation <span class="required">*</span></label
+                >
+                <input
+                  type="text"
+                  id="motherOccupation"
+                  name="motherOccupation"
+                  class="form-input"
+                  placeholder="Enter mother's occupation"
+                  required
+                />
+                <div class="error-message">
+                  Please enter Mother's Occupation
+                </div>
+              </div>
+            </div>
+
+            <h4 class="section-heading section-heading-neutral">
+              Local Guardian Details
+            </h4>
+
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label for="guardianName" class="form-label"
+                  >Local Guardian Name</label
+                >
+                <input
+                  type="text"
+                  id="guardianName"
+                  name="guardianName"
+                  class="form-input"
+                  placeholder="Enter local guardian's name"
+                />
+                <div class="error-message">
+                  Please enter local guardian's name
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="guardianMobile" class="form-label"
+                  >Local Guardian Mobile Number</label
+                >
+                <input
+                  type="text"
+                  id="guardianMobile"
+                  name="guardianMobile"
+                  class="form-input"
+                  placeholder="1234567890"
+                />
+                <div class="error-message">
+                  Please enter a valid 10-digit mobile number
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label for="guardianEmail" class="form-label"
+                  >Local Guardian Email ID</label
+                >
+                <input
+                  type="email"
+                  id="guardianEmail"
+                  name="guardianEmail"
+                  class="form-input"
+                  placeholder="guardian.email@example.com"
+                />
+                <div class="error-message">
+                  Please enter a valid email address
+                </div>
+              </div>
+              <div class="form-group"></div>
+            </div>
+          </div>
+
+          <div class="step-content" data-step="3">
+            <h2 class="step-title">Academic Information - Before Admission</h2>
+            <p class="step-description">
+              Provide your academic details before admission
+            </p>
+
+            <h4 class="section-heading section-heading-blue section-heading-first">
+              SSC (X) Details
+            </h4>
+            <div class="form-row three-cols">
+              <div class="form-group">
+                <label for="sscBoard" class="form-label">Board</label>
+                <select id="sscBoard" name="sscBoard" class="form-select">
+                  <option value="">Select Board</option>
+                  <option value="CBSE">CBSE</option>
+                  <option value="State">State Board</option>
+                  <option value="ICSE">ICSE</option>
+                  <option value="Other">Other</option>
+                </select>
+                <div class="error-message">Please select SSC board</div>
+              </div>
+              <div class="form-group">
+                <label for="sscPercentage" class="form-label"
+                  >Percentage / Grade</label
+                >
+                <input
+                  type="number"
+                  id="sscPercentage"
+                  name="sscPercentage"
+                  class="form-input"
+                  placeholder="Percentage"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                />
+                <div class="error-message">
+                  Please enter a valid percentage (0-100)
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="sscYear" class="form-label">Year of Passing</label>
+                <input
+                  type="number"
+                  id="sscYear"
+                  name="sscYear"
+                  class="form-input"
+                  placeholder="Year of Passing"
+                />
+                <div class="error-message">
+                  Please enter a valid passing year
+                </div>
+              </div>
+            </div>
+
+            <h4 class="section-heading section-heading-blue">
+              HSSC (XII) Details
+            </h4>
+            <div class="form-row three-cols">
+              <div class="form-group">
+                <label for="hsscBoard" class="form-label">Board</label>
+                <select id="hsscBoard" name="hsscBoard" class="form-select">
+                  <option value="">Select Board</option>
+                  <option value="CBSE">CBSE</option>
+                  <option value="State">State Board</option>
+                  <option value="ICSE">ICSE</option>
+                  <option value="Other">Other</option>
+                </select>
+                <div class="error-message">Please select HSSC board</div>
+              </div>
+              <div class="form-group">
+                <label for="hsscPercentage" class="form-label"
+                  >Percentage / Grade</label
+                >
+                <input
+                  type="number"
+                  id="hsscPercentage"
+                  name="hsscPercentage"
+                  class="form-input"
+                  placeholder="Percentage"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                />
+                <div class="error-message">
+                  Please enter a valid percentage (0-100)
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="hsscYear" class="form-label">Year of Passing</label>
+                <input
+                  type="number"
+                  id="hsscYear"
+                  name="hsscYear"
+                  class="form-input"
+                  placeholder="Year of Passing"
+                />
+                <div class="error-message">
+                  Please enter a valid passing year
+                </div>
+              </div>
+            </div>
+
+            <h4 class="section-heading section-heading-blue">
+              Diploma Details
+              <small class="note-muted"
+                >(if applicable)</small
+              >
+            </h4>
+            <div class="form-row three-cols">
+              <div class="form-group">
+                <label for="diplomaBoard" class="form-label"
+                  >Diploma Board</label
+                >
+                <input
+                  type="text"
+                  id="diplomaBoard"
+                  name="diplomaBoard"
+                  class="form-input"
+                  placeholder="e.g. MSBTE"
+                />
+                <div class="error-message">Please enter diploma board</div>
+              </div>
+              <div class="form-group">
+                <label for="diplomaPercentage" class="form-label"
+                  >Percentage / Grade</label
+                >
+                <input
+                  type="number"
+                  id="diplomaPercentage"
+                  name="diplomaPercentage"
+                  class="form-input"
+                  placeholder="Percentage"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                />
+                <div class="error-message">
+                  Please enter a valid percentage (0-100)
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="diplomaYear" class="form-label"
+                  >Year of Passing</label
+                >
+                <input
+                  type="number"
+                  id="diplomaYear"
+                  name="diplomaYear"
+                  class="form-input"
+                  placeholder="Year of Passing"
+                />
+                <div class="error-message">
+                  Please enter a valid passing year
+                </div>
+              </div>
+            </div>
+
+            <h4 class="section-heading section-heading-orange">
+              Entrance Exam & Admission Details
+            </h4>
+            <div class="form-row three-cols">
+              <div class="form-group">
+                <label for="entranceExamType" class="form-label"
+                  >Entrance Exam Type</label
+                >
+                <select
+                  id="entranceExamType"
+                  name="entranceExamType"
+                  class="form-select"
+                >
+                  <option value="">Select Exam</option>
+                  <option value="MHCET">MHT-CET</option>
+                  <option value="JEE">JEE</option>
+                </select>
+                <div class="error-message">
+                  Please select entrance exam type
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="entranceExamScore" class="form-label"
+                  >Percentile</label
+                >
+                <input
+                  type="text"
+                  id="entranceExamScore"
+                  name="entranceExamScore"
+                  class="form-input"
+                  placeholder="Score / Percentile"
+                />
+                <div class="error-message">
+                  Please enter entrance exam score
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="entranceExamDate" class="form-label"
+                  >Year of Passing</label
+                >
+                <input
+                  type="number"
+                  id="entranceExamDate"
+                  name="entranceExamDate"
+                  class="form-input"
+                  placeholder="Year of Passing"
+                />
+                <div class="error-message">Please enter passing year</div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="step-content" data-step="4">
+            <h2 class="step-title">Academic Information - After Admission</h2>
+            <p class="step-description">
+              Provide your academic performance after admission
+            </p>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Semester-wise Performance</label>
+
+                <div id="semesterRecords">
+                  <div
+                    class="semester-row card-panel"
+                  >
+                    <h4>Semester 1</h4>
+                    <div class="form-row two-cols">
+                      <div class="form-group">
+                        <label class="form-label">SGPA / Percentage</label>
+                        <input
+                          type="number"
+                          id="sem1SGPA"
+                          name="sem1SGPA"
+                          class="form-input"
+                          placeholder="SGPA"
+                          step="0.01"
+                          min="0"
+                          max="10"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label"
+                          >Season &amp; Year of Passing</label
+                        >
+                        <div class="form-row two-cols form-row-compact">
+                          <select name="sem1Season" class="form-select">
+                            <option value="">Season</option>
+                            <option value="Summer">Summer</option>
+                            <option value="Winter">Winter</option>
+                          </select>
+                          <input
+                            type="number"
+                            name="sem1Year"
+                            class="form-input"
+                            placeholder="Year e.g. 2023"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="form-row two-cols">
+                      <div class="form-group">
+                        <label class="form-label">College Rank</label>
+                        <input
+                          type="text"
+                          name="sem1Rank"
+                          class="form-input"
+                          placeholder="Rank (if any)"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Academic Awards</label>
+                        <input
+                          type="text"
+                          name="sem1Awards"
+                          class="form-input"
+                          placeholder="Awards Received (if any)"
+                        />
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label class="form-label">Backlog Subjects</label>
+                        <input
+                          type="text"
+                          id="sem1Backlog"
+                          name="sem1Backlog"
+                          class="form-input"
+                          placeholder="Backlog Subjects (comma separated)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    class="semester-row card-panel"
+                  >
+                    <h4>Semester 2</h4>
+                    <div class="form-row two-cols">
+                      <div class="form-group">
+                        <label class="form-label">SGPA / Percentage</label>
+                        <input
+                          type="number"
+                          id="sem2SGPA"
+                          name="sem2SGPA"
+                          class="form-input"
+                          placeholder="SGPA"
+                          step="0.01"
+                          min="0"
+                          max="10"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label"
+                          >Season &amp; Year of Passing</label
+                        >
+                        <div class="form-row two-cols form-row-compact">
+                          <select name="sem2Season" class="form-select">
+                            <option value="">Season</option>
+                            <option value="Summer">Summer</option>
+                            <option value="Winter">Winter</option>
+                          </select>
+                          <input
+                            type="number"
+                            name="sem2Year"
+                            class="form-input"
+                            placeholder="Year e.g. 2023"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="form-row two-cols">
+                      <div class="form-group">
+                        <label class="form-label">College Rank</label
+                        ><input
+                          type="text"
+                          name="sem2Rank"
+                          class="form-input"
+                          placeholder="Rank (if any)"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Academic Awards</label
+                        ><input
+                          type="text"
+                          name="sem2Awards"
+                          class="form-input"
+                          placeholder="Awards Received (if any)"
+                        />
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label class="form-label">Backlog Subjects</label
+                        ><input
+                          type="text"
+                          id="sem2Backlog"
+                          name="sem2Backlog"
+                          class="form-input"
+                          placeholder="Backlog Subjects (comma separated)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    class="semester-row card-panel"
+                  >
+                    <h4>Semester 3</h4>
+                    <div class="form-row two-cols">
+                      <div class="form-group">
+                        <label class="form-label">SGPA / Percentage</label
+                        ><input
+                          type="number"
+                          id="sem3SGPA"
+                          name="sem3SGPA"
+                          class="form-input"
+                          placeholder="SGPA"
+                          step="0.01"
+                          min="0"
+                          max="10"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label"
+                          >Season &amp; Year of Passing</label
+                        >
+                        <div class="form-row two-cols form-row-compact">
+                          <select name="sem3Season" class="form-select">
+                            <option value="">Season</option>
+                            <option value="Summer">Summer</option>
+                            <option value="Winter">Winter</option></select
+                          ><input
+                            type="number"
+                            name="sem3Year"
+                            class="form-input"
+                            placeholder="Year e.g. 2023"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="form-row two-cols">
+                      <div class="form-group">
+                        <label class="form-label">College Rank</label
+                        ><input
+                          type="text"
+                          name="sem3Rank"
+                          class="form-input"
+                          placeholder="Rank (if any)"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Academic Awards</label
+                        ><input
+                          type="text"
+                          name="sem3Awards"
+                          class="form-input"
+                          placeholder="Awards Received (if any)"
+                        />
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label class="form-label">Backlog Subjects</label
+                        ><input
+                          type="text"
+                          id="sem3Backlog"
+                          name="sem3Backlog"
+                          class="form-input"
+                          placeholder="Backlog Subjects (comma separated)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    class="semester-row card-panel"
+                  >
+                    <h4>Semester 4</h4>
+                    <div class="form-row two-cols">
+                      <div class="form-group">
+                        <label class="form-label">SGPA / Percentage</label
+                        ><input
+                          type="number"
+                          id="sem4SGPA"
+                          name="sem4SGPA"
+                          class="form-input"
+                          placeholder="SGPA"
+                          step="0.01"
+                          min="0"
+                          max="10"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label"
+                          >Season &amp; Year of Passing</label
+                        >
+                        <div class="form-row two-cols form-row-compact">
+                          <select name="sem4Season" class="form-select">
+                            <option value="">Season</option>
+                            <option value="Summer">Summer</option>
+                            <option value="Winter">Winter</option></select
+                          ><input
+                            type="number"
+                            name="sem4Year"
+                            class="form-input"
+                            placeholder="Year e.g. 2023"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="form-row two-cols">
+                      <div class="form-group">
+                        <label class="form-label">College Rank</label
+                        ><input
+                          type="text"
+                          name="sem4Rank"
+                          class="form-input"
+                          placeholder="Rank (if any)"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Academic Awards</label
+                        ><input
+                          type="text"
+                          name="sem4Awards"
+                          class="form-input"
+                          placeholder="Awards Received (if any)"
+                        />
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label class="form-label">Backlog Subjects</label
+                        ><input
+                          type="text"
+                          id="sem4Backlog"
+                          name="sem4Backlog"
+                          class="form-input"
+                          placeholder="Backlog Subjects (comma separated)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    class="semester-row card-panel"
+                  >
+                    <h4>Semester 5</h4>
+                    <div class="form-row two-cols">
+                      <div class="form-group">
+                        <label class="form-label">SGPA / Percentage</label
+                        ><input
+                          type="number"
+                          id="sem5SGPA"
+                          name="sem5SGPA"
+                          class="form-input"
+                          placeholder="SGPA"
+                          step="0.01"
+                          min="0"
+                          max="10"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label"
+                          >Season &amp; Year of Passing</label
+                        >
+                        <div class="form-row two-cols form-row-compact">
+                          <select name="sem5Season" class="form-select">
+                            <option value="">Season</option>
+                            <option value="Summer">Summer</option>
+                            <option value="Winter">Winter</option></select
+                          ><input
+                            type="number"
+                            name="sem5Year"
+                            class="form-input"
+                            placeholder="Year e.g. 2023"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="form-row two-cols">
+                      <div class="form-group">
+                        <label class="form-label">College Rank</label
+                        ><input
+                          type="text"
+                          name="sem5Rank"
+                          class="form-input"
+                          placeholder="Rank (if any)"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Academic Awards</label
+                        ><input
+                          type="text"
+                          name="sem5Awards"
+                          class="form-input"
+                          placeholder="Awards Received (if any)"
+                        />
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label class="form-label">Backlog Subjects</label
+                        ><input
+                          type="text"
+                          id="sem5Backlog"
+                          name="sem5Backlog"
+                          class="form-input"
+                          placeholder="Backlog Subjects (comma separated)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    class="semester-row card-panel"
+                  >
+                    <h4>Semester 6</h4>
+                    <div class="form-row two-cols">
+                      <div class="form-group">
+                        <label class="form-label">SGPA / Percentage</label
+                        ><input
+                          type="number"
+                          id="sem6SGPA"
+                          name="sem6SGPA"
+                          class="form-input"
+                          placeholder="SGPA"
+                          step="0.01"
+                          min="0"
+                          max="10"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label"
+                          >Season &amp; Year of Passing</label
+                        >
+                        <div class="form-row two-cols form-row-compact">
+                          <select name="sem6Season" class="form-select">
+                            <option value="">Season</option>
+                            <option value="Summer">Summer</option>
+                            <option value="Winter">Winter</option></select
+                          ><input
+                            type="number"
+                            name="sem6Year"
+                            class="form-input"
+                            placeholder="Year e.g. 2023"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="form-row two-cols">
+                      <div class="form-group">
+                        <label class="form-label">College Rank</label
+                        ><input
+                          type="text"
+                          name="sem6Rank"
+                          class="form-input"
+                          placeholder="Rank (if any)"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Academic Awards</label
+                        ><input
+                          type="text"
+                          name="sem6Awards"
+                          class="form-input"
+                          placeholder="Awards Received (if any)"
+                        />
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label class="form-label">Backlog Subjects</label
+                        ><input
+                          type="text"
+                          id="sem6Backlog"
+                          name="sem6Backlog"
+                          class="form-input"
+                          placeholder="Backlog Subjects (comma separated)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    class="semester-row card-panel"
+                  >
+                    <h4>Semester 7</h4>
+                    <div class="form-row two-cols">
+                      <div class="form-group">
+                        <label class="form-label">SGPA / Percentage</label
+                        ><input
+                          type="number"
+                          id="sem7SGPA"
+                          name="sem7SGPA"
+                          class="form-input"
+                          placeholder="SGPA"
+                          step="0.01"
+                          min="0"
+                          max="10"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label"
+                          >Season &amp; Year of Passing</label
+                        >
+                        <div class="form-row two-cols form-row-compact">
+                          <select name="sem7Season" class="form-select">
+                            <option value="">Season</option>
+                            <option value="Summer">Summer</option>
+                            <option value="Winter">Winter</option></select
+                          ><input
+                            type="number"
+                            name="sem7Year"
+                            class="form-input"
+                            placeholder="Year e.g. 2023"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="form-row two-cols">
+                      <div class="form-group">
+                        <label class="form-label">College Rank</label
+                        ><input
+                          type="text"
+                          name="sem7Rank"
+                          class="form-input"
+                          placeholder="Rank (if any)"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Academic Awards</label
+                        ><input
+                          type="text"
+                          name="sem7Awards"
+                          class="form-input"
+                          placeholder="Awards Received (if any)"
+                        />
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label class="form-label">Backlog Subjects</label
+                        ><input
+                          type="text"
+                          id="sem7Backlog"
+                          name="sem7Backlog"
+                          class="form-input"
+                          placeholder="Backlog Subjects (comma separated)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    class="semester-row card-panel"
+                  >
+                    <h4>Semester 8</h4>
+                    <div class="form-row two-cols">
+                      <div class="form-group">
+                        <label class="form-label">SGPA / Percentage</label
+                        ><input
+                          type="number"
+                          id="sem8SGPA"
+                          name="sem8SGPA"
+                          class="form-input"
+                          placeholder="SGPA"
+                          step="0.01"
+                          min="0"
+                          max="10"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label"
+                          >Season &amp; Year of Passing</label
+                        >
+                        <div class="form-row two-cols form-row-compact">
+                          <select name="sem8Season" class="form-select">
+                            <option value="">Season</option>
+                            <option value="Summer">Summer</option>
+                            <option value="Winter">Winter</option></select
+                          ><input
+                            type="number"
+                            name="sem8Year"
+                            class="form-input"
+                            placeholder="Year e.g. 2023"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="form-row two-cols">
+                      <div class="form-group">
+                        <label class="form-label">College Rank</label
+                        ><input
+                          type="text"
+                          name="sem8Rank"
+                          class="form-input"
+                          placeholder="Rank (if any)"
+                        />
+                      </div>
+                      <div class="form-group">
+                        <label class="form-label">Academic Awards</label
+                        ><input
+                          type="text"
+                          name="sem8Awards"
+                          class="form-input"
+                          placeholder="Awards Received (if any)"
+                        />
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label class="form-label">Backlog Subjects</label
+                        ><input
+                          type="text"
+                          id="sem8Backlog"
+                          name="sem8Backlog"
+                          class="form-input"
+                          placeholder="Backlog Subjects (comma separated)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="step-content" data-step="5">
+            <h2 class="step-title">Project and Internship Details</h2>
+            <p class="step-description">
+              Provide details of your projects and internships
+            </p>
+
+            <h4 class="section-heading section-heading-green section-heading-first">
+              Mini Project
+            </h4>
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label class="form-label">Mini Project Title</label>
+                <input
+                  type="text"
+                  id="miniProjectTitle"
+                  name="miniProjectTitle"
+                  class="form-input"
+                  placeholder="Enter mini project title"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Project Guide</label>
+                <input
+                  type="text"
+                  id="miniProjectGuide"
+                  name="miniProjectGuide"
+                  class="form-input"
+                  placeholder="Name of project guide / mentor"
+                />
+              </div>
+            </div>
+
+            <h4 class="section-heading section-heading-blue">
+              Major Project
+            </h4>
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label class="form-label">Major Project Title</label>
+                <input
+                  type="text"
+                  id="majorProjectTitle"
+                  name="majorProjectTitle"
+                  class="form-input"
+                  placeholder="Enter major project title"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Project Guide</label>
+                <input
+                  type="text"
+                  id="majorProjectGuide"
+                  name="majorProjectGuide"
+                  class="form-input"
+                  placeholder="Name of project guide / mentor"
+                />
+              </div>
+            </div>
+
+            <h4 class="section-heading section-heading-violet">
+              UBA / Collaborative Project
+              <small class="note-muted"
+                >(if applicable)</small
+              >
+            </h4>
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label class="form-label">UBA Project Title</label>
+                <input
+                  type="text"
+                  id="ubaProjectTitle"
+                  name="ubaProjectTitle"
+                  class="form-input"
+                  placeholder="Enter UBA / collaborative project title"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Project Guide</label>
+                <input
+                  type="text"
+                  id="ubaProjectGuide"
+                  name="ubaProjectGuide"
+                  class="form-input"
+                  placeholder="Name of project guide / mentor"
+                />
+              </div>
+            </div>
+
+            <h4 class="section-heading section-heading-orange">
+              Internship 1
+            </h4>
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label class="form-label">Company / Organization Name</label>
+                <input
+                  type="text"
+                  id="internship1Company"
+                  name="internship1Company"
+                  class="form-input"
+                  placeholder="Company Name"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Designation / Title</label>
+                <input
+                  type="text"
+                  id="internship1Title"
+                  name="internship1Title"
+                  class="form-input"
+                  placeholder="e.g. Web Developer Intern"
+                />
+              </div>
+            </div>
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label class="form-label">Domain</label>
+                <input
+                  type="text"
+                  id="internship1Domain"
+                  name="internship1Domain"
+                  class="form-input"
+                  placeholder="Domain"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Description</label>
+                <input
+                  type="text"
+                  id="internship1Description"
+                  name="internship1Description"
+                  class="form-input"
+                  placeholder="Brief description"
+                />
+              </div>
+            </div>
+            <div class="form-row three-cols">
+              <div class="form-group">
+                <select
+                  id="internship1Type"
+                  name="internship1Type"
+                  class="form-select"
+                >
+                  <option value="">Internship Type</option>
+                  <option value="Online">Online</option>
+                  <option value="Physical">Physical</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <select
+                  id="internship1Paid"
+                  name="internship1Paid"
+                  class="form-select"
+                >
+                  <option value="">Paid / Unpaid</option>
+                  <option value="Paid">Paid</option>
+                  <option value="Unpaid">Unpaid</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label class="form-label">Start Date</label>
+                <input
+                  type="date"
+                  id="internship1Start"
+                  name="internship1Start"
+                  class="form-input"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">End Date</label>
+                <input
+                  type="date"
+                  id="internship1End"
+                  name="internship1End"
+                  class="form-input"
+                />
+              </div>
+            </div>
+
+            <h4 class="section-heading section-heading-orange">
+              Internship 2
+            </h4>
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label class="form-label">Company / Organization Name</label>
+                <input
+                  type="text"
+                  id="internship2Company"
+                  name="internship2Company"
+                  class="form-input"
+                  placeholder="Company Name"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Designation / Title</label>
+                <input
+                  type="text"
+                  id="internship2Title"
+                  name="internship2Title"
+                  class="form-input"
+                  placeholder="e.g. Data Analyst Intern"
+                />
+              </div>
+            </div>
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label class="form-label">Domain</label>
+                <input
+                  type="text"
+                  id="internship2Domain"
+                  name="internship2Domain"
+                  class="form-input"
+                  placeholder="Domain"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Description</label>
+                <input
+                  type="text"
+                  id="internship2Description"
+                  name="internship2Description"
+                  class="form-input"
+                  placeholder="Brief description"
+                />
+              </div>
+            </div>
+            <div class="form-row three-cols">
+              <div class="form-group">
+                <select
+                  id="internship2Type"
+                  name="internship2Type"
+                  class="form-select"
+                >
+                  <option value="">Internship Type</option>
+                  <option value="Online">Online</option>
+                  <option value="Physical">Physical</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <select
+                  id="internship2Paid"
+                  name="internship2Paid"
+                  class="form-select"
+                >
+                  <option value="">Paid / Unpaid</option>
+                  <option value="Paid">Paid</option>
+                  <option value="Unpaid">Unpaid</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label class="form-label">Start Date</label>
+                <input
+                  type="date"
+                  id="internship2Start"
+                  name="internship2Start"
+                  class="form-input"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">End Date</label>
+                <input
+                  type="date"
+                  id="internship2End"
+                  name="internship2End"
+                  class="form-input"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="step-content" data-step="6">
+            <h2 class="step-title">Co-Curricular Activities</h2>
+            <p class="step-description">
+              Provide details of your co-curricular activities
+            </p>
+
+            <div class="form-row">
+              <div class="form-group">
+                <h4 class="section-heading section-heading-blue section-heading-lg">
+                  Participation Activities
+                </h4>
+                <p class="form-hint">
+                  (Technical Competition / Paper Presentation / Hackathon /
+                  etc.)
+                </p>
+
+                <div
+                  class="activity-row card-panel"
+                >
+                  <h5 class="subsection-title">
+                    Activity 1
+                  </h5>
+                  <div class="form-row four-cols">
+                    <div class="form-group">
+                      <input
+                        type="text"
+                        name="participation1Name"
+                        class="form-input"
+                        placeholder="Name of Activity"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <input
+                        type="date"
+                        name="participation1Date"
+                        class="form-input"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <select name="participation1Level" class="form-select">
+                        <option value="">Level</option>
+                        <option value="Institute">Institute</option>
+                        <option value="Department">Department</option>
+                        <option value="State">State</option>
+                        <option value="National">National</option>
+                        <option value="International">International</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <input
+                        type="text"
+                        name="participation1Awards"
+                        class="form-input"
+                        placeholder="Awards Received"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  class="activity-row card-panel"
+                >
+                  <h5 class="subsection-title">
+                    Activity 2
+                  </h5>
+                  <div class="form-row four-cols">
+                    <div class="form-group">
+                      <input
+                        type="text"
+                        name="participation2Name"
+                        class="form-input"
+                        placeholder="Name of Activity"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <input
+                        type="date"
+                        name="participation2Date"
+                        class="form-input"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <select name="participation2Level" class="form-select">
+                        <option value="">Level</option>
+                        <option value="Institute">Institute</option>
+                        <option value="Department">Department</option>
+                        <option value="State">State</option>
+                        <option value="National">National</option>
+                        <option value="International">International</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <input
+                        type="text"
+                        name="participation2Awards"
+                        class="form-input"
+                        placeholder="Awards Received"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  class="activity-row card-panel"
+                >
+                  <h5 class="subsection-title">
+                    Activity 3
+                  </h5>
+                  <div class="form-row four-cols">
+                    <div class="form-group">
+                      <input
+                        type="text"
+                        name="participation3Name"
+                        class="form-input"
+                        placeholder="Name of Activity"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <input
+                        type="date"
+                        name="participation3Date"
+                        class="form-input"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <select name="participation3Level" class="form-select">
+                        <option value="">Level</option>
+                        <option value="Institute">Institute</option>
+                        <option value="Department">Department</option>
+                        <option value="State">State</option>
+                        <option value="National">National</option>
+                        <option value="International">International</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <input
+                        type="text"
+                        name="participation3Awards"
+                        class="form-input"
+                        placeholder="Awards Received"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row form-row-spaced">
+              <div class="form-group">
+                <h4 class="section-heading section-heading-red section-heading-lg">
+                  Organized Activities
+                </h4>
+                <p class="form-hint">
+                  (Coordinator / Co-Coordinator / Member / etc.)
+                </p>
+
+                <div
+                  class="activity-row card-panel"
+                >
+                  <h5 class="subsection-title">
+                    Activity 1
+                  </h5>
+                  <div class="form-row four-cols">
+                    <div class="form-group">
+                      <input
+                        type="text"
+                        name="organization1Name"
+                        class="form-input"
+                        placeholder="Name of Activity"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <input
+                        type="date"
+                        name="organization1Date"
+                        class="form-input"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <select name="organization1Level" class="form-select">
+                        <option value="">Level</option>
+                        <option value="Institute">Institute</option>
+                        <option value="Department">Department</option>
+                        <option value="State">State</option>
+                        <option value="National">National</option>
+                        <option value="International">International</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <input
+                        type="text"
+                        name="organization1Remark"
+                        class="form-input"
+                        placeholder="Remark / Role"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  class="activity-row card-panel"
+                >
+                  <h5 class="subsection-title">
+                    Activity 2
+                  </h5>
+                  <div class="form-row four-cols">
+                    <div class="form-group">
+                      <input
+                        type="text"
+                        name="organization2Name"
+                        class="form-input"
+                        placeholder="Name of Activity"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <input
+                        type="date"
+                        name="organization2Date"
+                        class="form-input"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <select name="organization2Level" class="form-select">
+                        <option value="">Level</option>
+                        <option value="Institute">Institute</option>
+                        <option value="Department">Department</option>
+                        <option value="State">State</option>
+                        <option value="National">National</option>
+                        <option value="International">International</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <input
+                        type="text"
+                        name="organization2Remark"
+                        class="form-input"
+                        placeholder="Remark / Role"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  class="activity-row card-panel"
+                >
+                  <h5 class="subsection-title">
+                    Activity 3
+                  </h5>
+                  <div class="form-row four-cols">
+                    <div class="form-group">
+                      <input
+                        type="text"
+                        name="organization3Name"
+                        class="form-input"
+                        placeholder="Name of Activity"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <input
+                        type="date"
+                        name="organization3Date"
+                        class="form-input"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <select name="organization3Level" class="form-select">
+                        <option value="">Level</option>
+                        <option value="Institute">Institute</option>
+                        <option value="Department">Department</option>
+                        <option value="State">State</option>
+                        <option value="National">National</option>
+                        <option value="International">International</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <input
+                        type="text"
+                        name="organization3Remark"
+                        class="form-input"
+                        placeholder="Remark / Role"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row form-row-spaced">
+              <div class="form-group">
+                <h4 class="section-heading section-heading-green section-heading-lg">
+                  Skill Development Program (SDP) / Training / MOOC
+                </h4>
+                <p class="form-hint">
+                  (Online courses, certifications, workshops, training programs)
+                </p>
+
+                <div
+                  class="activity-row card-panel"
+                >
+                  <h5 class="subsection-title">Program 1</h5>
+                  <div class="form-row two-cols">
+                    <div class="form-group">
+                      <label class="form-label">Program / Course Title</label>
+                      <input
+                        type="text"
+                        name="sdp1Title"
+                        class="form-input"
+                        placeholder="e.g. Machine Learning Specialization"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label"
+                        >Organizing Agency / Platform</label
+                      >
+                      <input
+                        type="text"
+                        name="sdp1Agency"
+                        class="form-input"
+                        placeholder="e.g. Coursera, NPTEL, CDAC"
+                      />
+                    </div>
+                  </div>
+                  <div class="form-row two-cols">
+                    <div class="form-group">
+                      <label class="form-label">Duration (in Hours)</label>
+                      <input
+                        type="number"
+                        name="sdp1Duration"
+                        class="form-input"
+                        placeholder="Hours"
+                        min="0"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Date From &amp; To</label>
+                      <div class="form-row two-cols form-row-compact">
+                        <input
+                          type="date"
+                          name="sdp1DateFrom"
+                          class="form-input"
+                        />
+                        <input
+                          type="date"
+                          name="sdp1DateTo"
+                          class="form-input"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  class="activity-row card-panel"
+                >
+                  <h5 class="subsection-title">Program 2</h5>
+                  <div class="form-row two-cols">
+                    <div class="form-group">
+                      <label class="form-label">Program / Course Title</label>
+                      <input
+                        type="text"
+                        name="sdp2Title"
+                        class="form-input"
+                        placeholder="e.g. Deep Learning with TensorFlow"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label"
+                        >Organizing Agency / Platform</label
+                      >
+                      <input
+                        type="text"
+                        name="sdp2Agency"
+                        class="form-input"
+                        placeholder="e.g. Udemy, Infosys Springboard"
+                      />
+                    </div>
+                  </div>
+                  <div class="form-row two-cols">
+                    <div class="form-group">
+                      <label class="form-label">Duration (in Hours)</label>
+                      <input
+                        type="number"
+                        name="sdp2Duration"
+                        class="form-input"
+                        placeholder="Hours"
+                        min="0"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Date From &amp; To</label>
+                      <div class="form-row two-cols form-row-compact">
+                        <input
+                          type="date"
+                          name="sdp2DateFrom"
+                          class="form-input"
+                        />
+                        <input
+                          type="date"
+                          name="sdp2DateTo"
+                          class="form-input"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  class="activity-row card-panel"
+                >
+                  <h5 class="subsection-title">Program 3</h5>
+                  <div class="form-row two-cols">
+                    <div class="form-group">
+                      <label class="form-label">Program / Course Title</label>
+                      <input
+                        type="text"
+                        name="sdp3Title"
+                        class="form-input"
+                        placeholder="Course Title"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label"
+                        >Organizing Agency / Platform</label
+                      >
+                      <input
+                        type="text"
+                        name="sdp3Agency"
+                        class="form-input"
+                        placeholder="Platform / Agency"
+                      />
+                    </div>
+                  </div>
+                  <div class="form-row two-cols">
+                    <div class="form-group">
+                      <label class="form-label">Duration (in Hours)</label>
+                      <input
+                        type="number"
+                        name="sdp3Duration"
+                        class="form-input"
+                        placeholder="Hours"
+                        min="0"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Date From &amp; To</label>
+                      <div class="form-row two-cols form-row-compact">
+                        <input
+                          type="date"
+                          name="sdp3DateFrom"
+                          class="form-input"
+                        />
+                        <input
+                          type="date"
+                          name="sdp3DateTo"
+                          class="form-input"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="step-content" data-step="7">
+            <h2 class="step-title">SWOC Analysis</h2>
+            <p class="step-description">
+              Please provide your Strengths, Weaknesses, Opportunities, and
+              Challenges
+            </p>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="strengths" class="form-label"
+                  >Strengths <span class="required">*</span></label
+                >
+                <textarea
+                  id="strengths"
+                  name="strengths"
+                  class="form-input textarea"
+                  placeholder="Describe your strengths"
+                  required
+                ></textarea>
+                <div class="error-message">Please enter Your Strengths</div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="weaknesses" class="form-label"
+                  >Weaknesses / Areas of Improvement
+                  <span class="required">*</span></label
+                >
+                <textarea
+                  id="weaknesses"
+                  name="weaknesses"
+                  class="form-input textarea"
+                  placeholder="Describe your weaknesses or areas for improvement"
+                  required
+                ></textarea>
+                <div class="error-message">Please enter Your Weaknesses</div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="opportunities" class="form-label"
+                  >Opportunities <span class="required">*</span></label
+                >
+                <textarea
+                  id="opportunities"
+                  name="opportunities"
+                  class="form-input textarea"
+                  placeholder="Describe your opportunities"
+                  required
+                ></textarea>
+                <div class="error-message">Please enter Your Opportunities</div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="challenges" class="form-label"
+                  >Challenges <span class="required">*</span></label
+                >
+                <textarea
+                  id="challenges"
+                  name="challenges"
+                  class="form-input textarea"
+                  placeholder="Describe your challenges"
+                  required
+                ></textarea>
+                <div class="error-message">Please enter Your Challenges</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="step-content" data-step="8">
+            <h2 class="step-title">Career Objectives and Skills</h2>
+            <p class="step-description">
+              Share your career goals and skills assessment
+            </p>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="careerGoal" class="form-label"
+                  >Career Goal <span class="required">*</span></label
+                >
+                <select
+                  id="careerGoal"
+                  name="careerGoal"
+                  class="form-select"
+                  required
+                >
+                  <option value="">Select Career Goal</option>
+                  <option value="placement">
+                    Campus / Off-Campus Placement
+                  </option>
+                  <option value="higher_studies">Higher Studies</option>
+                  <option value="entrepreneur">Entrepreneurship</option>
+                </select>
+                <div class="error-message">Please select your career goal</div>
+              </div>
+            </div>
+
+            <div class="form-row is-hidden" id="placementTypeRow">
+              <div class="form-group">
+                <label for="placementType" class="form-label"
+                  >Placement Type</label
+                >
+                <select
+                  id="placementType"
+                  name="placementType"
+                  class="form-select"
+                >
+                  <option value="">Select Placement Type</option>
+                  <option value="IT Service">IT Service</option>
+                  <option value="IT Product">IT Product</option>
+                  <option value="Core">Core (Non-IT)</option>
+                  <option value="Finance">Finance / Banking</option>
+                  <option value="Any">Open to Any</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row is-hidden" id="higherStudiesTypeRow">
+              <div class="form-group">
+                <label for="higherStudiesType" class="form-label"
+                  >Higher Studies Type</label
+                >
+                <select
+                  id="higherStudiesType"
+                  name="higherStudiesType"
+                  class="form-select"
+                >
+                  <option value="">Select Higher Studies Type</option>
+                  <option value="ME/MTech">ME / M.Tech</option>
+                  <option value="MBA">MBA</option>
+                  <option value="MS Abroad">MS Abroad</option>
+                  <option value="PhD">PhD</option>
+                  <option value="Other PG">Other PG Program</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="specificDetails" class="form-label"
+                  >Specific Details / Notes</label
+                >
+                <textarea
+                  id="specificDetails"
+                  name="specificDetails"
+                  class="form-input textarea"
+                  placeholder="Provide specific details about your career objectives"
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label for="clarityPreparedness" class="form-label"
+                  >Clarity and Preparedness Level
+                  <span class="required">*</span></label
+                >
+                <select
+                  id="clarityPreparedness"
+                  name="clarityPreparedness"
+                  class="form-select"
+                  required
+                >
+                  <option value="">Select Level</option>
+                  <option value="unsatisfactory">Unsatisfactory</option>
+                  <option value="satisfactory">Satisfactory</option>
+                  <option value="good">Good</option>
+                  <option value="excellent">Excellent</option>
+                </select>
+                <div class="error-message">
+                  Please select your preparedness level
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="campusPlacement" class="form-label"
+                  >Interested in Campus Placement?
+                  <span class="required">*</span></label
+                >
+                <select
+                  id="campusPlacement"
+                  name="campusPlacement"
+                  class="form-select"
+                  required
+                >
+                  <option value="">Select Option</option>
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
+                </select>
+                <div class="error-message">Please select your preference</div>
+              </div>
+            </div>
+
+            <div class="form-row is-hidden" id="placementReasonRow">
+              <div class="form-group">
+                <label for="placementReasons" class="form-label"
+                  >Campus Placement Reasons / Notes
+                  <span class="required">*</span></label
+                >
+                <textarea
+                  id="placementReasons"
+                  name="placementReasons"
+                  class="form-input textarea"
+                  placeholder="Specify reasons regarding campus placement"
+                ></textarea>
+                <div class="error-message">
+                  Please enter Your Campus Placement Reasons
+                </div>
+              </div>
+            </div>
+
+            <h4 class="section-heading section-heading-neutral">
+              Areas of Interest (Other than Technical)
+            </h4>
+            <div class="form-row">
+              <div class="form-group">
+                <div class="checkbox-grid">
+                  <label class="checkbox-item"
+                    ><input
+                      type="checkbox"
+                      name="interest_cultural"
+                      value="Cultural"
+                    />
+                    Cultural Activities</label
+                  >
+                  <label class="checkbox-item"
+                    ><input
+                      type="checkbox"
+                      name="interest_sports"
+                      value="Sports"
+                    />
+                    Sports</label
+                  >
+                  <label class="checkbox-item"
+                    ><input
+                      type="checkbox"
+                      name="interest_literary"
+                      value="Literary"
+                    />
+                    Literary / Debate</label
+                  >
+                  <label class="checkbox-item"
+                    ><input
+                      type="checkbox"
+                      name="interest_social"
+                      value="Social"
+                    />
+                    Social Service / NSS</label
+                  >
+                  <label class="checkbox-item"
+                    ><input
+                      type="checkbox"
+                      name="interest_other"
+                      value="Other"
+                    />
+                    Other</label
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="mentorInterest" class="form-label"
+                  >Would you be interested in being a Student Mentor?</label
+                >
+                <select
+                  id="mentorInterest"
+                  name="mentorInterest"
+                  class="form-select"
+                >
+                  <option value="">Select Option</option>
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                  <option value="Maybe">Maybe</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="institutionExpectations" class="form-label"
+                  >Expectations from the Institute</label
+                >
+                <textarea
+                  id="institutionExpectations"
+                  name="institutionExpectations"
+                  class="form-input textarea"
+                  placeholder="What do you expect from the institute to support your career goals?"
+                ></textarea>
+              </div>
+            </div>
+
+            <h4 class="section-heading section-heading-blue">
+              Skills
+            </h4>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="technicalSoftSkills" class="form-label"
+                  >Technical &amp; Soft Skills (Overall)</label
+                >
+                <textarea
+                  id="technicalSoftSkills"
+                  name="technicalSoftSkills"
+                  class="form-input textarea"
+                  placeholder="List your key technical and soft skills"
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="form-row two-cols">
+              <div class="form-group">
+                <label for="additionalTechnicalSkills" class="form-label"
+                  >Additional Technical Skills</label
+                >
+                <textarea
+                  id="additionalTechnicalSkills"
+                  name="additionalTechnicalSkills"
+                  class="form-input textarea"
+                  placeholder="Any additional technical skills not covered above"
+                ></textarea>
+              </div>
+              <div class="form-group">
+                <label for="additionalSoftSkills" class="form-label"
+                  >Additional Soft Skills</label
+                >
+                <textarea
+                  id="additionalSoftSkills"
+                  name="additionalSoftSkills"
+                  class="form-input textarea"
+                  placeholder="Any additional soft skills (e.g. Leadership, Communication)"
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="programmingLanguages" class="form-label"
+                  >Programming Languages</label
+                >
+                <textarea
+                  id="programmingLanguages"
+                  name="programmingLanguages"
+                  class="form-input textarea"
+                  placeholder="List programming languages you know (comma separated)"
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="technologiesFrameworks" class="form-label"
+                  >Technologies &amp; Frameworks</label
+                >
+                <textarea
+                  id="technologiesFrameworks"
+                  name="technologiesFrameworks"
+                  class="form-input textarea"
+                  placeholder="List technologies and frameworks you know (comma separated)"
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="domainsOfInterest" class="form-label"
+                  >Domains of Interest <span class="required">*</span></label
+                >
+                <div class="checkbox-grid checkbox-grid-spaced">
+                  <label class="checkbox-item"
+                    ><input
+                      type="checkbox"
+                      name="domain1"
+                      value="Web Development"
+                    />
+                    Web Development</label
+                  >
+                  <label class="checkbox-item"
+                    ><input
+                      type="checkbox"
+                      name="domain2"
+                      value="Machine Learning"
+                    />
+                    Machine Learning</label
+                  >
+                  <label class="checkbox-item"
+                    ><input
+                      type="checkbox"
+                      name="domain3"
+                      value="Artificial Intelligence"
+                    />
+                    Artificial Intelligence</label
+                  >
+                  <label class="checkbox-item"
+                    ><input
+                      type="checkbox"
+                      name="domain4"
+                      value="Data Science"
+                    />
+                    Data Science</label
+                  >
+                  <label class="checkbox-item"
+                    ><input
+                      type="checkbox"
+                      name="domain5"
+                      value="Cyber Security"
+                    />
+                    Cyber Security</label
+                  >
+                  <label class="checkbox-item"
+                    ><input
+                      type="checkbox"
+                      name="domain6"
+                      value="Cloud Computing"
+                    />
+                    Cloud Computing</label
+                  >
+                  <label class="checkbox-item"
+                    ><input
+                      type="checkbox"
+                      name="domain7"
+                      value="Mobile Development"
+                    />
+                    Mobile Development</label
+                  >
+                  <label class="checkbox-item"
+                    ><input type="checkbox" name="domain8" value="Other" />
+                    Other</label
+                  >
+                </div>
+                <div class="error-message">
+                  Please select at least one domain of interest
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="familiarToolsPlatforms" class="form-label"
+                  >Familiar Tools &amp; Platforms</label
+                >
+                <textarea
+                  id="familiarToolsPlatforms"
+                  name="familiarToolsPlatforms"
+                  class="form-input textarea"
+                  placeholder="List tools and platforms you are familiar with (comma separated)"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="step-content" data-step="9">
+            <h2 class="step-title">Review &amp; Submit</h2>
+            <p class="step-description">
+              Please review your information before submitting
+            </p>
+
+            <div id="reviewContent"></div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="checkbox-item">
+                  <input
+                    type="checkbox"
+                    id="termsAccepted"
+                    name="termsAccepted"
+                    required
+                  />
+                  <span
+                    >I confirm that all the information provided is accurate and
+                    I agree to the terms and conditions
+                    <span class="required">*</span></span
+                  >
+                </label>
+                <div class="error-message">
+                  Please accept the terms and conditions
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="form-navigation">
+        <button
+          type="button"
+          id="prevBtn"
+          class="nav-button btn-previous"
+          disabled
+        >
+          ← Previous
+        </button>
+        <div class="step-counter">
+          Step <span id="currentStep">1</span> of 9
         </div>
-
-        <!-- Progress Section -->
-        <div class="progress-container">
-            <div class="progress-info">
-                <span class="progress-text">Progress</span>
-                <span class="progress-percentage">10%</span>
-            </div>
-            <div class="progress-track">
-                <div class="progress-fill"></div>
-            </div>
-            <div class="step-indicators">
-                <div class="step-indicator active">1</div>
-                <div class="step-indicator">2</div>
-                <div class="step-indicator">3</div>
-                <div class="step-indicator">4</div>
-                <div class="step-indicator">5</div>
-                <div class="step-indicator">6</div>
-                <div class="step-indicator">7</div>
-                <div class="step-indicator">8</div>
-                <div class="step-indicator">9</div>
-            </div>
-        </div>
-
-        <!-- Form Content -->
-        <div class="form-content">
-            <form id="wizardForm">
-                <!-- Step 1: Student's Personal Information -->
-                <div class="step-content active" data-step="1">
-                    <h2 class="step-title">Student's Personal Information</h2>
-                    <p class="step-description">Please provide your personal details</p>
-
-                    <div class="form-row two-cols">
-                        <div class="form-group">
-                            <label for="fullName" class="form-label">Full Name <span class="required">*</span></label>
-                            <input type="text" id="fullName" name="fullName" class="form-input"
-                                placeholder="Enter your full name" required>
-                            <div class="error-message">Please enter your full name</div>
-                        </div>
-                        <div class="form-group">
-                            <label for="section" class="form-label">Section</label>
-                            <select id="section" name="section" class="form-select">
-                                <option value="">Select Section</option>
-                                <option value="A">A</option>
-                                <option value="B">B</option>
-                            </select>
-                            <div class="error-message">Please select your section</div>
-                        </div>
-                    </div>
-
-                    <div class="form-row two-cols">
-                        <div class="form-group">
-                            <label for="semester" class="form-label">Semester</label>
-                            <select id="semester" name="semester" class="form-select">
-                                <option value="">Select Semester</option>
-                                <option value="1">Semester 1</option>
-                                <option value="2">Semester 2</option>
-                                <option value="3">Semester 3</option>
-                                <option value="4">Semester 4</option>
-                                <option value="5">Semester 5</option>
-                                <option value="6">Semester 6</option>
-                                <option value="7">Semester 7</option>
-                                <option value="8">Semester 8</option>
-                            </select>
-                            <div class="error-message">Please select your semester</div>
-                        </div>
-                        <div class="form-group">
-                            <label for="yearOfAdmission" class="form-label">Year of Admission</label>
-                            <input type="number" id="yearOfAdmission" name="yearOfAdmission" class="form-input"
-                                placeholder="2023">
-                            <div class="error-message" id="admissionYearError">Please enter year of admission</div>
-                        </div>
-                    </div>
-
-                    <div class="form-row two-cols">
-                        <div class="form-group">
-                            <label for="mobileNo" class="form-label">Mobile No. <span class="required">*</span></label>
-                            <input type="number" id="mobileNo" name="mobileNo" class="form-input"
-                                placeholder="1234567890" required>
-                            <div class="error-message" id="mobileError">Please enter a valid 10-digit mobile number
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="personalEmail" class="form-label">Personal Email <span
-                                    class="required">*</span></label>
-                            <input type="email" id="personalEmail" name="personalEmail" class="form-input"
-                                placeholder="your.email@example.com" required>
-                            <div class="error-message">Please enter a valid email address</div>
-                        </div>
-                    </div>
-
-                    <div class="form-row two-cols">
-                        <div class="form-group">
-                            <label for="collegeEmail" class="form-label">College Email <span
-                                    class="required">*</span></label>
-                            <input type="email" id="collegeEmail" name="collegeEmail" class="form-input"
-                                placeholder="your.college@stvincentngp.edu.in" required>
-                            <div class="error-message">Please enter a valid college email address ending with
-                                @stvincentngp.edu.in</div>
-                        </div>
-                        <div class="form-group">
-                            <label for="linkedInId" class="form-label">LinkedIn ID</label>
-                            <input type="text" id="linkedInId" name="linkedInId" class="form-input"
-                                placeholder="Enter your LinkedIn profile URL">
-                            <div class="error-message">Please enter your LinkedIn ID</div>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="permanentAddress" class="form-label">Permanent Address <span
-                                    class="required">*</span></label>
-                            <textarea id="permanentAddress" name="permanentAddress" class="form-input textarea"
-                                placeholder="Enter your permanent address" required></textarea>
-                            <div class="error-message">Please enter your permanent address</div>
-                        </div>
-                    </div>
-
-                    <div class="form-row two-cols">
-                        <div class="form-group">
-                            <label for="dob" class="form-label">Date of Birth <span class="required">*</span></label>
-                            <input type="date" id="dob" name="dob" class="form-input" required>
-                            <div class="error-message">Please enter your date of birth</div>
-                        </div>
-                        <div class="form-group">
-                            <label for="gender" class="form-label">Gender <span class="required">*</span></label>
-                            <select id="gender" name="gender" class="form-select" required>
-                                <option value="">Select Gender</option>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                                <option value="Other">Other</option>
-                            </select>
-                            <div class="error-message">Please select your gender</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 2: Parent's Information -->
-                <div class="step-content" data-step="2">
-                    <h2 class="step-title">Parent's Information</h2>
-                    <p class="step-description">Please provide your parent's details</p>
-
-                    <div class="form-row two-cols">
-                        <div class="form-group">
-                            <label for="fatherName" class="form-label">Father's Name <span
-                                    class="required">*</span></label>
-                            <input type="text" id="fatherName" name="fatherName" class="form-input"
-                                placeholder="Enter father's name" required>
-                            <div class="error-message">Please enter father's name</div>
-                        </div>
-                        <div class="form-group">
-                            <label for="fatherMobileNo" class="form-label">Father's Mobile No. <span
-                                    class="required">*</span></label>
-                            <input type="text" id="fatherMobileNo" name="fatherMobileNo" class="form-input"
-                                placeholder="1234567890" required>
-                            <div class="error-message">Please enter a valid 10-digit mobile number</div>
-                        </div>
-                    </div>
-
-                    <div class="form-row two-cols">
-                        <div class="form-group">
-                            <label for="fatherEmail" class="form-label">Father's Email ID</label>
-                            <input type="email" id="fatherEmail" name="fatherEmail" class="form-input"
-                                placeholder="father.email@example.com">
-                            <div class="error-message">Please enter a valid email address</div>
-                        </div>
-                        <div class="form-group">
-                            <label for="fatherOccupation" class="form-label">Father's Occupation <span
-                                    class="required">*</span></label>
-                            <input type="text" id="fatherOccupation" name="fatherOccupation" class="form-input"
-                                placeholder="Enter father's occupation" required>
-                            <div class="error-message">Please enter father's occupation</div>
-                        </div>
-                    </div>
-
-                    <div class="form-row two-cols">
-                        <div class="form-group">
-                            <label for="motherName" class="form-label">Mother's Name <span
-                                    class="required">*</span></label>
-                            <input type="text" id="motherName" name="motherName" class="form-input"
-                                placeholder="Enter mother's name" required>
-                            <div class="error-message">Please enter mother's name</div>
-                        </div>
-                        <div class="form-group">
-                            <label for="motherMobileNo" class="form-label">Mother's Mobile No. <span
-                                    class="required">*</span></label>
-                            <input type="text" id="motherMobileNo" name="motherMobileNo" class="form-input"
-                                placeholder="1234567890" required>
-                            <div class="error-message">Please enter a valid 10-digit mobile number</div>
-                        </div>
-                    </div>
-
-                    <div class="form-row two-cols">
-                        <div class="form-group">
-                            <label for="motherEmail" class="form-label">Mother's Email ID</label>
-                            <input type="email" id="motherEmail" name="motherEmail" class="form-input"
-                                placeholder="mother.email@example.com">
-                            <div class="error-message">Please enter a valid email address</div>
-                        </div>
-                        <div class="form-group">
-                            <label for="motherOccupation" class="form-label">Mother's Occupation <span
-                                    class="required">*</span></label>
-                            <input type="text" id="motherOccupation" name="motherOccupation" class="form-input"
-                                placeholder="Enter mother's occupation" required>
-                            <div class="error-message">Please enter Mother's Occupation</div>
-                        </div>
-                    </div>
-
-                    <div class="form-row two-cols">
-                        <div class="form-group">
-                            <label for="emergencyContactName" class="form-label">Emergency Contact Name</label>
-                            <input type="text" id="emergencyContactName" name="emergencyContactName" class="form-input"
-                                placeholder="Enter emergency contact name">
-                            <div class="error-message">Please enter emergency contact name</div>
-                        </div>
-                        <div class="form-group">
-                            <label for="emergencyContactNumber" class="form-label">Emergency Contact Number</label>
-                            <input type="text" id="emergencyContactNumber" name="emergencyContactNumber"
-                                class="form-input" placeholder="1234567890">
-                            <div class="error-message">Please enter a valid 10-digit mobile number</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 3: Academic Information - Before Admission -->
-                <div class="step-content" data-step="3">
-                    <h2 class="step-title">Academic Information - Before Admission</h2>
-                    <p class="step-description">Provide your academic details before admission</p>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">SSC (X) Details</label>
-                            <div class="form-row two-cols">
-                                <div class="form-group">
-                                    <label for="sscPercentage" class="form-label">Percentage</label>
-                                    <input type="number" id="sscPercentage" name="sscPercentage" class="form-input"
-                                        placeholder="Percentage" step="0.01">
-                                    <div class="error-message">Please enter a valid percentage (0-100)</div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="sscYear" class="form-label">Passing Year</label>
-                                    <input type="number" id="sscYear" name="sscYear" class="form-input"
-                                        placeholder="Year of Passing">
-                                    <div class="error-message">Please enter a valid passing year</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">HSSC (XII)/Diploma Details</label>
-                            <div class="form-row two-cols">
-                                <div class="form-group">
-                                    <label for="hsscPercentage" class="form-label">Percentage</label>
-                                    <input type="number" id="hsscPercentage" name="hsscPercentage" class="form-input"
-                                        placeholder="Percentage" step="0.01">
-                                    <div class="error-message">Please enter a valid percentage (0-100)</div>
-                                </div>
-                                <div class="form-group">
-                                    <label for="hsscYear" class="form-label">Passing Year</label>
-                                    <input type="number" id="hsscYear" name="hsscYear" class="form-input"
-                                        placeholder="Year of Passing">
-                                    <div class="error-message">Please enter a valid passing year</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 4: Academic Information - After Admission -->
-                <div class="step-content" data-step="4">
-                    <h2 class="step-title">Academic Information - After Admission</h2>
-                    <p class="step-description">Provide your academic performance after admission</p>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Semester-wise Performance</label>
-
-                            <!-- Dynamic semester inputs will be created based on current semester -->
-                            <div id="semesterRecords">
-                                <!-- Semester 1 -->
-                                <div class="semester-row">
-                                    <h4>Semester 1</h4>
-                                    <div class="form-row two-cols">
-                                        <div class="form-group">
-                                            <input type="number" id="sem1SGPA" name="sem1SGPA" class="form-input"
-                                                placeholder="SGPA" step="0.01">
-                                            <div class="error-message">Please enter valid SGPA</div>
-                                        </div>
-                                        <div class="form-group">
-                                            <input type="text" id="sem1Backlog" name="sem1Backlog" class="form-input"
-                                                placeholder="Backlog Subjects (comma separated)">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Semester 2 -->
-                                <div class="semester-row">
-                                    <h4>Semester 2</h4>
-                                    <div class="form-row two-cols">
-                                        <div class="form-group">
-                                            <input type="number" id="sem2SGPA" name="sem2SGPA" class="form-input"
-                                                placeholder="SGPA" step="0.01">
-                                            <div class="error-message">Please enter valid SGPA</div>
-                                        </div>
-                                        <div class="form-group">
-                                            <input type="text" id="sem2Backlog" name="sem2Backlog" class="form-input"
-                                                placeholder="Backlog Subjects (comma separated)">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Semester 3 -->
-                                <div class="semester-row">
-                                    <h4>Semester 3</h4>
-                                    <div class="form-row two-cols">
-                                        <div class="form-group">
-                                            <input type="number" id="sem3SGPA" name="sem3SGPA" class="form-input"
-                                                placeholder="SGPA" step="0.01">
-                                            <div class="error-message">Please enter valid SGPA</div>
-                                        </div>
-                                        <div class="form-group">
-                                            <input type="text" id="sem3Backlog" name="sem3Backlog" class="form-input"
-                                                placeholder="Backlog Subjects (comma separated)">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Semester 4 -->
-                                <div class="semester-row">
-                                    <h4>Semester 4</h4>
-                                    <div class="form-row two-cols">
-                                        <div class="form-group">
-                                            <input type="number" id="sem4SGPA" name="sem4SGPA" class="form-input"
-                                                placeholder="SGPA" step="0.01">
-                                            <div class="error-message">Please enter valid SGPA</div>
-                                        </div>
-                                        <div class="form-group">
-                                            <input type="text" id="sem4Backlog" name="sem4Backlog" class="form-input"
-                                                placeholder="Backlog Subjects (comma separated)">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Semester 5 -->
-                                <div class="semester-row">
-                                    <h4>Semester 5</h4>
-                                    <div class="form-row two-cols">
-                                        <div class="form-group">
-                                            <input type="number" id="sem5SGPA" name="sem5SGPA" class="form-input"
-                                                placeholder="SGPA" step="0.01">
-                                            <div class="error-message">Please enter valid SGPA</div>
-                                        </div>
-                                        <div class="form-group">
-                                            <input type="text" id="sem5Backlog" name="sem5Backlog" class="form-input"
-                                                placeholder="Backlog Subjects (comma separated)">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Semester 6 -->
-                                <div class="semester-row">
-                                    <h4>Semester 6</h4>
-                                    <div class="form-row two-cols">
-                                        <div class="form-group">
-                                            <input type="number" id="sem6SGPA" name="sem6SGPA" class="form-input"
-                                                placeholder="SGPA" step="0.01">
-                                            <div class="error-message">Please enter valid SGPA</div>
-                                        </div>
-                                        <div class="form-group">
-                                            <input type="text" id="sem6Backlog" name="sem6Backlog" class="form-input"
-                                                placeholder="Backlog Subjects (comma separated)">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Semester 7 -->
-                                <div class="semester-row">
-                                    <h4>Semester 7</h4>
-                                    <div class="form-row two-cols">
-                                        <div class="form-group">
-                                            <input type="number" id="sem7SGPA" name="sem7SGPA" class="form-input"
-                                                placeholder="SGPA" step="0.01">
-                                            <div class="error-message">Please enter valid SGPA</div>
-                                        </div>
-                                        <div class="form-group">
-                                            <input type="text" id="sem7Backlog" name="sem7Backlog" class="form-input"
-                                                placeholder="Backlog Subjects (comma separated)">
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Semester 8 -->
-                                <div class="semester-row">
-                                    <h4>Semester 8</h4>
-                                    <div class="form-row two-cols">
-                                        <div class="form-group">
-                                            <input type="number" id="sem8SGPA" name="sem8SGPA" class="form-input"
-                                                placeholder="SGPA" step="0.01">
-                                            <div class="error-message">Please enter valid SGPA</div>
-                                        </div>
-                                        <div class="form-group">
-                                            <input type="text" id="sem8Backlog" name="sem8Backlog" class="form-input"
-                                                placeholder="Backlog Subjects (comma separated)">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 5: Career Development Activities -->
-                <div class="step-content" data-step="5">
-                    <h2 class="step-title">Career Development Activities</h2>
-                    <p class="step-description">Provide details of your career development activities</p>
-
-                    <div id="careerActivities">
-                        <div class="activity-section">
-                            <h4>Career Activity 1</h4>
-                            <div class="form-row three-cols">
-                                <div class="form-group">
-                                    <input type="text" name="activity1Name" class="form-input"
-                                        placeholder="Activity Name">
-                                </div>
-                                <div class="form-group">
-                                    <input type="text" name="activity1Score" class="form-input"
-                                        placeholder="Score/Rank">
-                                </div>
-                                <div class="form-group">
-                                    <input type="date" name="activity1Date" class="form-input">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="activity-section">
-                            <h4>Career Activity 2</h4>
-                            <div class="form-row three-cols">
-                                <div class="form-group">
-                                    <input type="text" name="activity2Name" class="form-input"
-                                        placeholder="Activity Name">
-                                </div>
-                                <div class="form-group">
-                                    <input type="text" name="activity2Score" class="form-input"
-                                        placeholder="Score/Rank">
-                                </div>
-                                <div class="form-group">
-                                    <input type="date" name="activity2Date" class="form-input">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="activity-section">
-                            <h4>Career Activity 3</h4>
-                            <div class="form-row three-cols">
-                                <div class="form-group">
-                                    <input type="text" name="activity3Name" class="form-input"
-                                        placeholder="Activity Name">
-                                </div>
-                                <div class="form-group">
-                                    <input type="text" name="activity3Score" class="form-input"
-                                        placeholder="Score/Rank">
-                                </div>
-                                <div class="form-group">
-                                    <input type="date" name="activity3Date" class="form-input">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 6: Project and Internship Details -->
-                <div class="step-content" data-step="6">
-                    <h2 class="step-title">Project and Internship Details</h2>
-                    <p class="step-description">Provide details of your projects and internships</p>
-
-                    <!-- Projects Section -->
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Project 1</label>
-                            <div class="form-row two-cols">
-                                <div class="form-group">
-                                    <input type="text" id="project1Title" name="project1Title" class="form-input"
-                                        placeholder="Project Title">
-                                </div>
-                                <div class="form-group">
-                                    <input type="text" id="project1Description" name="project1Description"
-                                        class="form-input" placeholder="Project Description">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Project 2</label>
-                            <div class="form-row two-cols">
-                                <div class="form-group">
-                                    <input type="text" id="project2Title" name="project2Title" class="form-input"
-                                        placeholder="Project Title">
-                                </div>
-                                <div class="form-group">
-                                    <input type="text" id="project2Description" name="project2Description"
-                                        class="form-input" placeholder="Project Description">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Internships Section -->
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Internship 1</label>
-                            <div class="form-row two-cols">
-                                <div class="form-group">
-                                    <input type="text" id="internship1Company" name="internship1Company"
-                                        class="form-input" placeholder="Company Name">
-                                </div>
-                                <div class="form-group">
-                                    <input type="text" id="internship1Domain" name="internship1Domain"
-                                        class="form-input" placeholder="Domain">
-                                </div>
-                            </div>
-                            <div class="form-row three-cols">
-                                <div class="form-group">
-                                    <select id="internship1Type" name="internship1Type" class="form-select">
-                                        <option value="">Internship Type</option>
-                                        <option value="Online">Online</option>
-                                        <option value="Physical">Physical</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <select id="internship1Paid" name="internship1Paid" class="form-select">
-                                        <option value="">Paid/Unpaid</option>
-                                        <option value="Paid">Paid</option>
-                                        <option value="Unpaid">Unpaid</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-row two-cols">
-                                <div class="form-group">
-                                    <label class="form-label">Start Date</label>
-                                    <input type="date" id="internship1Start" name="internship1Start" class="form-input">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">End Date</label>
-                                    <input type="date" id="internship1End" name="internship1End" class="form-input">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Internship 2</label>
-                            <div class="form-row two-cols">
-                                <div class="form-group">
-                                    <input type="text" id="internship2Company" name="internship2Company"
-                                        class="form-input" placeholder="Company Name">
-                                </div>
-                                <div class="form-group">
-                                    <input type="text" id="internship2Domain" name="internship2Domain"
-                                        class="form-input" placeholder="Domain">
-                                </div>
-                            </div>
-                            <div class="form-row three-cols">
-                                <div class="form-group">
-                                    <select id="internship2Type" name="internship2Type" class="form-select">
-                                        <option value="">Internship Type</option>
-                                        <option value="Online">Online</option>
-                                        <option value="Physical">Physical</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <select id="internship2Paid" name="internship2Paid" class="form-select">
-                                        <option value="">Paid/Unpaid</option>
-                                        <option value="Paid">Paid</option>
-                                        <option value="Unpaid">Unpaid</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-row two-cols">
-                                <div class="form-group">
-                                    <label class="form-label">Start Date</label>
-                                    <input type="date" id="internship2Start" name="internship2Start" class="form-input">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">End Date</label>
-                                    <input type="date" id="internship2End" name="internship2End" class="form-input">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 7: Co-Curricular Activities -->
-                <div class="step-content" data-step="7">
-                    <h2 class="step-title">Co-Curricular Activities</h2>
-                    <p class="step-description">Provide details of your co-curricular activities</p>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <h4
-                                style="margin-bottom: 15px; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 8px;">
-                                Participation Activities</h4>
-                            <p class="form-hint">(Skill development program/ MOOC/ Paper presentation/ Technical
-                                Competition/ etc.)</p>
-
-                            <div class="activity-row"
-                                style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                                <h5 style="margin-bottom: 10px; color: #34495e;">Activity 1</h5>
-                                <div class="form-row four-cols">
-                                    <div class="form-group">
-                                        <input type="text" name="participation1Name" class="form-input"
-                                            placeholder="Name of Activity">
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="date" name="participation1Date" class="form-input">
-                                    </div>
-                                    <div class="form-group">
-                                        <select name="participation1Level" class="form-select">
-                                            <option value="">Level</option>
-                                            <option value="Institute">Institute</option>
-                                            <option value="Department">Department</option>
-                                            <option value="State">State</option>
-                                            <option value="National">National</option>
-                                            <option value="International">International</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="text" name="participation1Awards" class="form-input"
-                                            placeholder="Awards Received">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="activity-row"
-                                style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                                <h5 style="margin-bottom: 10px; color: #34495e;">Activity 2</h5>
-                                <div class="form-row four-cols">
-                                    <div class="form-group">
-                                        <input type="text" name="participation2Name" class="form-input"
-                                            placeholder="Name of Activity">
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="date" name="participation2Date" class="form-input">
-                                    </div>
-                                    <div class="form-group">
-                                        <select name="participation2Level" class="form-select">
-                                            <option value="">Level</option>
-                                            <option value="Institute">Institute</option>
-                                            <option value="Department">Department</option>
-                                            <option value="State">State</option>
-                                            <option value="National">National</option>
-                                            <option value="International">International</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="text" name="participation2Awards" class="form-input"
-                                            placeholder="Awards Received">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="activity-row"
-                                style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                                <h5 style="margin-bottom: 10px; color: #34495e;">Activity 3</h5>
-                                <div class="form-row four-cols">
-                                    <div class="form-group">
-                                        <input type="text" name="participation3Name" class="form-input"
-                                            placeholder="Name of Activity">
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="date" name="participation3Date" class="form-input">
-                                    </div>
-                                    <div class="form-group">
-                                        <select name="participation3Level" class="form-select">
-                                            <option value="">Level</option>
-                                            <option value="Institute">Institute</option>
-                                            <option value="Department">Department</option>
-                                            <option value="State">State</option>
-                                            <option value="National">National</option>
-                                            <option value="International">International</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="text" name="participation3Awards" class="form-input"
-                                            placeholder="Awards Received">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-row" style="margin-top: 30px;">
-                        <div class="form-group">
-                            <h4
-                                style="margin-bottom: 15px; color: #2c3e50; border-bottom: 2px solid #e74c3c; padding-bottom: 8px;">
-                                Organized Activities</h4>
-                            <p class="form-hint">(Coordinator/ Co-Coordinator/ Member/ etc)</p>
-
-                            <div class="activity-row"
-                                style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                                <h5 style="margin-bottom: 10px; color: #34495e;">Activity 1</h5>
-                                <div class="form-row four-cols">
-                                    <div class="form-group">
-                                        <input type="text" name="organization1Name" class="form-input"
-                                            placeholder="Name of Activity">
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="date" name="organization1Date" class="form-input">
-                                    </div>
-                                    <div class="form-group">
-                                        <select name="organization1Level" class="form-select">
-                                            <option value="">Level</option>
-                                            <option value="Institute">Institute</option>
-                                            <option value="Department">Department</option>
-                                            <option value="State">State</option>
-                                            <option value="National">National</option>
-                                            <option value="International">International</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="text" name="organization1Remark" class="form-input"
-                                            placeholder="Remark">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="activity-row"
-                                style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                                <h5 style="margin-bottom: 10px; color: #34495e;">Activity 2</h5>
-                                <div class="form-row four-cols">
-                                    <div class="form-group">
-                                        <input type="text" name="organization2Name" class="form-input"
-                                            placeholder="Name of Activity">
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="date" name="organization2Date" class="form-input">
-                                    </div>
-                                    <div class="form-group">
-                                        <select name="organization2Level" class="form-select">
-                                            <option value="">Level</option>
-                                            <option value="Institute">Institute</option>
-                                            <option value="Department">Department</option>
-                                            <option value="State">State</option>
-                                            <option value="National">National</option>
-                                            <option value="International">International</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="text" name="organization2Remark" class="form-input"
-                                            placeholder="Remark">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="activity-row"
-                                style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
-                                <h5 style="margin-bottom: 10px; color: #34495e;">Activity 3</h5>
-                                <div class="form-row four-cols">
-                                    <div class="form-group">
-                                        <input type="text" name="organization3Name" class="form-input"
-                                            placeholder="Name of Activity">
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="date" name="organization3Date" class="form-input">
-                                    </div>
-                                    <div class="form-group">
-                                        <select name="organization3Level" class="form-select">
-                                            <option value="">Level</option>
-                                            <option value="Institute">Institute</option>
-                                            <option value="Department">Department</option>
-                                            <option value="State">State</option>
-                                            <option value="National">National</option>
-                                            <option value="International">International</option>
-                                        </select>
-                                    </div>
-                                    <div class="form-group">
-                                        <input type="text" name="organization3Remark" class="form-input"
-                                            placeholder="Remark">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 8: SWOC Analysis -->
-                <div class="step-content" data-step="8">
-                    <h2 class="step-title">SWOC Analysis</h2>
-                    <p class="step-description">Please provide your Strengths, Weaknesses, Opportunities, and Challenges
-                    </p>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="strengths" class="form-label">Strengths <span class="required">*</span></label>
-                            <textarea id="strengths" name="strengths" class="form-input textarea"
-                                placeholder="Describe your strengths" required></textarea>
-                            <div class="error-message">Please enter Your Strengths</div>
-
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="weaknesses" class="form-label">Weaknesses <span
-                                    class="required">*</span></label>
-                            <textarea id="weaknesses" name="weaknesses" class="form-input textarea"
-                                placeholder="Describe your weaknesses" required></textarea>
-                            <div class="error-message">Please enter Your Weaknesses</div>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="opportunities" class="form-label">Opportunities <span
-                                    class="required">*</span></label>
-                            <textarea id="opportunities" name="opportunities" class="form-input textarea"
-                                placeholder="Describe your opportunities" required></textarea>
-                            <div class="error-message">Please enter Your Opportunities</div>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="challenges" class="form-label">Challenges <span
-                                    class="required">*</span></label>
-                            <textarea id="challenges" name="challenges" class="form-input textarea"
-                                placeholder="Describe your challenges" required></textarea>
-                            <div class="error-message">Please enter Your Challenges</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 9: Career Objectives and Skills -->
-                <div class="step-content" data-step="9">
-                    <h2 class="step-title">Career Objectives and Skills</h2>
-                    <p class="step-description">Share your career goals and skills assessment</p>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="careerGoal" class="form-label">Career Goal <span
-                                    class="required">*</span></label>
-                            <select id="careerGoal" name="careerGoal" class="form-select" required>
-                                <option value="">Select Career Goal</option>
-                                <option value="higher_studies">Higher Studies</option>
-                                <option value="job_oriented">Job Oriented</option>
-                                <option value="entrepreneur">Entrepreneur</option>
-                            </select>
-                            <div class="error-message">Please select your career goal</div>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="specificDetails" class="form-label">Specific Details</label>
-                            <textarea id="specificDetails" name="specificDetails" class="form-input textarea"
-                                placeholder="Provide specific details about your career objectives"></textarea>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="clarityPreparedness" class="form-label">Clarity and Preparedness <span
-                                    class="required">*</span></label>
-                            <select id="clarityPreparedness" name="clarityPreparedness" class="form-select" required>
-                                <option value="">Select Level</option>
-                                <option value="unsatisfactory">Unsatisfactory</option>
-                                <option value="satisfactory">Satisfactory</option>
-                                <option value="good">Good</option>
-                            </select>
-                            <div class="error-message">Please select your career goal</div>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="campusPlacement" class="form-label">Interested in Campus Placement? <span
-                                    class="required">*</span></label>
-                            <select id="campusPlacement" name="campusPlacement" class="form-select" required>
-                                <option value="">Select Option</option>
-                                <option value="true">Yes</option>
-                                <option value="false">No</option>
-                            </select>
-                            <div class="error-message">Please select your career goal</div>
-                        </div>
-                    </div>
-
-                    <div class="form-row" id="placementReasonRow" style="display: none;">
-                        <div class="form-group">
-                            <label for="placementReasons" class="form-label">Campus Placement Reasons <span
-                                    class="required">*</span></label>
-                            <textarea id="placementReasons" name="placementReasons" class="form-input textarea"
-                                placeholder="Specify reasons regarding campus placement" required></textarea>
-                            <div class="error-message">Please enter Your Campus Placement Reasons</div>
-                        </div>
-                    </div>
-
-                    <!-- Skills Section -->
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="programmingLanguages" class="form-label">Programming Languages</label>
-                            <textarea id="programmingLanguages" name="programmingLanguages" class="form-input textarea"
-                                placeholder="List programming languages you know (comma separated)"></textarea>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="technologiesFrameworks" class="form-label">Technologies & Frameworks</label>
-                            <textarea id="technologiesFrameworks" name="technologiesFrameworks"
-                                class="form-input textarea"
-                                placeholder="List technologies and frameworks you know (comma separated)"></textarea>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="domainsOfInterest" class="form-label">Domains of Interest <span
-                                    class="required">*</span></label>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" name="domain1" value="Web Development">
-                                        Web Development
-                                    </label>
-                                </div>
-                                <div class="form-group">
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" name="domain2" value="Machine Learning">
-                                        Machine Learning
-                                    </label>
-                                </div>
-                                <div class="form-group">
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" name="domain3" value="Artificial Intelligence">
-                                        Artificial Intelligence
-                                    </label>
-                                </div>
-                                <div class="form-group">
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" name="domain4" value="Data Science">
-                                        Data Science
-                                    </label>
-                                </div>
-                                <div class="form-group">
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" name="domain5" value="Cyber Security">
-                                        Cyber Security
-                                    </label>
-                                </div>
-                                <div class="form-group">
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" name="domain6" value="Other">
-                                        Other
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="error-message">Please select at least one domain of interest</div>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="familiarToolsPlatforms" class="form-label">Familiar Tools & Platforms</label>
-                            <textarea id="familiarToolsPlatforms" name="familiarToolsPlatforms"
-                                class="form-input textarea"
-                                placeholder="List tools and platforms you are familiar with (comma separated)"></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 10: Review & Submit -->
-                <div class="step-content" data-step="10">
-                    <h2 class="step-title">Review & Submit</h2>
-                    <p class="step-description">Please review your information before submitting</p>
-
-                    <div id="reviewContent"
-                        style="background: #f8f9ff; padding: 25px; border-radius: 12px; margin: 20px 0;">
-                        <!-- Review content will be populated by JavaScript -->
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="checkbox-item">
-                                <input type="checkbox" id="termsAccepted" name="termsAccepted" required>
-                                <span>I confirm that all the information provided is accurate and I agree to the terms
-                                    and conditions <span class="required">*</span></span>
-                            </label>
-                            <div class="error-message">Please accept the terms and conditions</div>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-
-        <!-- Navigation -->
-        <div class="form-navigation">
-            <button type="button" id="prevBtn" class="nav-button btn-previous" disabled>
-                ← Previous
-            </button>
-            <div class="step-counter">
-                Step <span id="currentStep">1</span> of 10
-            </div>
-            <button type="button" id="nextBtn" class="nav-button btn-next">
-                Next →
-            </button>
-        </div>
+        <button type="button" id="nextBtn" class="nav-button btn-next">
+          Next →
+        </button>
+      </div>
     </div>
 
-    <script src="./s.js"></script>
-</body>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const careerGoalSel = document.getElementById("careerGoal");
+        const placementTypeRow = document.getElementById("placementTypeRow");
+        const higherStudiesTypeRow = document.getElementById(
+          "higherStudiesTypeRow",
+        );
 
+        if (careerGoalSel) {
+          careerGoalSel.addEventListener("change", function () {
+            placementTypeRow.style.display =
+              this.value === "placement" ? "" : "none";
+            higherStudiesTypeRow.style.display =
+              this.value === "higher_studies" ? "" : "none";
+          });
+        }
+
+        const campusPlacementSel = document.getElementById("campusPlacement");
+        const placementReasonRow =
+          document.getElementById("placementReasonRow");
+        if (campusPlacementSel) {
+          campusPlacementSel.addEventListener("change", function () {
+            placementReasonRow.style.display =
+              this.value === "false" ? "" : "none";
+          });
+        }
+      });
+    </script>
+
+    <script src="./s.js"></script>
+  </body>
 </html>

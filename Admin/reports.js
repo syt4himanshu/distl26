@@ -2,6 +2,11 @@ let currentSemester = 1;
 let toppersChart = null;
 let distributionChart = null;
 let allStudentsData = [];
+const GENERAL_REPORT_PAGE_SIZE = 20;
+let currentGeneralReportPage = 1;
+let filteredGeneralReportData = [];
+let filteredIncompleteProfileData = [];
+const MISSING_SENTINELS = new Set(['', 'n/a', 'na', 'none', 'null', 'undefined', '-']);
 
 // DOM Content Loaded Event
 document.addEventListener('DOMContentLoaded', function () {
@@ -172,12 +177,168 @@ async function fetchBacklogStudents() {
   return students.filter(student => student.backlogs > 0);
 }
 
+function hasRequiredValue(value) {
+  if (typeof value === 'boolean') return true;
+  if (typeof value === 'number') return !Number.isNaN(value);
+  if (Array.isArray(value)) return value.length > 0;
+
+  const normalized = String(value ?? '').trim().toLowerCase();
+  return !MISSING_SENTINELS.has(normalized);
+}
+
+function getMissingStudentProfileFields(rawStudent) {
+  const student = rawStudent || {};
+  const personal = student.personal_info || {};
+  const swoc = student.swoc || {};
+  const career = student.career_objective || {};
+  const skills = student.skills || {};
+  const missing = [];
+
+  const check = (label, value) => {
+    if (!hasRequiredValue(value)) {
+      missing.push(label);
+    }
+  };
+
+  // Required fields from Student/s.html that are persisted in backend payload.
+  check('Full Name', student.full_name);
+  check('Date of Birth', personal.dob);
+  check('Gender', personal.gender);
+  check('WhatsApp Mobile No.', personal.mobile_no);
+  check('Personal Email', personal.personal_email);
+  check('College Email', personal.college_email);
+  check('Permanent Address', personal.permanent_address);
+  check("Father's Name", personal.father_name);
+  check("Father's Mobile", personal.father_mobile_no);
+  check("Father's Occupation", personal.father_occupation);
+  check("Mother's Name", personal.mother_name);
+  check("Mother's Mobile", personal.mother_mobile_no);
+  check("Mother's Occupation", personal.mother_occupation);
+  check('Strengths', swoc.strengths);
+  check('Weaknesses', swoc.weaknesses);
+  check('Opportunities', swoc.opportunities);
+  check('Challenges', swoc.challenges);
+  check('Career Goal', career.career_goal);
+  check('Clarity & Preparedness', career.clarity_preparedness);
+  check('Domains of Interest', skills.domains_of_interest);
+
+  if (typeof career.interested_in_campus_placement !== 'boolean') {
+    missing.push('Campus Placement Interest');
+  } else if (career.interested_in_campus_placement === false) {
+    check('Campus Placement Reasons', career.campus_placement_reasons);
+  }
+
+  return missing;
+}
+
+function getIncompleteProfileStudents(students) {
+  return (students || []).reduce((acc, student) => {
+    const raw = student?.rawData || {};
+    const missingFields = getMissingStudentProfileFields(raw);
+    if (missingFields.length > 0) {
+      acc.push({
+        name: raw.full_name || student?.name || 'N/A',
+        uid: raw.uid || student?.uid || 'N/A',
+        year: raw.year_of_admission || 'N/A',
+        section: raw.section || 'N/A',
+        missingFields
+      });
+    }
+    return acc;
+  }, []);
+}
+
+function getMissingFieldsSummary(fields) {
+  if (!Array.isArray(fields) || fields.length === 0) return 'N/A';
+  if (fields.length <= 3) return fields.join(', ');
+  return `${fields.slice(0, 3).join(', ')} +${fields.length - 3} more`;
+}
+
+function populateIncompleteYearFilter(students) {
+  const yearFilter = document.getElementById('incompleteYearFilter');
+  if (!yearFilter) return;
+
+  const previous = yearFilter.value;
+  const yearSet = new Set();
+
+  (students || []).forEach(student => {
+    const yearValue = student?.rawData?.year_of_admission;
+    const normalized = String(yearValue ?? '').trim();
+    if (!normalized) return;
+    if (MISSING_SENTINELS.has(normalized.toLowerCase())) return;
+    yearSet.add(normalized);
+  });
+
+  const years = Array.from(yearSet).sort((a, b) => Number(b) - Number(a));
+  yearFilter.innerHTML = '<option value="">All Years</option>';
+  years.forEach(year => {
+    const option = document.createElement('option');
+    option.value = year;
+    option.textContent = year;
+    yearFilter.appendChild(option);
+  });
+
+  if (previous && years.includes(previous)) {
+    yearFilter.value = previous;
+  }
+}
+
+async function loadIncompleteProfilesReport() {
+  try {
+    if (!Array.isArray(allStudentsData) || allStudentsData.length === 0) {
+      allStudentsData = await fetchStudentsData();
+    }
+
+    populateIncompleteYearFilter(allStudentsData);
+
+    const countEl = document.getElementById('incompleteStudentsCount');
+    const tbody = document.getElementById('incompleteProfileTableBody');
+    const yearFilter = document.getElementById('incompleteYearFilter');
+    if (!countEl || !tbody) {
+      return;
+    }
+
+    const selectedYear = yearFilter ? yearFilter.value : '';
+    const incompleteStudents = getIncompleteProfileStudents(allStudentsData);
+    const filteredIncompleteStudents = selectedYear
+      ? incompleteStudents.filter(student => String(student.year) === String(selectedYear))
+      : incompleteStudents;
+
+    filteredIncompleteProfileData = filteredIncompleteStudents;
+    countEl.textContent = filteredIncompleteStudents.length;
+    tbody.innerHTML = '';
+
+    if (filteredIncompleteStudents.length === 0) {
+      tbody.innerHTML = selectedYear
+        ? `<tr><td colspan="5" class="no-data">No incomplete profiles found for year ${selectedYear}.</td></tr>`
+        : '<tr><td colspan="5" class="no-data">All students have filled required profile fields.</td></tr>';
+      return;
+    }
+
+    filteredIncompleteStudents.forEach(student => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${student.name}</td>
+        <td>${student.uid}</td>
+        <td>${student.year}</td>
+        <td>${student.section}</td>
+        <td title="${student.missingFields.join(', ')}">${getMissingFieldsSummary(student.missingFields)}</td>
+      `;
+      tbody.appendChild(row);
+    });
+  } catch (error) {
+    console.error('Error loading incomplete profile report:', error);
+    showError(`Error loading incomplete profile report: ${error.message}`);
+  }
+}
+
 // Initialize all reports
 function initializeReports() {
   loadMetrics();
   loadToppers(currentSemester);
   loadSemesterDistribution();
   loadBacklogStudents();
+  loadIncompleteProfilesReport();
   loadGeneralReport();
 }
 
@@ -496,8 +657,8 @@ async function loadBacklogStudents() {
 async function loadGeneralReport() {
   try {
     allStudentsData = await fetchStudentsData();
-
-    updateGeneralReportTable(allStudentsData);
+    filteredGeneralReportData = [...allStudentsData];
+    updateGeneralReportTable(filteredGeneralReportData, true);
   } catch (error) {
     console.error('Error loading general report:', error);
     showError(`Error loading general report: ${error.message}`);
@@ -548,25 +709,47 @@ function filterGeneralReport() {
     }
   }
 
-  updateGeneralReportTable(filteredData);
+  filteredGeneralReportData = filteredData;
+  updateGeneralReportTable(filteredData, true);
 }
 
 // Update general report table - UPDATED
-function updateGeneralReportTable(data) {
+function updateGeneralReportPaginationUI(totalItems) {
+  const totalPages = Math.max(1, Math.ceil(totalItems / GENERAL_REPORT_PAGE_SIZE));
+  if (currentGeneralReportPage > totalPages) currentGeneralReportPage = totalPages;
+  if (currentGeneralReportPage < 1) currentGeneralReportPage = 1;
+
+  const pageInfo = document.getElementById('generalReportPageInfo');
+  const prevBtn = document.getElementById('generalReportPrevPageBtn');
+  const nextBtn = document.getElementById('generalReportNextPageBtn');
+
+  if (pageInfo) pageInfo.textContent = `Page ${currentGeneralReportPage} of ${totalPages} (${totalItems} students)`;
+  if (prevBtn) prevBtn.disabled = currentGeneralReportPage === 1;
+  if (nextBtn) nextBtn.disabled = currentGeneralReportPage === totalPages;
+}
+
+function updateGeneralReportTable(data, resetPage = false) {
   const tbody = document.getElementById('generalReportTableBody');
   if (!tbody) {
     console.error('General report table body not found');
     return;
   }
 
+  if (resetPage) currentGeneralReportPage = 1;
+  filteredGeneralReportData = Array.isArray(data) ? data : [];
+  updateGeneralReportPaginationUI(filteredGeneralReportData.length);
+
   tbody.innerHTML = '';
 
-  if (data.length === 0) {
+  if (filteredGeneralReportData.length === 0) {
     tbody.innerHTML = '<tr><td colspan="8" class="no-data">No students match the selected filters</td></tr>';
     return;
   }
 
-  data.forEach(student => {
+  const startIdx = (currentGeneralReportPage - 1) * GENERAL_REPORT_PAGE_SIZE;
+  const pageData = filteredGeneralReportData.slice(startIdx, startIdx + GENERAL_REPORT_PAGE_SIZE);
+
+  pageData.forEach(student => {
     const row = document.createElement('tr');
     row.innerHTML = `
           <td>${student.uid}</td>
@@ -588,12 +771,22 @@ function updateGeneralReportTable(data) {
   });
 }
 
+function changeGeneralReportPage(direction) {
+  const totalPages = Math.max(1, Math.ceil(filteredGeneralReportData.length / GENERAL_REPORT_PAGE_SIZE));
+  const nextPage = currentGeneralReportPage + direction;
+  if (nextPage < 1 || nextPage > totalPages) return;
+  currentGeneralReportPage = nextPage;
+  updateGeneralReportTable(filteredGeneralReportData, false);
+}
+
 // Refresh all reports
 function refreshReports() {
   document.getElementById('totalStudentsMetric').textContent = '-';
   document.getElementById('avgSGPAMetric').textContent = '-'; // Updated ID
   document.getElementById('totalBacklogsMetric').textContent = '-';
   document.getElementById('activeSemestersMetric').textContent = '-';
+  const incompleteCountEl = document.getElementById('incompleteStudentsCount');
+  if (incompleteCountEl) incompleteCountEl.textContent = '-';
 
   initializeReports();
 }
@@ -1176,51 +1369,369 @@ function exportToPDF() {
   }
 }
 
-// Export filtered students to PDF with batched processing
-function exportFilteredStudentsToPDF() {
-  // Get the currently filtered data from the general report table
-  const filteredData = getCurrentFilteredStudents();
+// College-format PDF export utilities
+function sanitizeFilename(value) {
+  return String(value || 'Report')
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, '')
+    .replace(/\s+/g, '_')
+    .slice(0, 80) || 'Report';
+}
 
+function formatColumnLabel(key) {
+  return String(key || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function normalizeReportData(reportData) {
+  if (Array.isArray(reportData)) {
+    const rows = reportData.map(row => (row && typeof row === 'object' ? row : { value: row }));
+    const columnSet = new Set();
+    rows.forEach(row => Object.keys(row || {}).forEach(key => columnSet.add(key)));
+    const columns = Array.from(columnSet);
+    return { columns, rows };
+  }
+
+  if (reportData && typeof reportData === 'object' && Array.isArray(reportData.rows)) {
+    const rows = reportData.rows.map(row => (row && typeof row === 'object' ? row : { value: row }));
+    const columns = Array.isArray(reportData.columns) && reportData.columns.length
+      ? reportData.columns
+      : (() => {
+        const columnSet = new Set();
+        rows.forEach(row => Object.keys(row || {}).forEach(key => columnSet.add(key)));
+        return Array.from(columnSet);
+      })();
+    return { columns, rows };
+  }
+
+  return { columns: [], rows: [] };
+}
+
+function renderCellValue(value) {
+  if (value === null || value === undefined || value === '') return 'N/A';
+  if (Array.isArray(value)) {
+    if (value.length === 0) return 'N/A';
+    return value.map(v => (typeof v === 'object' ? JSON.stringify(v) : String(v))).join(', ');
+  }
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
+function buildCollegeReportHTML(columns, rows, reportTitle, generatedOnText) {
+  const logoSrc = new URL('../Images/college-logo.png', window.location.href).href;
+  const fallbackLogoSrc = `${window.location.origin}/real-kys/Images/college-logo.png`;
+  const headersHtml = columns.map(col => `
+    <th style="
+      border: 1px solid #444444;
+      padding: 10px;
+      background: #f3f4f6;
+      font-weight: 700;
+      text-align: left;
+      font-size: 12px;
+    ">${escapeHtml(formatColumnLabel(col))}</th>
+  `).join('');
+  const rowsHtml = rows.map(row => {
+    const cells = columns.map(col => `
+      <td style="
+        border: 1px solid #444444;
+        padding: 9px 10px;
+        vertical-align: top;
+        word-break: break-word;
+        font-size: 12px;
+        line-height: 1.4;
+      ">${escapeHtml(renderCellValue(row[col]))}</td>
+    `).join('');
+    return `<tr style="page-break-inside: avoid; break-inside: avoid;">${cells}</tr>`;
+  }).join('');
+
+  return `
+    <style>
+      @page {
+        size: A4;
+        margin: 20mm;
+      }
+      * { box-sizing: border-box; }
+    </style>
+
+    <div class="college-report-root" style="
+      width: 100%;
+      color: #111111;
+      background: #ffffff;
+      font-family: Arial, 'Times New Roman', sans-serif;
+      font-size: 12px;
+      line-height: 1.45;
+      padding: 0;
+      margin: 0;
+    ">
+      <div style="text-align: center; margin-bottom: 18px;">
+        <img src="${logoSrc}" onerror="this.onerror=null;this.src='${fallbackLogoSrc}'" alt="College Logo" style="display: block; width: 100px; height: auto; margin: 0 auto 12px;" />
+        <div style="font-size: 15px; font-weight: 700; margin-bottom: 8px;">
+          Department Of Computer Science &amp; Engineering
+        </div>
+        <div style="font-size: 18px; font-weight: 700; margin: 0 0 8px 0;">
+          ${escapeHtml(reportTitle)}
+        </div>
+        <div style="font-size: 12px;">
+          Generated On: ${escapeHtml(generatedOnText)}
+        </div>
+      </div>
+
+      <table style="
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      ">
+        <thead>
+          <tr>${headersHtml}</tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function waitForImagesToLoad(root) {
+  const images = Array.from(root.querySelectorAll('img'));
+  if (!images.length) return Promise.resolve();
+
+  return Promise.all(images.map(img => new Promise(resolve => {
+    if (img.complete) {
+      resolve();
+      return;
+    }
+    img.onload = () => resolve();
+    img.onerror = () => resolve();
+  })));
+}
+
+async function exportReportToPDF(reportData, reportTitle) {
+  let template = null;
+  try {
+    if (!window.html2pdf) {
+      showError('html2pdf.js is not loaded. Please refresh and try again.');
+      return;
+    }
+
+    const normalized = normalizeReportData(reportData);
+    if (!normalized.rows.length || !normalized.columns.length) {
+      showError('No report data available for PDF export.');
+      return;
+    }
+
+    const generatedOn = new Date();
+    const generatedOnText = generatedOn.toLocaleString();
+    template = document.createElement('div');
+    template.style.position = 'absolute';
+    template.style.left = '-10000px';
+    template.style.top = '0';
+    template.style.transform = 'none';
+    template.style.width = '170mm';
+    template.style.maxWidth = '170mm';
+    template.style.background = '#ffffff';
+    template.style.opacity = '1';
+    template.style.pointerEvents = 'none';
+    template.innerHTML = buildCollegeReportHTML(
+      normalized.columns,
+      normalized.rows,
+      reportTitle,
+      generatedOnText
+    );
+
+    document.body.appendChild(template);
+    await waitForImagesToLoad(template);
+    const printableRoot = template.querySelector('.college-report-root') || template;
+
+    const dateForFile = generatedOn.toISOString().slice(0, 10);
+    const fileName = `${sanitizeFilename(reportTitle)}_${dateForFile}.pdf`;
+    const worker = window.html2pdf()
+      .set({
+        margin: [20, 20, 20, 20],
+        filename: fileName,
+        image: { type: 'jpeg', quality: 0.98 },
+        pagebreak: { mode: ['css', 'legacy'] },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait'
+        }
+      })
+      .from(printableRoot)
+      .toPdf();
+
+    const pdf = await worker.get('pdf');
+    const totalPages = pdf.internal.getNumberOfPages();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    for (let i = 1; i <= totalPages; i++) {
+      pdf.setPage(i);
+      pdf.setFont('times', 'normal');
+      pdf.setFontSize(10);
+      pdf.text(`Generated on: ${generatedOnText}`, 20, pageHeight - 8, { align: 'left' });
+      pdf.text(`Page ${i} of ${totalPages}`, pageWidth - 20, pageHeight - 8, { align: 'right' });
+    }
+
+    await worker.save();
+  } catch (error) {
+    console.error('Failed to export report PDF:', error);
+    showError(`Failed to export report PDF: ${error.message}`);
+  } finally {
+    if (template && template.parentNode) {
+      template.parentNode.removeChild(template);
+    }
+  }
+}
+
+function exportFilteredStudentsToPDF() {
+  const filteredData = getCurrentFilteredStudents();
   if (!filteredData || filteredData.length === 0) {
     showError('No filtered students found. Please apply filters first.');
     return;
   }
 
-  // Check if we should use batched processing for large datasets
-  if (filteredData.length > 20) {
-    exportFilteredStudentsBatched(filteredData);
+  const reportRows = filteredData.map(student => ({
+    uid: student.uid || 'N/A',
+    name: student.name || 'N/A',
+    year: student.rawData?.year_of_admission || 'N/A',
+    section: student.rawData?.section || 'N/A',
+    semester: student.semester || 'N/A',
+    sgpa: typeof student.sgpa === 'number' ? student.sgpa.toFixed(2) : '0.00',
+    backlogs: student.backlogs ?? 0,
+    domain: student.domain || 'N/A',
+    career_goal: student.careerGoal || 'N/A'
+  }));
+
+  exportReportToPDF(reportRows, 'Filtered Students Report');
+}
+
+function getIncompleteProfileExportRows(selectedYear = '') {
+  let sourceRows = [];
+
+  if (Array.isArray(allStudentsData) && allStudentsData.length > 0) {
+    const incompleteStudents = getIncompleteProfileStudents(allStudentsData);
+    sourceRows = selectedYear
+      ? incompleteStudents.filter(student => String(student.year) === String(selectedYear))
+      : incompleteStudents;
+  } else if (Array.isArray(filteredIncompleteProfileData) && filteredIncompleteProfileData.length > 0) {
+    sourceRows = selectedYear
+      ? filteredIncompleteProfileData.filter(student => String(student.year) === String(selectedYear))
+      : filteredIncompleteProfileData;
   } else {
-    exportFilteredStudentsSingle(filteredData);
+    const tbody = document.getElementById('incompleteProfileTableBody');
+    if (tbody) {
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      sourceRows = rows
+        .map(row => {
+          const cells = Array.from(row.querySelectorAll('td'));
+          const values = cells.map(td => td.textContent.trim());
+          if (values.length < 5 || rowContainsPlaceholder(values)) {
+            return null;
+          }
+
+          const yearValue = values[2] || 'N/A';
+          if (selectedYear && String(yearValue) !== String(selectedYear)) {
+            return null;
+          }
+
+          const fullMissingFieldsText = cells[4]?.getAttribute('title') || values[4] || '';
+          return {
+            name: values[0] || 'N/A',
+            uid: values[1] || 'N/A',
+            year: yearValue,
+            section: values[3] || 'N/A',
+            missingFields: fullMissingFieldsText
+              .split(',')
+              .map(v => v.trim())
+              .filter(Boolean)
+          };
+        })
+        .filter(Boolean);
+    }
   }
+
+  return Array.isArray(sourceRows) ? sourceRows : [];
+}
+
+function exportIncompleteProfilesToExcel() {
+  if (!window.XLSX) {
+    showError('Excel library is not loaded. Please refresh and try again.');
+    return;
+  }
+
+  const yearFilter = document.getElementById('incompleteYearFilter');
+  const selectedYear = yearFilter ? yearFilter.value : '';
+  const sourceRows = getIncompleteProfileExportRows(selectedYear);
+
+  if (sourceRows.length === 0) {
+    showError('No incomplete-profile records available for export.');
+    return;
+  }
+
+  const excelData = sourceRows.map(student => ({
+    UID: student.uid || 'N/A',
+    Name: student.name || 'N/A',
+    Year: student.year || 'N/A',
+    Section: student.section || 'N/A',
+    'Missing Required Fields': Array.isArray(student.missingFields) && student.missingFields.length
+      ? student.missingFields.join(', ')
+      : 'N/A'
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(excelData);
+  ws['!cols'] = [
+    { wch: 14 }, // UID
+    { wch: 30 }, // Name
+    { wch: 12 }, // Year
+    { wch: 12 }, // Section
+    { wch: 90 }  // Missing Required Fields
+  ];
+  ws['!autofilter'] = { ref: 'A1:E1' };
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Incomplete Profiles');
+
+  const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const yearPart = selectedYear ? selectedYear : 'all';
+  const filename = `incomplete_required_profile_fields_${yearPart}_${timestamp}.xlsx`;
+
+  XLSX.writeFile(wb, filename);
+  alert('✅ Incomplete profile Excel report exported successfully!');
+}
+
+function exportIncompleteProfilesToPDF() {
+  exportIncompleteProfilesToExcel();
+}
+
+function rowContainsPlaceholder(cells) {
+  const joined = cells.join(' ').toLowerCase();
+  return joined.includes('loading')
+    || joined.includes('no incomplete profiles found')
+    || joined.includes('all students have filled required profile fields');
 }
 
 // Get currently filtered students from the table
 function getCurrentFilteredStudents() {
-  const tbody = document.getElementById('generalReportTableBody');
-  if (!tbody) return null;
-
-  const rows = tbody.querySelectorAll('tr');
-  const filteredStudents = [];
-
-  rows.forEach(row => {
-    if (row.style.display !== 'none' && !row.querySelector('.no-data')) {
-      const cells = row.querySelectorAll('td');
-      if (cells.length >= 7) {
-        const student = {
-          uid: cells[0].textContent,
-          name: cells[1].textContent,
-          semester: parseInt(cells[2].textContent),
-          sgpa: parseFloat(cells[3].textContent),
-          backlogs: parseInt(cells[4].textContent),
-          domain: cells[5].querySelector('.tag')?.textContent || 'Unknown',
-          careerGoal: cells[6].querySelector('.tag')?.textContent || 'Unknown'
-        };
-        filteredStudents.push(student);
-      }
-    }
-  });
-
-  return filteredStudents;
+  return Array.isArray(filteredGeneralReportData) ? filteredGeneralReportData : [];
 }
 
 // Export filtered students in a single PDF

@@ -1,0 +1,21 @@
+# Environment and secrets
+.env
+.env.*
+
+# Python virtualenvs
+venv/
+.venv/
+Backend/KYS_flask_backend/venv/
+
+# Python cache/artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Git metadata
+.git/
+
+# IDE / OS
+.DS_Store
+.vscode/

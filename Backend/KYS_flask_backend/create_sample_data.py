@@ -1,5 +1,9 @@
+import logging
 from main import app, db, User, Student, Faculty
 from werkzeug.security import generate_password_hash
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def create_sample_data():
     with app.app_context():
@@ -34,7 +38,7 @@ def create_sample_data():
             }
         ]
         
-        print("Creating sample students...")
+        logger.info("Creating sample students...")
         for student_data in students_data:
             # Check if student already exists
             existing = Student.query.filter_by(uid=student_data["uid"]).first()
@@ -51,9 +55,9 @@ def create_sample_data():
                 # Create student profile
                 student = Student(**student_data, user_id=user.id)
                 db.session.add(student)
-                print(f"Created student: {student_data['uid']} - {student_data['first_name']} {student_data['last_name']}")
+                logger.info(f"Created student: {student_data['uid']} - {student_data['first_name']} {student_data['last_name']}")
             else:
-                print(f"Student {student_data['uid']} already exists")
+                logger.info(f"Student {student_data['uid']} already exists")
                 
         # Create sample teachers
         teachers_data = [
@@ -71,7 +75,7 @@ def create_sample_data():
             }
         ]
         
-        print("Creating sample teachers...")
+        logger.info("Creating sample teachers...")
         for teacher_data in teachers_data:
             existing = Faculty.query.filter_by(email=teacher_data["email"]).first()
             if not existing:
@@ -88,21 +92,21 @@ def create_sample_data():
                 # Create faculty profile
                 faculty = Faculty(**teacher_data, user_id=user.id)
                 db.session.add(faculty)
-                print(f"Created teacher: {teacher_data['email']} - {teacher_data['first_name']} {teacher_data['last_name']}")
+                logger.info(f"Created teacher: {teacher_data['email']} - {teacher_data['first_name']} {teacher_data['last_name']}")
             else:
-                print(f"Teacher {teacher_data['email']} already exists")
+                logger.info(f"Teacher {teacher_data['email']} already exists")
         
         db.session.commit()
-        print("✅ Sample data created successfully!")
+        logger.info("✅ Sample data created successfully!")
         
         # Show summary
         student_count = Student.query.count()
         faculty_count = Faculty.query.count() 
         user_count = User.query.count()
-        print(f"📊 Database Summary:")
-        print(f"   Students: {student_count}")
-        print(f"   Faculty: {faculty_count}")  
-        print(f"   Users: {user_count}")
+        logger.info(f"📊 Database Summary:")
+        logger.info(f"   Students: {student_count}")
+        logger.info(f"   Faculty: {faculty_count}")  
+        logger.info(f"   Users: {user_count}")
 
 if __name__ == "__main__":
     create_sample_data()

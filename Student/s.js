@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // DOM Elements
     const form = document.getElementById('wizardForm');
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
@@ -12,323 +11,593 @@ document.addEventListener('DOMContentLoaded', () => {
     const campusPlacement = document.getElementById('campusPlacement');
     const placementReasonRow = document.getElementById('placementReasonRow');
     const semesterSelect = document.getElementById('semester');
+    const careerGoalSelect = document.getElementById('careerGoal');
+    const placementTypeRow = document.getElementById('placementTypeRow');
+    const higherStudiesTypeRow = document.getElementById('higherStudiesTypeRow');
+    const replacePhotoBtn = document.getElementById('replacePhotoBtn');
 
-    // State variables
     let currentStep = 1;
     const totalSteps = stepContents.length;
 
-    // Initialize form
+    const DRAFT_VERSION = 1;
+    const DRAFT_PREFIX = 'student_form_draft_v1';
+    const DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
+    let draftStorageKey = `${DRAFT_PREFIX}_anonymous`;
+    let autosaveTimer = null;
+
     initializeForm();
 
-    // Event Listeners
     prevBtn.addEventListener('click', goToPreviousStep);
     nextBtn.addEventListener('click', handleNextButtonClick);
+    stepIndicators.forEach((indicator, index) => {
+        indicator.addEventListener('click', () => handleStepIndicatorClick(index + 1));
+    });
+
+    if (replacePhotoBtn) {
+        replacePhotoBtn.addEventListener('click', () => {
+            const wrapper = document.getElementById('photoUploadWrapper');
+            const isHidden = wrapper && wrapper.style.display === 'none';
+            setPhotoReplaceMode(isHidden);
+        });
+    }
 
     if (campusPlacement && placementReasonRow) {
-        campusPlacement.addEventListener('change', togglePlacementReason);
+        campusPlacement.addEventListener('change', () => {
+            togglePlacementReason();
+            scheduleDraftSave();
+        });
+    }
+
+    if (careerGoalSelect) {
+        careerGoalSelect.addEventListener('change', () => {
+            toggleCareerGoalSubFields();
+            scheduleDraftSave();
+        });
     }
 
     if (semesterSelect) {
-        semesterSelect.addEventListener('change', updateSemesterVisibility);
+        semesterSelect.addEventListener('change', () => {
+            updateSemesterVisibility();
+            scheduleDraftSave();
+        });
     }
 
-    // Add real-time validation
     form.querySelectorAll('input, select, textarea').forEach(field => {
         field.addEventListener('blur', () => {
-            validateField(field);
+            if (field.required) validateField(field);
+            scheduleDraftSave();
         });
 
         field.addEventListener('input', () => {
             if (field.classList.contains('error')) {
                 clearFieldError(field);
             }
+            scheduleDraftSave();
+        });
+
+        field.addEventListener('change', () => {
+            scheduleDraftSave();
         });
     });
 
-    // Functions
+    window.addEventListener('beforeunload', () => {
+        saveDraft(false);
+    });
+
     async function initializeForm() {
-        await loadStudentData();
-        updateFormState();
+        const studentData = await loadStudentData();
+        setDraftStorageKey(studentData);
+        restoreDraftIfAvailable();
+        togglePlacementReason();
+        toggleCareerGoalSubFields();
         updateSemesterVisibility();
+        updateFormState();
+    }
+
+    function scheduleDraftSave() {
+        clearTimeout(autosaveTimer);
+        autosaveTimer = setTimeout(() => saveDraft(false), 900);
+    }
+
+    function showToast(message, type = 'info', duration = 2600) {
+        const existing = document.querySelector('.form-toast');
+        if (existing) {
+            existing.remove();
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `form-toast toast-${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.add('toast-exit');
+            setTimeout(() => toast.remove(), 260);
+        }, duration);
+    }
+
+    function safeStorageGet(key) {
+        try {
+            return localStorage.getItem(key);
+        } catch (error) {
+            console.error('localStorage read failed:', error);
+            return null;
+        }
+    }
+
+    function safeStorageSet(key, value) {
+        try {
+            localStorage.setItem(key, value);
+            return true;
+        } catch (error) {
+            console.error('localStorage write failed:', error);
+            return false;
+        }
+    }
+
+    function safeStorageRemove(key) {
+        try {
+            localStorage.removeItem(key);
+            return true;
+        } catch (error) {
+            console.error('localStorage remove failed:', error);
+            return false;
+        }
+    }
+
+    function parseJwtSub(token) {
+        try {
+            const parts = token.split('.');
+            if (parts.length < 2) return null;
+            const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+            const decoded = atob(payload.padEnd(payload.length + (4 - payload.length % 4) % 4, '='));
+            const json = JSON.parse(decoded);
+            return json.sub || json.user_id || json.id || null;
+        } catch {
+            return null;
+        }
+    }
+
+    function setDraftStorageKey(studentData) {
+        const token = safeStorageGet('access_token') || '';
+        const tokenSub = parseJwtSub(token);
+        const candidate = studentData?.id || studentData?.student_id || studentData?.user_id || studentData?.full_name || tokenSub || 'anonymous';
+        draftStorageKey = `${DRAFT_PREFIX}_${String(candidate).replace(/\s+/g, '_')}`;
+    }
+
+    function serializeFormState() {
+        const values = {};
+        form.querySelectorAll('input, select, textarea').forEach(el => {
+            if (!el.name) return;
+
+            if (el.type === 'file') {
+                if (el.files && el.files.length > 0) {
+                    values[el.name] = { fileName: el.files[0].name, size: el.files[0].size };
+                }
+                return;
+            }
+
+            if (el.type === 'checkbox') {
+                values[el.name] = Boolean(el.checked);
+                return;
+            }
+
+            if (el.type === 'radio') {
+                if (el.checked) values[el.name] = el.value;
+                return;
+            }
+
+            values[el.name] = el.value;
+        });
+
+        return values;
+    }
+
+    function restoreSerializedState(values) {
+        if (!values || typeof values !== 'object') return;
+
+        form.querySelectorAll('input, select, textarea').forEach(el => {
+            if (!el.name || !(el.name in values)) return;
+            const val = values[el.name];
+
+            if (el.type === 'file') return;
+
+            if (el.type === 'checkbox') {
+                el.checked = Boolean(val);
+                return;
+            }
+
+            if (el.type === 'radio') {
+                el.checked = val === el.value;
+                return;
+            }
+
+            el.value = val ?? '';
+        });
+
+        togglePlacementReason();
+        toggleCareerGoalSubFields();
+        updateSemesterVisibility();
+    }
+
+    function saveDraft(showFeedback = false) {
+        const now = Date.now();
+        const payload = {
+            version: DRAFT_VERSION,
+            savedAt: now,
+            expiresAt: now + DRAFT_TTL_MS,
+            currentStep,
+            formValues: serializeFormState()
+        };
+
+        const ok = safeStorageSet(draftStorageKey, JSON.stringify(payload));
+
+        if (!ok && showFeedback) {
+            showToast('Could not save draft locally. Browser storage may be full or blocked.', 'error', 4000);
+            return false;
+        }
+
+        if (ok && showFeedback) {
+            showToast('Step saved. Draft available for 24 hours.', 'success', 2200);
+        }
+
+        return ok;
+    }
+
+    function restoreDraftIfAvailable() {
+        const raw = safeStorageGet(draftStorageKey);
+        if (!raw) return;
+
+        try {
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') {
+                safeStorageRemove(draftStorageKey);
+                return;
+            }
+
+            if (parsed.version !== DRAFT_VERSION) {
+                safeStorageRemove(draftStorageKey);
+                return;
+            }
+
+            if (!parsed.expiresAt || Date.now() > parsed.expiresAt) {
+                safeStorageRemove(draftStorageKey);
+                showToast('Saved draft expired after 24 hours and was cleared.', 'info', 3200);
+                return;
+            }
+
+            restoreSerializedState(parsed.formValues);
+
+            if (Number.isInteger(parsed.currentStep) && parsed.currentStep >= 1 && parsed.currentStep <= totalSteps) {
+                currentStep = parsed.currentStep;
+            }
+
+            showToast('Draft restored from local storage.', 'info', 2400);
+        } catch (error) {
+            console.error('Invalid draft JSON:', error);
+            safeStorageRemove(draftStorageKey);
+            showToast('A corrupted saved draft was removed.', 'warning', 3000);
+        }
+    }
+
+    function clearDraft() {
+        safeStorageRemove(draftStorageKey);
     }
 
     async function loadStudentData() {
         try {
-            const token = localStorage.getItem("access_token");
+            const token = safeStorageGet('access_token');
             if (!token) {
-                window.location.href = "../login.html";
-                return;
+                window.location.href = '../login.html';
+                return null;
             }
 
-            const response = await fetch("http://localhost:5002/student/me", {
-                method: "GET",
+            const response = await fetch('http://localhost:5002/student/me', {
+                method: 'GET',
                 headers: {
-                    "Authorization": "Bearer " + token,
-                    "Content-Type": "application/json"
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
                 }
             });
 
             if (response.ok) {
                 const studentData = await response.json();
-                console.log(studentData);
                 populateFormWithData(studentData);
-            } else if (response.status === 401) {
-                // Unauthorized - redirect to login
-                localStorage.removeItem("access_token");
-                window.location.href = "../login.html";
-            } else {
-                console.log("No existing student data found, starting with empty form");
+                return studentData;
             }
+
+            if (response.status === 401) {
+                safeStorageRemove('access_token');
+                window.location.href = '../login.html';
+                return null;
+            }
+
+            console.log('No existing student data found, starting with empty form');
+            return null;
         } catch (error) {
             console.error('Error loading student data:', error);
+            showToast('Could not fetch existing profile data. You can continue and submit later.', 'warning', 3400);
+            return null;
+        }
+    }
+
+    function setVal(id, value) {
+        const el = document.getElementById(id);
+        if (el && value !== undefined && value !== null) el.value = value;
+    }
+
+    function setQueryVal(selector, value) {
+        const el = document.querySelector(selector);
+        if (el && value !== undefined && value !== null) el.value = value;
+    }
+
+    function renderUploadedPhotoLink(photoUrl) {
+        const infoEl = document.getElementById('uploadedPhotoInfo');
+        const linkEl = document.getElementById('uploadedPhotoLink');
+        const statusEl = document.getElementById('photoStatusMessage');
+        const replaceBtn = document.getElementById('replacePhotoBtn');
+        if (!infoEl || !linkEl) return;
+
+        if (photoUrl && typeof photoUrl === 'string' && photoUrl.trim()) {
+            infoEl.style.display = 'block';
+            linkEl.href = photoUrl;
+            if (statusEl) {
+                statusEl.style.display = 'block';
+                statusEl.textContent = 'Photo already uploaded. Upload again only if you want to replace it.';
+            }
+            if (replaceBtn) replaceBtn.style.display = 'inline-flex';
+            setPhotoReplaceMode(false);
+        } else {
+            infoEl.style.display = 'none';
+            linkEl.href = '#';
+            if (statusEl) statusEl.style.display = 'none';
+            if (replaceBtn) replaceBtn.style.display = 'none';
+            setPhotoReplaceMode(true);
+        }
+    }
+
+    function setPhotoReplaceMode(showUploader) {
+        const wrapper = document.getElementById('photoUploadWrapper');
+        const replaceBtn = document.getElementById('replacePhotoBtn');
+        if (!wrapper) return;
+        wrapper.style.display = showUploader ? 'block' : 'none';
+        if (replaceBtn && replaceBtn.style.display !== 'none') {
+            replaceBtn.textContent = showUploader ? 'Cancel Replace' : 'Replace Photo';
         }
     }
 
     function populateFormWithData(data) {
-        // Basic information
-        if (data.full_name) document.getElementById('fullName').value = data.full_name;
-        if (data.section) document.getElementById('section').value = data.section;
-        if (data.semester) document.getElementById('semester').value = data.semester;
-        if (data.year_of_admission) document.getElementById('yearOfAdmission').value = data.year_of_admission;
+        setVal('fullName', data.full_name);
+        setVal('section', data.section);
+        setVal('semester', data.semester);
+        setVal('yearOfAdmission', data.year_of_admission);
 
-        // Personal information
         if (data.personal_info) {
             const pi = data.personal_info;
-            if (pi.mobile_no) document.getElementById('mobileNo').value = pi.mobile_no;
-            if (pi.personal_email) document.getElementById('personalEmail').value = pi.personal_email;
-            if (pi.college_email) document.getElementById('collegeEmail').value = pi.college_email;
-            if (pi.linked_in_id) document.getElementById('linkedInId').value = pi.linked_in_id;
-            if (pi.permanent_address) document.getElementById('permanentAddress').value = pi.permanent_address;
-            if (pi.dob) document.getElementById('dob').value = pi.dob;
-            if (pi.gender) document.getElementById('gender').value = pi.gender;
-            if (pi.father_name) document.getElementById('fatherName').value = pi.father_name;
-            if (pi.father_mobile_no) document.getElementById('fatherMobileNo').value = pi.father_mobile_no;
-            if (pi.father_email) document.getElementById('fatherEmail').value = pi.father_email;
-            if (pi.father_occupation) document.getElementById('fatherOccupation').value = pi.father_occupation;
-            if (pi.mother_name) document.getElementById('motherName').value = pi.mother_name;
-            if (pi.mother_mobile_no) document.getElementById('motherMobileNo').value = pi.mother_mobile_no;
-            if (pi.mother_email) document.getElementById('motherEmail').value = pi.mother_email;
-            if (pi.mother_occupation) document.getElementById('motherOccupation').value = pi.mother_occupation;
-            if (pi.emergency_contact_name) document.getElementById('emergencyContactName').value = pi.emergency_contact_name;
-            if (pi.emergency_contact_number) document.getElementById('emergencyContactNumber').value = pi.emergency_contact_number;
+            setVal('bloodGroup', pi.blood_group);
+            setVal('category', pi.category);
+            setVal('aadharNumber', pi.aadhar_number);
+            setVal('misUID', pi.mis_uid);
+            setVal('mobileNo', pi.mobile_no);
+            setVal('personalEmail', pi.personal_email);
+            setVal('collegeEmail', pi.college_email);
+            setVal('linkedInId', pi.linked_in_id);
+            setVal('githubId', pi.github_id);
+            setVal('permanentAddress', pi.permanent_address);
+            setVal('presentAddress', pi.present_address);
+            setVal('dob', pi.dob);
+            setVal('gender', pi.gender);
+            setVal('fatherName', pi.father_name);
+            setVal('fatherMobileNo', pi.father_mobile_no);
+            setVal('fatherEmail', pi.father_email);
+            setVal('fatherOccupation', pi.father_occupation);
+            setVal('motherName', pi.mother_name);
+            setVal('motherMobileNo', pi.mother_mobile_no);
+            setVal('motherEmail', pi.mother_email);
+            setVal('motherOccupation', pi.mother_occupation);
+            setVal('guardianName', pi.emergency_contact_name);
+            setVal('guardianMobile', pi.emergency_contact_number);
+            setVal('guardianEmail', pi.guardian_email);
+            renderUploadedPhotoLink(pi.photo_url);
+        } else {
+            renderUploadedPhotoLink(null);
         }
 
-        // Past education records
         if (data.past_education_records && data.past_education_records.length > 0) {
-            const pastEd = data.past_education_records;
-
-            pastEd.forEach(record => {
-
-                if (record.exam_name === 'SSC' || record.degree === 'X') {
-                    console.log(record.percentage)
-                    if (record.percentage) document.getElementById('sscPercentage').value = record.percentage;
-                    if (record.year_of_passing) document.getElementById('sscYear').value = record.year_of_passing;
-                } else if (record.exam_name === 'HSSC' || record.degree === 'XII') {
-                    if (record.percentage) document.getElementById('hsscPercentage').value = record.percentage;
-                    if (record.year_of_passing) document.getElementById('hsscYear').value = record.year_of_passing;
+            data.past_education_records.forEach(record => {
+                const examName = (record.exam_name || record.degree || '').toUpperCase();
+                if (examName === 'SSC' || examName === 'X') {
+                    setVal('sscPercentage', record.percentage);
+                    setVal('sscYear', record.year_of_passing);
+                } else if (examName === 'HSSC' || examName === 'XII') {
+                    setVal('hsscPercentage', record.percentage);
+                    setVal('hsscYear', record.year_of_passing);
+                } else if (examName === 'DIPLOMA') {
+                    setVal('diplomaPercentage', record.percentage);
+                    setVal('diplomaYear', record.year_of_passing);
                 }
             });
         }
 
-        // Post admission records
         if (data.post_admission_records && data.post_admission_records.length > 0) {
-            const postEd = data.post_admission_records;
-            postEd.forEach(record => {
-                const semesterNum = record.semester;
-                if (semesterNum >= 1 && semesterNum <= 8) {
-                    const sgpaField = document.getElementById(`sem${semesterNum}SGPA`);
-                    const backlogField = document.getElementById(`sem${semesterNum}Backlog`);
-                    if (sgpaField && record.sgpa) sgpaField.value = record.sgpa;
-                    if (backlogField && record.backlog_subjects) backlogField.value = record.backlog_subjects;
+            data.post_admission_records.forEach(record => {
+                const s = record.semester;
+                if (s >= 1 && s <= 8) {
+                    setVal(`sem${s}SGPA`, record.sgpa);
+                    setVal(`sem${s}Backlog`, record.backlog_subjects);
                 }
             });
         }
 
-        // Career activities
-        if (data.career_activities && data.career_activities.length > 0) {
-            const activities = data.career_activities;
-            activities.forEach((activity, index) => {
-                if (index < 3) {
-                    const nameField = document.querySelector(`input[name="activity${index + 1}Name"]`);
-                    const scoreField = document.querySelector(`input[name="activity${index + 1}Score"]`);
-                    const dateField = document.querySelector(`input[name="activity${index + 1}Date"]`);
-                    if (nameField && activity.activity_name) nameField.value = activity.activity_name;
-                    if (scoreField && activity.score_rank) scoreField.value = activity.score_rank;
-                    if (dateField && activity.exam_date) dateField.value = activity.exam_date;
-                }
-            });
-        }
-
-        // Projects
         if (data.projects && data.projects.length > 0) {
-            const projects = data.projects;
-            if (projects[0]) {
-                if (projects[0].title) document.getElementById('project1Title').value = projects[0].title;
-                if (projects[0].description) document.getElementById('project1Description').value = projects[0].description;
+            if (data.projects[0]) {
+                setVal('miniProjectTitle', data.projects[0].title);
+                setVal('miniProjectGuide', data.projects[0].description);
             }
-            if (projects[1]) {
-                if (projects[1].title) document.getElementById('project2Title').value = projects[1].title;
-                if (projects[1].description) document.getElementById('project2Description').value = projects[1].description;
+            if (data.projects[1]) {
+                setVal('majorProjectTitle', data.projects[1].title);
+                setVal('majorProjectGuide', data.projects[1].description);
+            }
+            if (data.projects[2]) {
+                setVal('ubaProjectTitle', data.projects[2].title);
+                setVal('ubaProjectGuide', data.projects[2].description);
             }
         }
 
-        // Internships
         if (data.internships && data.internships.length > 0) {
-            const internships = data.internships;
-            if (internships[0]) {
-                if (internships[0].company_name) document.getElementById('internship1Company').value = internships[0].company_name;
-                if (internships[0].domain) document.getElementById('internship1Domain').value = internships[0].domain;
-                if (internships[0].internship_type) document.getElementById('internship1Type').value = internships[0].internship_type;
-                if (internships[0].paid_unpaid) document.getElementById('internship1Paid').value = internships[0].paid_unpaid;
-                if (internships[0].start_date) document.getElementById('internship1Start').value = internships[0].start_date;
-                if (internships[0].end_date) document.getElementById('internship1End').value = internships[0].end_date;
-            }
-            if (internships[1]) {
-                if (internships[1].company_name) document.getElementById('internship2Company').value = internships[1].company_name;
-                if (internships[1].domain) document.getElementById('internship2Domain').value = internships[1].domain;
-                if (internships[1].internship_type) document.getElementById('internship2Type').value = internships[1].internship_type;
-                if (internships[1].paid_unpaid) document.getElementById('internship2Paid').value = internships[1].paid_unpaid;
-                if (internships[1].start_date) document.getElementById('internship2Start').value = internships[1].start_date;
-                if (internships[1].end_date) document.getElementById('internship2End').value = internships[1].end_date;
-            }
+            data.internships.forEach((internship, idx) => {
+                const n = idx + 1;
+                if (n > 2) return;
+                setVal(`internship${n}Company`, internship.company_name);
+                setVal(`internship${n}Domain`, internship.domain);
+                setVal(`internship${n}Type`, internship.internship_type);
+                setVal(`internship${n}Paid`, internship.paid_unpaid);
+                setVal(`internship${n}Start`, internship.start_date);
+                setVal(`internship${n}End`, internship.end_date);
+            });
         }
 
-        // Co-curricular participations
         if (data.cocurricular_participations && data.cocurricular_participations.length > 0) {
-            const participations = data.cocurricular_participations;
-            participations.forEach((participation, index) => {
-                if (index < 3) {
-                    const nameField = document.querySelector(`input[name="participation${index + 1}Name"]`);
-                    const dateField = document.querySelector(`input[name="participation${index + 1}Date"]`);
-                    const levelField = document.querySelector(`select[name="participation${index + 1}Level"]`);
-                    const awardsField = document.querySelector(`input[name="participation${index + 1}Awards"]`);
-                    if (nameField && participation.name) nameField.value = participation.name;
-                    if (dateField && participation.date) dateField.value = participation.date;
-                    if (levelField && participation.level) levelField.value = participation.level;
-                    if (awardsField && participation.awards) awardsField.value = participation.awards;
-                }
+            data.cocurricular_participations.forEach((p, idx) => {
+                if (idx >= 3) return;
+                const i = idx + 1;
+                setQueryVal(`input[name="participation${i}Name"]`, p.name);
+                setQueryVal(`input[name="participation${i}Date"]`, p.date);
+                setQueryVal(`select[name="participation${i}Level"]`, p.level);
+                setQueryVal(`input[name="participation${i}Awards"]`, p.awards);
             });
         }
 
-        // Co-curricular organizations
         if (data.cocurricular_organizations && data.cocurricular_organizations.length > 0) {
-            const organizations = data.cocurricular_organizations;
-            organizations.forEach((org, index) => {
-                if (index < 3) {
-                    const nameField = document.querySelector(`input[name="organization${index + 1}Name"]`);
-                    const dateField = document.querySelector(`input[name="organization${index + 1}Date"]`);
-                    const levelField = document.querySelector(`select[name="organization${index + 1}Level"]`);
-                    const remarkField = document.querySelector(`input[name="organization${index + 1}Remark"]`);
-                    if (nameField && org.name) nameField.value = org.name;
-                    if (dateField && org.date) dateField.value = org.date;
-                    if (levelField && org.level) levelField.value = org.level;
-                    if (remarkField && org.remark) remarkField.value = org.remark;
-                }
+            data.cocurricular_organizations.forEach((org, idx) => {
+                if (idx >= 3) return;
+                const i = idx + 1;
+                setQueryVal(`input[name="organization${i}Name"]`, org.name);
+                setQueryVal(`input[name="organization${i}Date"]`, org.date);
+                setQueryVal(`select[name="organization${i}Level"]`, org.level);
+                setQueryVal(`input[name="organization${i}Remark"]`, org.remark);
             });
         }
 
-        // SWOC
         if (data.swoc) {
-            if (data.swoc.strengths) document.getElementById('strengths').value = data.swoc.strengths;
-            if (data.swoc.weaknesses) document.getElementById('weaknesses').value = data.swoc.weaknesses;
-            if (data.swoc.opportunities) document.getElementById('opportunities').value = data.swoc.opportunities;
-            if (data.swoc.challenges) document.getElementById('challenges').value = data.swoc.challenges;
+            setVal('strengths', data.swoc.strengths);
+            setVal('weaknesses', data.swoc.weaknesses);
+            setVal('opportunities', data.swoc.opportunities);
+            setVal('challenges', data.swoc.challenges);
         }
 
-        // Career objective
         if (data.career_objective) {
-            if (data.career_objective.career_goal) document.getElementById('careerGoal').value = data.career_objective.career_goal;
-            if (data.career_objective.specific_details) document.getElementById('specificDetails').value = data.career_objective.specific_details;
-            if (data.career_objective.clarity_preparedness) document.getElementById('clarityPreparedness').value = data.career_objective.clarity_preparedness;
-            if (data.career_objective.interested_in_campus_placement !== undefined) {
+            const co = data.career_objective;
+            setVal('careerGoal', co.career_goal);
+            setVal('specificDetails', co.specific_details);
+            setVal('clarityPreparedness', co.clarity_preparedness);
 
-                document.getElementById('campusPlacement').value = data.career_objective.interested_in_campus_placement ? 'true' : 'false';
-                togglePlacementReason();
+            if (co.interested_in_campus_placement !== undefined) {
+                setVal('campusPlacement', co.interested_in_campus_placement ? 'true' : 'false');
             }
-            if (data.career_objective.placement_reasons) document.getElementById('placementReasons').value = data.career_objective.placement_reasons;
+            setVal('placementReasons', co.campus_placement_reasons);
         }
 
-        // Skills
         if (data.skills) {
-            if (data.skills.programming_languages) document.getElementById('programmingLanguages').value = data.skills.programming_languages;
-            if (data.skills.technologies_frameworks) document.getElementById('technologiesFrameworks').value = data.skills.technologies_frameworks;
-            if (data.skills.familiar_tools_platforms) document.getElementById('familiarToolsPlatforms').value = data.skills.familiar_tools_platforms;
+            setVal('programmingLanguages', data.skills.programming_languages);
+            setVal('technologiesFrameworks', data.skills.technologies_frameworks);
+            setVal('familiarToolsPlatforms', data.skills.familiar_tools_platforms);
+
+            if (data.skills.domains_of_interest) {
+                const domains = data.skills.domains_of_interest.split(',').map(d => d.trim());
+                document.querySelectorAll('input[name^="domain"]').forEach(cb => {
+                    if (domains.includes(cb.value)) cb.checked = true;
+                });
+            }
         }
-
-        // Domains of interest (checkboxes)
-
-        if (data.skills && data.skills.domains_of_interest) {
-            const domains = data.skills.domains_of_interest.split(',').map(d => d.trim());
-            document.querySelectorAll('input[name^="domain"]').forEach(checkbox => {
-                if (domains.includes(checkbox.value)) {
-                    checkbox.checked = true;
-                }
-            });
-        }
-
-        console.log('Form populated with existing student data');
     }
 
     function goToPreviousStep() {
         if (currentStep > 1) {
             currentStep--;
             updateFormState();
+            saveDraft(false);
         }
     }
 
     function handleNextButtonClick() {
-        if (validateStep(currentStep)) {
-            if (currentStep < totalSteps) {
-                currentStep++;
-                updateFormState();
-            } else {
-                submitForm();
-            }
+        if (!validateStep(currentStep)) {
+            showToast('Please correct the highlighted fields before continuing.', 'error', 2400);
+            return;
+        }
+
+        saveDraft(true);
+
+        if (currentStep < totalSteps) {
+            currentStep++;
+            updateFormState();
+        } else {
+            submitForm();
         }
     }
 
+    function handleStepIndicatorClick(targetStep) {
+        if (targetStep === currentStep) return;
+
+        if (targetStep < currentStep) {
+            currentStep = targetStep;
+            updateFormState();
+            saveDraft(false);
+            return;
+        }
+
+        showToast('Complete the current step to move forward.', 'warning', 2600);
+    }
+
     function updateFormState() {
-        // Update step contents visibility
         stepContents.forEach((content, index) => {
             content.classList.toggle('active', index + 1 === currentStep);
         });
 
-        // Update step indicators
         if (stepIndicators.length) {
             stepIndicators.forEach((indicator, index) => {
                 indicator.classList.toggle('active', index + 1 === currentStep);
                 indicator.classList.toggle('completed', index + 1 < currentStep);
+                indicator.classList.toggle('locked', index + 1 > currentStep);
+                indicator.setAttribute('aria-disabled', index + 1 > currentStep ? 'true' : 'false');
             });
         }
 
-        // Update progress bar
         const progress = ((currentStep - 1) / (totalSteps - 1)) * 100;
         progressFill.style.width = `${progress}%`;
         progressPercentage.textContent = `${Math.round(progress)}%`;
 
-        // Update buttons
         prevBtn.disabled = currentStep === 1;
         nextBtn.textContent = currentStep === totalSteps ? 'Submit' : 'Next →';
         currentStepSpan.textContent = currentStep;
 
-        // Populate review content if on final step
         if (currentStep === totalSteps) {
             populateReviewContent();
         }
     }
 
     function updateSemesterVisibility() {
+        if (!semesterSelect) return;
         const currentSemester = parseInt(semesterSelect.value) || 0;
-
-        // Hide all semester rows first
         document.querySelectorAll('.semester-row').forEach((row, index) => {
-            const semesterNum = index + 1;
-            if (semesterNum >= currentSemester) {
-                row.style.display = 'none';
-            } else {
-                row.style.display = 'block';
-            }
+            const semNum = index + 1;
+            row.style.display = semNum < currentSemester ? 'block' : 'none';
         });
+    }
+
+    function togglePlacementReason() {
+        if (!campusPlacement || !placementReasonRow) return;
+        const show = campusPlacement.value === 'false';
+        placementReasonRow.style.display = show ? 'block' : 'none';
+        const reasonsField = document.getElementById('placementReasons');
+        if (reasonsField) reasonsField.required = show;
+    }
+
+    function toggleCareerGoalSubFields() {
+        if (!careerGoalSelect) return;
+        const val = careerGoalSelect.value;
+        if (placementTypeRow) placementTypeRow.style.display = val === 'placement' ? '' : 'none';
+        if (higherStudiesTypeRow) higherStudiesTypeRow.style.display = val === 'higher_studies' ? '' : 'none';
     }
 
     function validateStep(step) {
@@ -336,55 +605,43 @@ document.addEventListener('DOMContentLoaded', () => {
         const requiredFields = currentStepContent.querySelectorAll('[required]');
         let isValid = true;
 
-        // Special validation for step 8 (SWOC) - all fields required
-        if (step === 8) {
-            const swocFields = ['strengths', 'weaknesses', 'opportunities', 'challenges'];
-            swocFields.forEach(fieldId => {
-                const field = document.getElementById(fieldId);
+        if (step === 7) {
+            ['strengths', 'weaknesses', 'opportunities', 'challenges'].forEach(id => {
+                const field = document.getElementById(id);
                 if (field && !field.value.trim()) {
-                    field.required = true;
-                    if (!validateField(field)) {
-                        isValid = false;
-                    }
+                    if (!validateField(field)) isValid = false;
                 }
             });
         }
 
-        // Special validation for step 9 (Career Objectives) - all fields required
-        if (step === 9) {
-            const careerFields = ['careerGoal', 'clarityPreparedness', 'campusPlacement'];
-            careerFields.forEach(fieldId => {
-                const field = document.getElementById(fieldId);
+        if (step === 8) {
+            ['careerGoal', 'clarityPreparedness', 'campusPlacement'].forEach(id => {
+                const field = document.getElementById(id);
                 if (field && !field.value.trim()) {
-                    field.required = true;
-                    if (!validateField(field)) {
-                        isValid = false;
-                    }
+                    if (!validateField(field)) isValid = false;
                 }
             });
 
-            // Validate domains checkboxes - at least one must be selected
-            const domainCheckboxes = document.querySelectorAll('input[name^="domain"]');
-            const checkedDomains = Array.from(domainCheckboxes).filter(cb => cb.checked);
+            const checkedDomains = Array.from(document.querySelectorAll('input[name^="domain"]:checked'));
             if (checkedDomains.length === 0) {
                 isValid = false;
-                // Show error for domains
-                const domainsContainer = document.querySelector('label[for="domainsOfInterest"]').parentElement;
-                const errorDiv = domainsContainer.querySelector('.error-message') || document.createElement('div');
-                errorDiv.className = 'error-message';
-                errorDiv.textContent = 'Please select at least one domain of interest';
-                errorDiv.style.display = 'block';
-                if (!domainsContainer.querySelector('.error-message')) {
-                    domainsContainer.appendChild(errorDiv);
+                const container = document.querySelector('label[for="domainsOfInterest"]')?.parentElement;
+                if (container) {
+                    let errorDiv = container.querySelector('.error-message');
+                    if (!errorDiv) {
+                        errorDiv = document.createElement('div');
+                        errorDiv.className = 'error-message';
+                        container.appendChild(errorDiv);
+                    }
+                    errorDiv.textContent = 'Please select at least one domain of interest';
+                    errorDiv.style.display = 'block';
                 }
             }
         }
 
-        // Validate required fields
         for (let field of requiredFields) {
             if (!validateField(field)) {
                 isValid = false;
-                // Scroll to first error field
                 field.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 break;
             }
@@ -395,99 +652,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function validateField(field) {
         const formGroup = field.closest('.form-group');
+        if (!formGroup) return true;
         const errorMessage = formGroup.querySelector('.error-message');
 
-        // Reset previous validation states
         clearFieldError(field);
 
         let fieldValid = true;
         let errorMsg = 'This field is required';
 
-        // Check if field is empty
         if (field.type === 'checkbox') {
-            if (!field.checked) {
-                fieldValid = false;
-            }
+            if (field.required && !field.checked) fieldValid = false;
         } else if (!field.value.trim()) {
-            fieldValid = false;
+            if (field.required) fieldValid = false;
         } else {
-            // Field-specific validation
             switch (field.id) {
                 case 'mobileNo':
                 case 'fatherMobileNo':
                 case 'motherMobileNo':
-                case 'emergencyContactNumber':
-                    if (!isValidPhone(field.value)) {
-                        fieldValid = false;
-                        errorMsg = 'Please enter a valid 10-digit mobile number';
-                    }
+                case 'guardianMobile':
+                    if (!isValidPhone(field.value)) { fieldValid = false; errorMsg = 'Please enter a valid 10-digit mobile number'; }
+                    break;
+                case 'aadharNumber':
+                    if (field.value.replace(/\D/g, '').length !== 12) { fieldValid = false; errorMsg = 'Please enter a valid 12-digit Aadhar number'; }
                     break;
                 case 'personalEmail':
                 case 'fatherEmail':
                 case 'motherEmail':
-                    if (!isValidEmail(field.value)) {
-                        fieldValid = false;
-                        errorMsg = 'Please enter a valid email address';
-                    }
+                case 'guardianEmail':
+                    if (!isValidEmail(field.value)) { fieldValid = false; errorMsg = 'Please enter a valid email address'; }
                     break;
                 case 'collegeEmail':
-                    if (!isValidCollegeEmail(field.value)) {
-                        fieldValid = false;
-                        errorMsg = 'Please enter a valid college email address ending with @stvincentngp.edu.in';
-                    }
+                    if (!isValidCollegeEmail(field.value)) { fieldValid = false; errorMsg = 'Please enter a valid college email ending with @stvincentngp.edu.in'; }
                     break;
                 case 'yearOfAdmission':
-                    if (!isValidYear(field.value)) {
-                        fieldValid = false;
-                        errorMsg = 'Please enter a valid year between 2000 and current year';
-                    }
+                    if (!isValidYear(field.value)) { fieldValid = false; errorMsg = 'Please enter a valid year between 2000 and current year'; }
                     break;
                 case 'sscPercentage':
                 case 'hsscPercentage':
-                    if (!isValidPercentage(field.value)) {
-                        fieldValid = false;
-                        errorMsg = 'Please enter a valid percentage (0-100)';
-                    }
+                case 'diplomaPercentage':
+                    if (!isValidPercentage(field.value)) { fieldValid = false; errorMsg = 'Please enter a valid percentage (0-100)'; }
                     break;
                 case 'sscYear':
                 case 'hsscYear':
-                    if (!isValidPassingYear(field.value)) {
-                        fieldValid = false;
-                        errorMsg = 'Please enter a valid passing year (less than current year)';
-                    }
+                case 'diplomaYear':
+                    if (!isValidPassingYear(field.value)) { fieldValid = false; errorMsg = 'Please enter a valid passing year'; }
                     break;
                 case 'semester':
-                    if (!isValidSemester(field.value)) {
-                        fieldValid = false;
-                        errorMsg = 'Semester must be between 1 and 8';
-                    }
+                    if (!isValidSemester(field.value)) { fieldValid = false; errorMsg = 'Semester must be between 1 and 8'; }
                     break;
-                case 'sem1SGPA':
-                case 'sem2SGPA':
-                case 'sem3SGPA':
-                case 'sem4SGPA':
-                case 'sem5SGPA':
-                case 'sem6SGPA':
-                case 'sem7SGPA':
-                case 'sem8SGPA':
-                    if (!isValidSGPA(field.value)) {
-                        fieldValid = false;
-                        errorMsg = 'SGPA must be between 0 and 10';
+                default:
+                    if (field.id && field.id.match(/^sem\dSGPA$/)) {
+                        if (!isValidSGPA(field.value)) { fieldValid = false; errorMsg = 'SGPA must be between 0 and 10'; }
                     }
-                    break;
-            }
-
-            // For selects, ensure not default if value is ''
-            if (field.tagName === 'SELECT' && field.value === '') {
-                fieldValid = false;
+                    if (field.tagName === 'SELECT' && field.value === '') fieldValid = false;
             }
         }
 
-        // Apply validation state
         if (!fieldValid) {
             field.classList.add('error');
-            errorMessage.textContent = errorMsg;
-            errorMessage.style.display = 'block';
+            if (errorMessage) {
+                errorMessage.textContent = errorMsg;
+                errorMessage.style.display = 'block';
+            }
         }
 
         return fieldValid;
@@ -495,241 +721,295 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function clearFieldError(field) {
         const formGroup = field.closest('.form-group');
+        if (!formGroup) return;
         const errorMessage = formGroup.querySelector('.error-message');
-
         field.classList.remove('error');
-        if (errorMessage) {
-            errorMessage.style.display = 'none';
-        }
+        if (errorMessage) errorMessage.style.display = 'none';
     }
 
-    // Validation helper functions
-    function isValidEmail(email) {
-        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return re.test(email.trim());
-    }
-
-    function isValidCollegeEmail(email) {
-        const re = /^[^\s@]+@stvincentngp\.edu\.in$/;
-        return re.test(email.trim());
-    }
-
-    function isValidPhone(phone) {
-        const re = /^[0-9]{10}$/;
-        return re.test(phone.replace(/\D/g, ''));
-    }
-
-    function isValidYear(year) {
-        const currentYear = new Date().getFullYear();
-        const numYear = parseInt(year);
-        return !isNaN(numYear) && numYear >= 2000 && numYear <= currentYear;
-    }
-
-    function isValidPercentage(value) {
-        const numValue = parseFloat(value);
-        return !isNaN(numValue) && numValue >= 0 && numValue < 100;
-    }
-
-    function isValidSemester(semester) {
-        const numSemester = parseInt(semester);
-        return !isNaN(numSemester) && numSemester >= 1 && numSemester <= 8;
-    }
-
-    function isValidPassingYear(year) {
-        const numYear = parseInt(year);
-        const currentYear = new Date().getFullYear();
-        return !isNaN(numYear) && numYear >= 2000 && numYear < currentYear;
-    }
-
-    function isValidSGPA(sgpa) {
-        const numSGPA = parseFloat(sgpa);
-        return !isNaN(numSGPA) && numSGPA >= 0 && numSGPA <= 10;
-    }
-
-    function togglePlacementReason() {
-
-
-        if (campusPlacement === 'false') {
-            placementReasonRow.style.display = 'block';
-            document.getElementById('placementReasons').required = true;
-        } else {
-            placementReasonRow.style.display = 'none';
-            document.getElementById('placementReasons').required = false;
-        }
-    }
+    function isValidEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()); }
+    function isValidCollegeEmail(email) { return /^[^\s@]+@stvincentngp\.edu\.in$/.test(email.trim()); }
+    function isValidPhone(phone) { return /^[0-9]{10}$/.test(phone.replace(/\D/g, '')); }
+    function isValidYear(year) { const n = parseInt(year, 10); return !isNaN(n) && n >= 2000 && n <= new Date().getFullYear(); }
+    function isValidPercentage(v) { const n = parseFloat(v); return !isNaN(n) && n >= 0 && n <= 100; }
+    function isValidSemester(s) { const n = parseInt(s, 10); return !isNaN(n) && n >= 1 && n <= 8; }
+    function isValidPassingYear(year) { const n = parseInt(year, 10); const cur = new Date().getFullYear(); return !isNaN(n) && n >= 2000 && n <= cur; }
+    function isValidSGPA(s) { const n = parseFloat(s); return !isNaN(n) && n >= 0 && n <= 10; }
 
     function populateReviewContent() {
         const formData = new FormData(form);
-        let reviewHTML = '<h3>Review Your Information</h3>';
+        const get = k => formData.get(k);
 
-        // Group fields by step
-        const sections = [
-            {
-                title: 'Student\'s Personal Information',
-                fields: ['fullName', 'section', 'semester', 'yearOfAdmission', 'mobileNo', 'personalEmail', 'collegeEmail', 'linkedInId', 'permanentAddress', 'dob', 'gender']
-            },
-            {
-                title: 'Parent\'s Information',
-                fields: ['fatherName', 'fatherMobileNo', 'fatherEmail', 'fatherOccupation', 'motherName', 'motherMobileNo', 'motherEmail', 'motherOccupation', 'emergencyContactName', 'emergencyContactNumber']
-            },
-            {
-                title: 'Academic Information (Before Admission)',
-                fields: ['sscPercentage', 'sscYear', 'hsscPercentage', 'hsscYear']
-            },
-            {
-                title: 'Academic Information (After Admission)',
-                fields: ['sem1SGPA', 'sem1Backlog', 'sem2SGPA', 'sem2Backlog', 'sem3SGPA', 'sem3Backlog', 'sem4SGPA', 'sem4Backlog', 'sem5SGPA', 'sem5Backlog', 'sem6SGPA', 'sem6Backlog', 'sem7SGPA', 'sem7Backlog', 'sem8SGPA', 'sem8Backlog']
-            },
-            {
-                title: 'Career Development Activities',
-                fields: ['activity1Name', 'activity1Score', 'activity1Date', 'activity2Name', 'activity2Score', 'activity2Date', 'activity3Name', 'activity3Score', 'activity3Date']
-            },
-            {
-                title: 'Project and Internship Details',
-                fields: ['project1Title', 'project1Description', 'project2Title', 'project2Description', 'internship1Company', 'internship1Domain', 'internship1Type', 'internship1Paid', 'internship1Start', 'internship1End', 'internship2Company', 'internship2Domain', 'internship2Type', 'internship2Paid', 'internship2Start', 'internship2End']
-            },
-            {
-                title: 'Co-Curricular Activities',
-                fields: [] // Will be handled separately
-            },
-            {
-                title: 'SWOC Analysis',
-                fields: ['strengths', 'weaknesses', 'opportunities', 'challenges']
-            },
-            {
-                title: 'Career Objectives and Skills',
-                fields: ['careerGoal', 'specificDetails', 'clarityPreparedness', 'campusPlacement', 'placementReasons', 'programmingLanguages', 'technologiesFrameworks', 'familiarToolsPlatforms']
+        const row = (label, value) => value ? `<p><strong>${label}:</strong> ${value}</p>` : '';
+        const sec = (title, html) => html.trim() ? `<h4>${title}</h4><div class="review-section">${html}</div>` : '';
+
+        let html = '<h3>Review Your Information</h3>';
+
+        html += sec('Student Personal Information',
+            row('Full Name', get('fullName')) +
+            row('Section', get('section')) +
+            row('Semester', get('semester')) +
+            row('Year of Admission', get('yearOfAdmission')) +
+            row('Date of Birth', get('dob')) +
+            row('Gender', get('gender')) +
+            row('Blood Group', get('bloodGroup')) +
+            row('Category', get('category')) +
+            row('Aadhar Number', get('aadharNumber')) +
+            row('MIS UID', get('misUID')) +
+            row('WhatsApp Mobile No.', get('mobileNo')) +
+            row('Personal Email', get('personalEmail')) +
+            row('College Email', get('collegeEmail')) +
+            row('LinkedIn ID', get('linkedInId')) +
+            row('GitHub ID', get('githubId')) +
+            row('Permanent Address', get('permanentAddress')) +
+            row('Present Address', get('presentAddress'))
+        );
+
+        html += sec("Parent's Information",
+            row("Father's Name", get('fatherName')) +
+            row("Father's Mobile", get('fatherMobileNo')) +
+            row("Father's Email", get('fatherEmail')) +
+            row("Father's Occupation", get('fatherOccupation')) +
+            row("Mother's Name", get('motherName')) +
+            row("Mother's Mobile", get('motherMobileNo')) +
+            row("Mother's Email", get('motherEmail')) +
+            row("Mother's Occupation", get('motherOccupation')) +
+            row('Local Guardian Name', get('guardianName')) +
+            row('Local Guardian Mobile', get('guardianMobile')) +
+            row('Local Guardian Email', get('guardianEmail'))
+        );
+
+        html += sec('Academic Information (Before Admission)',
+            row('SSC Board', get('sscBoard')) +
+            row('SSC Percentage', get('sscPercentage')) +
+            row('SSC Year', get('sscYear')) +
+            row('HSSC Board', get('hsscBoard')) +
+            row('HSSC Percentage', get('hsscPercentage')) +
+            row('HSSC Year', get('hsscYear')) +
+            row('Diploma Board', get('diplomaBoard')) +
+            row('Diploma Percentage', get('diplomaPercentage')) +
+            row('Diploma Year', get('diplomaYear')) +
+            row('Entrance Exam Type', get('entranceExamType')) +
+            row('Entrance Exam Score', get('entranceExamScore')) +
+            row('Entrance Exam Passing Year', get('entranceExamDate'))
+        );
+
+        let semHtml = '';
+        for (let i = 1; i <= 8; i++) {
+            const sgpa = get(`sem${i}SGPA`);
+            const season = get(`sem${i}Season`);
+            const yr = get(`sem${i}Year`);
+            const rank = get(`sem${i}Rank`);
+            const awards = get(`sem${i}Awards`);
+            const backlog = get(`sem${i}Backlog`);
+            if (sgpa || season || rank || awards || backlog) {
+                semHtml += `<p><strong>Semester ${i}:</strong> `;
+                if (sgpa) semHtml += `SGPA: ${sgpa}`;
+                if (season && yr) semHtml += ` | ${season} ${yr}`;
+                if (rank) semHtml += ` | Rank: ${rank}`;
+                if (awards) semHtml += ` | Awards: ${awards}`;
+                if (backlog) semHtml += ` | Backlogs: ${backlog}`;
+                semHtml += '</p>';
             }
-        ];
-
-        sections.forEach(section => {
-            let sectionHasContent = false;
-            let sectionHTML = `<h4>${section.title}</h4><div class="review-section">`;
-
-            section.fields.forEach(field => {
-                const value = formData.get(field);
-                if (value) {
-                    const label = document.querySelector(`label[for="${field}"]`)?.textContent?.replace(' *', '') ||
-                        document.querySelector(`label[for="${field}"]`)?.textContent || field;
-                    sectionHTML += `<p><strong>${label}:</strong> ${value}</p>`;
-                    sectionHasContent = true;
-                }
-            });
-
-            // Handle domains checkboxes
-            if (section.title === 'Career Objectives and Skills') {
-                const selectedDomains = [];
-                document.querySelectorAll('input[name^="domain"]:checked').forEach(checkbox => {
-                    selectedDomains.push(checkbox.value);
-                });
-                if (selectedDomains.length > 0) {
-                    sectionHTML += `<p><strong>Domains of Interest:</strong> ${selectedDomains.join(', ')}</p>`;
-                    sectionHasContent = true;
-                }
-            }
-
-            sectionHTML += '</div>';
-
-            if (sectionHasContent) {
-                reviewHTML += sectionHTML;
-            }
-        });
-
-        // Handle co-curricular activities separately
-        const activityRows = document.querySelectorAll('.activity-row');
-        if (activityRows.length > 0) {
-            reviewHTML += '<h4>Co-Curricular Activities</h4><div class="review-section">';
-
-            activityRows.forEach((row, index) => {
-                const inputs = row.querySelectorAll('input, select');
-                let activityText = '';
-
-                inputs.forEach(input => {
-                    if (input.value) {
-                        const label = input.parentElement.querySelector('label')?.textContent ||
-                            input.getAttribute('placeholder') ||
-                            input.name;
-                        activityText += `${label}: ${input.value}, `;
-                    }
-                });
-
-                if (activityText) {
-                    reviewHTML += `<p><strong>Activity ${index + 1}:</strong> ${activityText.slice(0, -2)}</p>`;
-                }
-            });
-
-            reviewHTML += '</div>';
         }
+        html += sec('Academic Information (After Admission)', semHtml);
 
-        reviewContent.innerHTML = reviewHTML;
+        html += sec('Project and Internship Details',
+            row('Mini Project Title', get('miniProjectTitle')) +
+            row('Mini Project Guide', get('miniProjectGuide')) +
+            row('Major Project Title', get('majorProjectTitle')) +
+            row('Major Project Guide', get('majorProjectGuide')) +
+            row('UBA Project Title', get('ubaProjectTitle')) +
+            row('UBA Project Guide', get('ubaProjectGuide')) +
+            row('Internship 1 Company', get('internship1Company')) +
+            row('Internship 1 Title', get('internship1Title')) +
+            row('Internship 1 Domain', get('internship1Domain')) +
+            row('Internship 1 Type', get('internship1Type')) +
+            row('Internship 1 Paid/Unpaid', get('internship1Paid')) +
+            row('Internship 1 Dates', [get('internship1Start'), get('internship1End')].filter(Boolean).join(' to ')) +
+            row('Internship 2 Company', get('internship2Company')) +
+            row('Internship 2 Title', get('internship2Title')) +
+            row('Internship 2 Domain', get('internship2Domain')) +
+            row('Internship 2 Type', get('internship2Type')) +
+            row('Internship 2 Paid/Unpaid', get('internship2Paid')) +
+            row('Internship 2 Dates', [get('internship2Start'), get('internship2End')].filter(Boolean).join(' to '))
+        );
+
+        let ccaHtml = '';
+        for (let i = 1; i <= 3; i++) {
+            const pName = get(`participation${i}Name`);
+            if (pName) ccaHtml += row(`Participation ${i}`, [pName, get(`participation${i}Level`), get(`participation${i}Awards`)].filter(Boolean).join(' | '));
+        }
+        for (let i = 1; i <= 3; i++) {
+            const oName = get(`organization${i}Name`);
+            if (oName) ccaHtml += row(`Organized ${i}`, [oName, get(`organization${i}Level`), get(`organization${i}Remark`)].filter(Boolean).join(' | '));
+        }
+        for (let i = 1; i <= 3; i++) {
+            const sTitle = get(`sdp${i}Title`);
+            if (sTitle) ccaHtml += row(`SDP/MOOC ${i}`, [sTitle, get(`sdp${i}Agency`), get(`sdp${i}Duration`) ? get(`sdp${i}Duration`) + ' hrs' : ''].filter(Boolean).join(' | '));
+        }
+        html += sec('Co-Curricular Activities', ccaHtml);
+
+        html += sec('SWOC Analysis',
+            row('Strengths', get('strengths')) +
+            row('Weaknesses', get('weaknesses')) +
+            row('Opportunities', get('opportunities')) +
+            row('Challenges', get('challenges'))
+        );
+
+        const selectedDomains = Array.from(document.querySelectorAll('input[name^="domain"]:checked')).map(c => c.value);
+        const selectedInterests = Array.from(document.querySelectorAll('input[name^="interest_"]:checked')).map(c => c.value);
+
+        html += sec('Career Objectives and Skills',
+            row('Career Goal', get('careerGoal')) +
+            row('Placement Type', get('placementType')) +
+            row('Higher Studies Type', get('higherStudiesType')) +
+            row('Specific Details', get('specificDetails')) +
+            row('Clarity & Preparedness', get('clarityPreparedness')) +
+            row('Campus Placement Interest', get('campusPlacement')) +
+            row('Placement Reasons', get('placementReasons')) +
+            row('Areas of Interest', selectedInterests.join(', ')) +
+            row('Interested in Being Mentor?', get('mentorInterest')) +
+            row('Expectations from Institute', get('institutionExpectations')) +
+            row('Technical & Soft Skills', get('technicalSoftSkills')) +
+            row('Additional Technical Skills', get('additionalTechnicalSkills')) +
+            row('Additional Soft Skills', get('additionalSoftSkills')) +
+            row('Programming Languages', get('programmingLanguages')) +
+            row('Technologies & Frameworks', get('technologiesFrameworks')) +
+            row('Familiar Tools & Platforms', get('familiarToolsPlatforms')) +
+            row('Domains of Interest', selectedDomains.join(', '))
+        );
+
+        reviewContent.innerHTML = html;
     }
 
     async function submitForm() {
-        if (validateStep(currentStep)) {
-            try {
-                const formData = new FormData(form);
-                const rawData = Object.fromEntries(formData.entries());
+        if (!validateStep(currentStep)) {
+            showToast('Please complete all required fields before submitting.', 'error', 3000);
+            return;
+        }
 
-                // Transform form data to match API schema
-                const studentData = transformFormDataToAPI(rawData);
+        try {
+            const formData = new FormData(form);
+            const rawData = Object.fromEntries(formData.entries());
+            const studentData = transformFormDataToAPI(rawData);
+            const photoFile = formData.get('photoUpload');
 
-                const token = localStorage.getItem("access_token");
-                if (!token) {
-                    alert("Please login first");
-                    window.location.href = "../login.html";
-                    return;
-                }
-
-                const response = await fetch("http://localhost:5002/student/me", {
-                    method: "PUT",
-                    headers: {
-                        "Authorization": "Bearer " + token,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(studentData)
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    alert('Profile updated successfully!');
-                    console.log('Form submitted successfully:', result);
-                } else {
-                    const error = await response.json();
-                    console.error('Submission failed:', error);
-                    alert('Failed to update profile: ' + (error.details || error.error || 'Unknown error'));
-                }
-
-            } catch (error) {
-                console.error('Error submitting form:', error);
-                alert('Network error. Please check your connection and try again.');
+            const token = safeStorageGet('access_token');
+            if (!token) {
+                showToast('Session expired. Please login again.', 'error', 3000);
+                window.location.href = '../login.html';
+                return;
             }
+
+            nextBtn.classList.add('btn-loading');
+            nextBtn.disabled = true;
+
+            const response = await fetch('http://localhost:5002/student/me', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(studentData)
+            });
+
+            if (response.ok) {
+                await response.json();
+                let photoUploadError = null;
+                if (photoFile instanceof File && photoFile.size > 0) {
+                    const uploadResult = await uploadPhoto(photoFile, token);
+                    photoUploadError = uploadResult.error;
+                    if (!photoUploadError && uploadResult.photoUrl) {
+                        renderUploadedPhotoLink(uploadResult.photoUrl);
+                    }
+                }
+
+                clearDraft();
+                if (photoUploadError) {
+                    showToast('Profile saved, but photo upload failed.', 'warning', 3200);
+                    alert('Profile updated successfully, but photo upload failed: ' + photoUploadError);
+                } else {
+                    showToast('Profile and photo updated successfully. Local draft cleared.', 'success', 2600);
+                    alert('Profile updated successfully!');
+                }
+            } else {
+                let errorPayload = null;
+                try {
+                    errorPayload = await response.json();
+                } catch {
+                    errorPayload = null;
+                }
+                console.error('Submission failed:', errorPayload);
+                showToast('Failed to update profile. Please try again.', 'error', 3400);
+                alert('Failed to update profile: ' + (errorPayload?.details || errorPayload?.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error submitting form:', error);
+            showToast('Network error. Please check your connection and retry.', 'error', 3400);
+            alert('Network error. Please check your connection and try again.');
+        } finally {
+            nextBtn.classList.remove('btn-loading');
+            nextBtn.disabled = false;
         }
     }
 
-    function transformFormDataToAPI(rawData) {
-        // Helper function to set default value
-        const setDefault = (value) => value && value.trim() ? value.trim() : "N/A";
+    async function uploadPhoto(photoFile, token) {
+        if (!photoFile.type || !photoFile.type.startsWith('image/')) {
+            return { error: 'Invalid file type. Please upload a JPG/PNG image.' };
+        }
+        if (photoFile.size > 2 * 1024 * 1024) {
+            return { error: 'File too large. Max size is 2MB.' };
+        }
 
-        // Collect selected domains
-        const selectedDomains = [];
-        document.querySelectorAll('input[name^="domain"]:checked').forEach(checkbox => {
-            selectedDomains.push(checkbox.value);
+        const photoFormData = new FormData();
+        photoFormData.append('photo', photoFile);
+
+        const uploadResponse = await fetch('http://localhost:5002/student/me/upload-photo', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            },
+            body: photoFormData
         });
 
-        // Transform data to match API schema
-        const apiData = {
-            // Basic student info (only semester and section allowed for students)
-            semester: rawData.semester ? parseInt(rawData.semester) : null,
-            section: rawData.section || null,
+        if (!uploadResponse.ok) {
+            let errorPayload = null;
+            try {
+                errorPayload = await uploadResponse.json();
+            } catch {
+                errorPayload = null;
+            }
+            return { error: errorPayload?.error || 'Upload failed' };
+        }
+        const payload = await uploadResponse.json();
+        return { error: null, photoUrl: payload?.photo_url || null };
+    }
 
-            // Personal information
+    function transformFormDataToAPI(rawData) {
+        const setDefault = v => (v && v.trim()) ? v.trim() : 'N/A';
+        const parseNum = v => (v && v.trim()) ? parseFloat(v) : null;
+        const parseInt2 = v => (v && v.trim()) ? parseInt(v, 10) : null;
+        const orNull = v => (v && v.trim()) ? v.trim() : null;
+
+        const selectedDomains = Array.from(document.querySelectorAll('input[name^="domain"]:checked')).map(c => c.value);
+
+        const apiData = {
+            semester: parseInt2(rawData.semester),
+            section: orNull(rawData.section),
             personal_info: {
+                blood_group: orNull(rawData.bloodGroup),
+                category: orNull(rawData.category),
+                aadhar_number: orNull(rawData.aadharNumber),
+                mis_uid: orNull(rawData.misUID),
                 mobile_no: setDefault(rawData.mobileNo),
                 personal_email: setDefault(rawData.personalEmail),
                 college_email: setDefault(rawData.collegeEmail),
                 linked_in_id: setDefault(rawData.linkedInId),
+                github_id: orNull(rawData.githubId),
                 permanent_address: setDefault(rawData.permanentAddress),
-                dob: rawData.dob || null,
+                present_address: orNull(rawData.presentAddress),
+                dob: orNull(rawData.dob),
                 gender: setDefault(rawData.gender),
                 father_name: setDefault(rawData.fatherName),
                 father_mobile_no: setDefault(rawData.fatherMobileNo),
@@ -739,210 +1019,136 @@ document.addEventListener('DOMContentLoaded', () => {
                 mother_mobile_no: setDefault(rawData.motherMobileNo),
                 mother_email: setDefault(rawData.motherEmail),
                 mother_occupation: setDefault(rawData.motherOccupation),
-                emergency_contact_name: setDefault(rawData.emergencyContactName),
-                emergency_contact_number: setDefault(rawData.emergencyContactNumber)
+                emergency_contact_name: setDefault(rawData.guardianName),
+                emergency_contact_number: setDefault(rawData.guardianMobile),
+                guardian_name: orNull(rawData.guardianName),
+                guardian_mobile: orNull(rawData.guardianMobile),
+                guardian_email: orNull(rawData.guardianEmail)
             },
-
-            // Past education records
             past_education_records: [],
-
-            // Post admission records
             post_admission_records: [],
-
-            // Career activities
-            career_activities: [],
-
-            // Projects
             projects: [],
-
-            // Internships
             internships: [],
-
-            // Co-curricular participations
             cocurricular_participations: [],
-
-            // Co-curricular organizations
             cocurricular_organizations: [],
-
-            // SWOC
             swoc: {
                 strengths: setDefault(rawData.strengths),
                 weaknesses: setDefault(rawData.weaknesses),
                 opportunities: setDefault(rawData.opportunities),
                 challenges: setDefault(rawData.challenges)
             },
-
-            // Career objective
             career_objective: {
                 career_goal: setDefault(rawData.careerGoal),
                 specific_details: setDefault(rawData.specificDetails),
                 clarity_preparedness: setDefault(rawData.clarityPreparedness),
                 interested_in_campus_placement: rawData.campusPlacement === 'true',
-                campus_placement_reasons: setDefault(rawData.placementReasons),
-
+                campus_placement_reasons: setDefault(rawData.placementReasons)
             },
-
-            // Skills
             skills: {
                 programming_languages: setDefault(rawData.programmingLanguages),
                 technologies_frameworks: setDefault(rawData.technologiesFrameworks),
                 familiar_tools_platforms: setDefault(rawData.familiarToolsPlatforms),
-                domains_of_interest: selectedDomains.length > 0 ? selectedDomains.join(', ') : "N/A"
+                domains_of_interest: selectedDomains.length > 0 ? selectedDomains.join(', ') : 'N/A'
             }
         };
 
-        // Add past education records
-        if (rawData.sscYear && rawData.sscYear.trim() !== '') {
-            const sscYear = parseInt(rawData.sscYear);
-            if (!isNaN(sscYear) && sscYear > 0) {
-                apiData.past_education_records.push({
-                    exam_name: 'SSC',
-                    percentage: parseFloat(rawData.sscPercentage) || null,
-                    year_of_passing: sscYear
-                });
-            }
+        const sscPercentage = parseNum(rawData.sscPercentage);
+        const sscYear = parseInt2(rawData.sscYear);
+        if (sscYear !== null && sscPercentage !== null) {
+            apiData.past_education_records.push({
+                exam_name: 'SSC',
+                percentage: sscPercentage,
+                year_of_passing: sscYear
+            });
+        }
+        const hsscPercentage = parseNum(rawData.hsscPercentage);
+        const hsscYear = parseInt2(rawData.hsscYear);
+        if (hsscYear !== null && hsscPercentage !== null) {
+            apiData.past_education_records.push({
+                exam_name: 'HSSC',
+                percentage: hsscPercentage,
+                year_of_passing: hsscYear
+            });
+        }
+        const diplomaPercentage = parseNum(rawData.diplomaPercentage);
+        const diplomaYear = parseInt2(rawData.diplomaYear);
+        if (diplomaYear !== null && diplomaPercentage !== null) {
+            apiData.past_education_records.push({
+                exam_name: 'DIPLOMA',
+                percentage: diplomaPercentage,
+                year_of_passing: diplomaYear
+            });
         }
 
-        if (rawData.hsscYear && rawData.hsscYear.trim() !== '') {
-            const hsscYear = parseInt(rawData.hsscYear);
-            if (!isNaN(hsscYear) && hsscYear > 0) {
-                apiData.past_education_records.push({
-                    exam_name: 'HSSC',
-                    percentage: parseFloat(rawData.hsscPercentage) || null,
-                    year_of_passing: hsscYear
-                });
-            }
-        }
-
-        // Add post admission records
         for (let i = 1; i <= 8; i++) {
             const sgpa = rawData[`sem${i}SGPA`];
             const backlog = rawData[`sem${i}Backlog`];
-            if (sgpa || backlog) {
+            const parsedSgpa = parseNum(sgpa);
+            if (parsedSgpa !== null || (sgpa === '0' || sgpa === 0)) {
                 apiData.post_admission_records.push({
                     semester: i,
-                    sgpa: parseFloat(sgpa) || null,
+                    sgpa: parsedSgpa,
                     backlog_subjects: setDefault(backlog)
                 });
             }
         }
 
-        // Add career activities
-        for (let i = 1; i <= 3; i++) {
-            const name = rawData[`activity${i}Name`];
-            const score = rawData[`activity${i}Score`];
-            const date = rawData[`activity${i}Date`];
-            if (name || score || date) {
-                apiData.career_activities.push({
-                    activity_name: setDefault(name),
-                    score_rank: setDefault(score),
-                    exam_date: date || null
+        [
+            { type: 'Mini Project', title: rawData.miniProjectTitle, guide: rawData.miniProjectGuide },
+            { type: 'Major Project', title: rawData.majorProjectTitle, guide: rawData.majorProjectGuide },
+            { type: 'UBA', title: rawData.ubaProjectTitle, guide: rawData.ubaProjectGuide }
+        ].forEach(p => {
+            if (orNull(p.title)) {
+                apiData.projects.push({
+                    title: setDefault(p.title),
+                    description: setDefault(p.guide)
                 });
-            }
-        }
-
-        // Add projects
-        if (rawData.project1Title) {
-            apiData.projects.push({
-                title: setDefault(rawData.project1Title),
-                description: setDefault(rawData.project1Description)
-            });
-        }
-
-        if (rawData.project2Title) {
-            apiData.projects.push({
-                title: setDefault(rawData.project2Title),
-                description: setDefault(rawData.project2Description)
-            });
-        }
-
-        // Add internships
-        if (rawData.internship1Company) {
-            apiData.internships.push({
-                company_name: setDefault(rawData.internship1Company),
-                domain: setDefault(rawData.internship1Domain),
-                internship_type: setDefault(rawData.internship1Type),
-                paid_unpaid: rawData.internship1Paid === 'Paid' ? 'Paid' : 'Unpaid',
-                start_date: rawData.internship1Start || null,
-                end_date: rawData.internship1End || null
-            });
-        }
-
-        if (rawData.internship2Company) {
-            apiData.internships.push({
-                company_name: setDefault(rawData.internship2Company),
-                domain: setDefault(rawData.internship2Domain),
-                internship_type: setDefault(rawData.internship2Type),
-                paid_unpaid: rawData.internship2Paid === 'Paid' ? 'Paid' : 'Unpaid',
-                start_date: rawData.internship2Start || null,
-                end_date: rawData.internship2End || null
-            });
-        }
-
-        // Add co-curricular participations
-        for (let i = 1; i <= 3; i++) {
-            const name = rawData[`participation${i}Name`];
-            const date = rawData[`participation${i}Date`];
-            const level = rawData[`participation${i}Level`];
-            const awards = rawData[`participation${i}Awards`];
-            if (name || date || level || awards) {
-                apiData.cocurricular_participations.push({
-                    name: setDefault(name),
-                    date: date || null,
-                    level: setDefault(level),
-                    awards: setDefault(awards)
-                });
-            }
-        }
-
-        // Add co-curricular organizations
-        for (let i = 1; i <= 3; i++) {
-            const name = rawData[`organization${i}Name`];
-            const date = rawData[`organization${i}Date`];
-            const level = rawData[`organization${i}Level`];
-            const remark = rawData[`organization${i}Remark`];
-            if (name || date || level || remark) {
-                apiData.cocurricular_organizations.push({
-                    name: setDefault(name),
-                    date: date || null,
-                    level: setDefault(level),
-                    remark: setDefault(remark)
-                });
-            }
-        }
-
-        // Remove empty arrays and null values
-        Object.keys(apiData).forEach(key => {
-            if (Array.isArray(apiData[key]) && apiData[key].length === 0) {
-                delete apiData[key];
-            } else if (apiData[key] === null || apiData[key] === '') {
-                delete apiData[key];
             }
         });
 
-        // Debug logging
-        console.log('Sending data to backend:', JSON.stringify(apiData, null, 2));
+        [1, 2].forEach(n => {
+            if (orNull(rawData[`internship${n}Company`])) {
+                apiData.internships.push({
+                    company_name: setDefault(rawData[`internship${n}Company`]),
+                    domain: setDefault(rawData[`internship${n}Domain`]),
+                    internship_type: setDefault(rawData[`internship${n}Type`]),
+                    paid_unpaid: rawData[`internship${n}Paid`] === 'Paid' ? 'Paid' : 'Unpaid',
+                    start_date: orNull(rawData[`internship${n}Start`]),
+                    end_date: orNull(rawData[`internship${n}End`])
+                });
+            }
+        });
+
+        for (let i = 1; i <= 3; i++) {
+            const name = rawData[`participation${i}Name`];
+            if (orNull(name)) {
+                apiData.cocurricular_participations.push({
+                    name: setDefault(name),
+                    date: orNull(rawData[`participation${i}Date`]),
+                    level: setDefault(rawData[`participation${i}Level`]),
+                    awards: setDefault(rawData[`participation${i}Awards`])
+                });
+            }
+        }
+
+        for (let i = 1; i <= 3; i++) {
+            const name = rawData[`organization${i}Name`];
+            if (orNull(name)) {
+                apiData.cocurricular_organizations.push({
+                    name: setDefault(name),
+                    date: orNull(rawData[`organization${i}Date`]),
+                    level: setDefault(rawData[`organization${i}Level`]),
+                    remark: setDefault(rawData[`organization${i}Remark`])
+                });
+            }
+        }
+
+        Object.keys(apiData).forEach(key => {
+            if (Array.isArray(apiData[key]) && apiData[key].length === 0) delete apiData[key];
+            else if (apiData[key] === null) delete apiData[key];
+        });
 
         return apiData;
     }
 
-    // Theme toggle functionality
-    const themeToggle = document.getElementById('themeToggle');
-    if (themeToggle) {
-        themeToggle.addEventListener('click', toggleTheme);
-        initializeTheme();
-    }
-
-    function toggleTheme() {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
-    }
-
-    function initializeTheme() {
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-theme', savedTheme);
-    }
 });

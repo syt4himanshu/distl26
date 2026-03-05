@@ -6,6 +6,107 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard</title>
   <link rel="stylesheet" href="./a.css">
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --surface: #151820;
+      --surface-2: #1c2030;
+      --surface-3: #232840;
+      --border: rgba(255, 255, 255, 0.07);
+      --border-active: rgba(99, 179, 237, 0.4);
+      --text-primary: #eef2ff;
+      --text-secondary: #8892b0;
+      --text-muted: #4a5478;
+      --accent: #63b3ed;
+      --accent-2: #9f7aea;
+      --accent-3: #68d391;
+      --danger: #fc8181;
+      --warning: #f6e05e;
+      --success: #68d391;
+
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+
+      --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.6);
+      --shadow-glow: 0 0 40px rgba(99, 179, 237, 0.12);
+
+      --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-bounce: 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    #toast-stack {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: #ffffff;
+      color: #1e293b;
+      border: 1px solid #e2e8f0;
+      border-left: 3px solid var(--accent);
+      border-radius: 10px;
+      box-shadow: 0 8px 32px rgba(15, 23, 42, 0.14);
+      padding: 12px 14px;
+      max-width: 340px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 14px;
+      line-height: 1.4;
+      pointer-events: auto;
+      animation: toast-in 0.22s ease forwards;
+    }
+
+    .toast.toast-success {
+      border-left-color: var(--success);
+    }
+
+    .toast.toast-danger {
+      border-left-color: var(--danger);
+    }
+
+    .toast.toast-warning {
+      border-left-color: var(--warning);
+    }
+
+    .toast.hiding {
+      animation: toast-out 0.22s ease forwards;
+    }
+
+    @keyframes toast-in {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes toast-out {
+      from {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      to {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+    }
+  </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
   <script src="../js/auth.js"></script>
   <script>
@@ -215,6 +316,11 @@
           </tbody>
         </table>
       </div>
+      <div class="pagination-controls">
+        <button id="usersPrevPageBtn" class="btn btn-primary" type="button" onclick="changeUsersPage(-1)">← Prev</button>
+        <span id="usersPageInfo">Page 1 of 1</span>
+        <button id="usersNextPageBtn" class="btn btn-primary" type="button" onclick="changeUsersPage(1)">Next →</button>
+      </div>
     </div>
 
     <!-- Teachers List Section -->
@@ -331,6 +437,11 @@
           <tbody id="studentTableBody">
           </tbody>
         </table>
+      </div>
+      <div class="pagination-controls">
+        <button id="studentsPrevPageBtn" class="btn btn-primary" type="button" onclick="changeStudentsPage(-1)">← Prev</button>
+        <span id="studentsPageInfo">Page 1 of 1</span>
+        <button id="studentsNextPageBtn" class="btn btn-primary" type="button" onclick="changeStudentsPage(1)">Next →</button>
       </div>
     </div>
 
@@ -488,6 +599,44 @@
         </div>
       </div>
 
+      <!-- Incomplete Student Form Report -->
+      <div class="report-card" style="margin-bottom: 20px;">
+        <h3>📝 Students with Incomplete Required Profile Fields</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <div>
+            <span style="font-size: 24px; font-weight: bold; color: #f59e0b;" id="incompleteStudentsCount">-</span>
+            <span style="color: #64748b;"> students have incomplete required fields</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label for="incompleteYearFilter" style="font-size: 13px; color: #64748b; font-weight: 600;">Year</label>
+            <select id="incompleteYearFilter" onchange="loadIncompleteProfilesReport()"
+              style="padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; color: #334155;">
+              <option value="">All Years</option>
+            </select>
+            <button class="btn btn-info" type="button" onclick="exportIncompleteProfilesToExcel()"
+              style="padding: 6px 12px; font-size: 13px;">📊 Export Excel</button>
+          </div>
+        </div>
+        <div class="table-container" style="max-height: 280px; overflow-y: auto;">
+          <table class="data-table" id="incompleteProfileTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>UID</th>
+                <th>Year</th>
+                <th>Section</th>
+                <th>Missing Required Fields</th>
+              </tr>
+            </thead>
+            <tbody id="incompleteProfileTableBody">
+              <tr>
+                <td colspan="5" class="loading">Loading incomplete profile report...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
 
 
       <!-- Export Buttons -->
@@ -562,6 +711,11 @@
           </tbody>
         </table>
       </div>
+      <div class="pagination-controls">
+        <button id="generalReportPrevPageBtn" class="btn btn-primary" type="button" onclick="changeGeneralReportPage(-1)">← Prev</button>
+        <span id="generalReportPageInfo">Page 1 of 1</span>
+        <button id="generalReportNextPageBtn" class="btn btn-primary" type="button" onclick="changeGeneralReportPage(1)">Next →</button>
+      </div>
     </div>
   </div>
 
@@ -571,10 +725,20 @@
 
   <div class="details-container hidden" id="studentModal">
     <div class="dialog-container hidden">
-      <div class="dialog-header">
+      <div class="dialog-header student-print-header">
         <button class="close-button" onclick="closeDialog()">×</button>
-        <h1 class="dialog-title">Student Information</h1>
-        <p class="dialog-subtitle">Department of Computer Engineering</p>
+        <div class="print-branding">
+          <img src="../Images/apple-touch-icon (1).png" alt="College Logo" class="college-logo">
+          <div class="print-branding-text">
+            <h1 class="dialog-title">Student Information</h1>
+            <p class="dialog-subtitle" id="studentDepartmentLabel">Department of Computer Science Engineering</p>
+            <p class="dialog-caption">KYS-Mentoring System 2026-27</p>
+          </div>
+          <div class="student-photo-block">
+            <img id="studentPhotoPreview" src="" alt="Student Profile Photo" class="student-photo-preview">
+            <p>Profile Photo</p>
+          </div>
+        </div>
       </div>
 
       <div class="dialog-content">
@@ -588,7 +752,7 @@
             <table class="data-table">
               <tr>
                 <th>Department</th>
-                <td>Computer Engineering</td>
+                <td id="studentDepartment">Computer Science Engineering</td>
               </tr>
               <tr>
                 <th>Full Name</th>
@@ -619,6 +783,22 @@
                 <td id="studentGender">Male</td>
               </tr>
               <tr>
+                <th>Blood Group</th>
+                <td id="studentBloodGroup">N/A</td>
+              </tr>
+              <tr>
+                <th>Category</th>
+                <td id="studentCategory">N/A</td>
+              </tr>
+              <tr>
+                <th>Aadhar Card Number</th>
+                <td id="studentAadhar">N/A</td>
+              </tr>
+              <tr>
+                <th>MIS UID</th>
+                <td id="studentMisUid">N/A</td>
+              </tr>
+              <tr>
                 <th>Mobile No.</th>
                 <td id="studentMobile">9012901912</td>
               </tr>
@@ -635,16 +815,28 @@
                 <td id="studentLinkedIn">dcvbv</td>
               </tr>
               <tr>
+                <th>GitHub ID</th>
+                <td id="studentGithub">N/A</td>
+              </tr>
+              <tr>
                 <th>Permanent Address</th>
                 <td id="studentAddress">anm sd</td>
               </tr>
               <tr>
-                <th>Emergency Contact Name</th>
-                <td id="emergencyContactName">xdfg</td>
+                <th>Present Address</th>
+                <td id="studentPresentAddress">N/A</td>
               </tr>
               <tr>
-                <th>Emergency Contact Number</th>
-                <td id="emergencyContactNumber">8765432345</td>
+                <th>Local Guardian Name</th>
+                <td id="studentGuardianName">N/A</td>
+              </tr>
+              <tr>
+                <th>Local Guardian Mobile</th>
+                <td id="studentGuardianMobile">N/A</td>
+              </tr>
+              <tr>
+                <th>Local Guardian Email</th>
+                <td id="studentGuardianEmail">N/A</td>
               </tr>
             </table>
           </div>
@@ -690,6 +882,18 @@
                 <th>Mother's Occupation</th>
                 <td id="motherOccupation">fgbn</td>
               </tr>
+              <tr>
+                <th>Local Guardian Name</th>
+                <td id="parentGuardianName">N/A</td>
+              </tr>
+              <tr>
+                <th>Local Guardian Mobile</th>
+                <td id="parentGuardianMobile">N/A</td>
+              </tr>
+              <tr>
+                <th>Local Guardian Email</th>
+                <td id="parentGuardianEmail">N/A</td>
+              </tr>
             </table>
           </div>
         </div>
@@ -703,12 +907,20 @@
           <div class="section-content">
             <table class="data-table">
               <tr>
+                <th>SSC Board</th>
+                <td id="sscBoard">N/A</td>
+              </tr>
+              <tr>
                 <th>SSC (X) Percentage/Grade</th>
                 <td id="sscPercentage">99%</td>
               </tr>
               <tr>
                 <th>SSC Year of Passing</th>
                 <td id="sscYear">2023</td>
+              </tr>
+              <tr>
+                <th>HSSC Board</th>
+                <td id="hsscBoard">N/A</td>
               </tr>
               <tr>
                 <th>HSSC (XII) Percentage/Grade</th>
@@ -719,12 +931,32 @@
                 <td id="hsscYear">2024</td>
               </tr>
               <tr>
+                <th>Diploma Board</th>
+                <td id="diplomaBoard">N/A</td>
+              </tr>
+              <tr>
                 <th>Diploma Percentage/Grade</th>
-                <td><span class="empty-value">N/A</span></td>
+                <td id="diplomaPercentage">N/A</td>
               </tr>
               <tr>
                 <th>Diploma Year of Passing</th>
-                <td><span class="empty-value">N/A</span></td>
+                <td id="diplomaYear">N/A</td>
+              </tr>
+              <tr>
+                <th>Entrance Exam Type</th>
+                <td id="entranceExamType">N/A</td>
+              </tr>
+              <tr>
+                <th>Entrance Exam Score</th>
+                <td id="entranceExamScore">N/A</td>
+              </tr>
+              <tr>
+                <th>Entrance Exam Date</th>
+                <td id="entranceExamDate">N/A</td>
+              </tr>
+              <tr>
+                <th>Other Exam Details</th>
+                <td id="otherExamDetails">N/A</td>
               </tr>
             </table>
           </div>
@@ -829,6 +1061,10 @@
           <div class="section-content">
             <table class="data-table">
               <tr>
+                <th>Aptitude Test Name</th>
+                <td id="aptitudeName">N/A</td>
+              </tr>
+              <tr>
                 <th>Aptitude Score/Rank</th>
                 <td id="aptitudeScore">N/A</td>
               </tr>
@@ -837,32 +1073,64 @@
                 <td id="aptitudeDate">N/A</td>
               </tr>
               <tr>
-                <th>Cocubes Score/Rank</th>
-                <td id="cocubesScore">N/A</td>
+                <th>Group Discussion Name</th>
+                <td id="gdName">N/A</td>
               </tr>
               <tr>
-                <th>Cocubes Date</th>
-                <td id="cocubesDate">N/A</td>
+                <th>Group Discussion Score/Outcome</th>
+                <td id="gdScore">N/A</td>
               </tr>
               <tr>
-                <th>Gate Score/Rank</th>
-                <td id="gateScore">N/A</td>
+                <th>Group Discussion Date</th>
+                <td id="gdDate">N/A</td>
               </tr>
               <tr>
-                <th>Gate Date</th>
-                <td id="gateDate">N/A</td>
+                <th>Personal Interview Name</th>
+                <td id="piName">N/A</td>
               </tr>
               <tr>
-                <th>Other Exam Name</th>
-                <td id="otherExamName"><span class="empty-value">N/A</span></td>
+                <th>Personal Interview Score/Outcome</th>
+                <td id="piScore">N/A</td>
               </tr>
               <tr>
-                <th>Other Exam Score/Rank</th>
-                <td id="otherExamScore"><span class="empty-value">N/A</span></td>
+                <th>Personal Interview Date</th>
+                <td id="piDate">N/A</td>
               </tr>
               <tr>
-                <th>Other Exam Date</th>
-                <td id="otherExamDate"><span class="empty-value">N/A</span></td>
+                <th>Psychometric Test Name</th>
+                <td id="psychometricName">N/A</td>
+              </tr>
+              <tr>
+                <th>Psychometric Score/Result</th>
+                <td id="psychometricScore">N/A</td>
+              </tr>
+              <tr>
+                <th>Psychometric Date</th>
+                <td id="psychometricDate">N/A</td>
+              </tr>
+              <tr>
+                <th>Higher Exam Type</th>
+                <td id="higherExamType">N/A</td>
+              </tr>
+              <tr>
+                <th>Higher Exam Score/Rank</th>
+                <td id="higherExamScore">N/A</td>
+              </tr>
+              <tr>
+                <th>Higher Exam Date</th>
+                <td id="higherExamDate">N/A</td>
+              </tr>
+              <tr>
+                <th>Other Activity Name</th>
+                <td id="otherExamName">N/A</td>
+              </tr>
+              <tr>
+                <th>Other Activity Score/Rank</th>
+                <td id="otherExamScore">N/A</td>
+              </tr>
+              <tr>
+                <th>Other Activity Date</th>
+                <td id="otherExamDate">N/A</td>
               </tr>
             </table>
           </div>
@@ -890,28 +1158,44 @@
           <div class="section-content">
             <table class="data-table">
               <tr>
-                <th>Project 1 Title</th>
+                <th>Mini Project Title</th>
                 <td id="project1Title">N/A</td>
               </tr>
               <tr>
-                <th>Project 1 Description</th>
+                <th>Mini Project Guide</th>
                 <td id="project1Description">N/A</td>
               </tr>
               <tr>
-                <th>Project 2 Title</th>
+                <th>Major Project Title</th>
                 <td id="project2Title">N/A</td>
               </tr>
               <tr>
-                <th>Project 2 Description</th>
+                <th>Major Project Guide</th>
                 <td id="project2Description">N/A</td>
+              </tr>
+              <tr>
+                <th>UBA / Collaborative Project Title</th>
+                <td id="ubaProjectTitle">N/A</td>
+              </tr>
+              <tr>
+                <th>UBA / Collaborative Project Guide</th>
+                <td id="ubaProjectDescription">N/A</td>
               </tr>
               <tr>
                 <th>Internship 1 Company</th>
                 <td id="internship1Company">N/A</td>
               </tr>
               <tr>
+                <th>Internship 1 Title</th>
+                <td id="internship1Title">N/A</td>
+              </tr>
+              <tr>
                 <th>Internship 1 Domain</th>
                 <td id="internship1Domain">N/A</td>
+              </tr>
+              <tr>
+                <th>Internship 1 Description</th>
+                <td id="internship1Description">N/A</td>
               </tr>
               <tr>
                 <th>Internship 1 Type</th>
@@ -930,8 +1214,16 @@
                 <td id="internship2Company">N/A</td>
               </tr>
               <tr>
+                <th>Internship 2 Title</th>
+                <td id="internship2Title">N/A</td>
+              </tr>
+              <tr>
                 <th>Internship 2 Domain</th>
                 <td id="internship2Domain">N/A</td>
+              </tr>
+              <tr>
+                <th>Internship 2 Description</th>
+                <td id="internship2Description">N/A</td>
               </tr>
               <tr>
                 <th>Internship 2 Type</th>
@@ -1003,6 +1295,14 @@
                   </div>
                 </td>
               </tr>
+              <tr>
+                <th>Skill Development Program / Training / MOOC</th>
+                <td>
+                  <div class="activity-list" id="sdpActivitiesList">
+                    <p>No skill development records</p>
+                  </div>
+                </td>
+              </tr>
             </table>
           </div>
         </div>
@@ -1044,8 +1344,16 @@
           <div class="section-content">
             <table class="data-table">
               <tr>
-                <th>Career Objectives</th>
+                <th>Career Goal</th>
                 <td id="careerObjectives">N/A</td>
+              </tr>
+              <tr>
+                <th>Placement Type</th>
+                <td id="placementType">N/A</td>
+              </tr>
+              <tr>
+                <th>Higher Studies Type</th>
+                <td id="higherStudiesType">N/A</td>
               </tr>
               <tr>
                 <th>Specific Details</th>
@@ -1062,6 +1370,26 @@
               <tr>
                 <th>Campus Placement Reasons</th>
                 <td id="campusPlacementReasons">N/A</td>
+              </tr>
+              <tr>
+                <th>Areas of Interest</th>
+                <td id="areasOfInterest">N/A</td>
+              </tr>
+              <tr>
+                <th>Interested in Being Student Mentor</th>
+                <td id="mentorInterest">N/A</td>
+              </tr>
+              <tr>
+                <th>Technical & Soft Skills (Overall)</th>
+                <td id="technicalSoftSkills">N/A</td>
+              </tr>
+              <tr>
+                <th>Additional Technical Skills</th>
+                <td id="additionalTechnicalSkills">N/A</td>
+              </tr>
+              <tr>
+                <th>Additional Soft Skills</th>
+                <td id="additionalSoftSkills">N/A</td>
               </tr>
               <tr>
                 <th>Programming Languages</th>
@@ -1115,6 +1443,19 @@
     </div>
   </div>
 
+  <!-- User Profile Image Modal -->
+  <div id="studentImagePreviewModal" class="modal">
+    <div class="modal-content image-preview-modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="studentImagePreviewTitle">Profile Photo</h3>
+        <button class="close-btn" onclick="closeStudentImagePreviewModal()">&times;</button>
+      </div>
+      <div class="modal-body image-preview-body">
+        <img id="studentImagePreviewImg" class="image-preview-img" src="" alt="Profile preview">
+      </div>
+    </div>
+  </div>
+
   <!-- Change Password Modal -->
   <div id="changePasswordModal" class="modal">
     <div class="modal-content">
@@ -1158,6 +1499,8 @@
       </div>
     </div>
   </div>
+
+  <div id="toast-stack" aria-live="polite" aria-atomic="true"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>

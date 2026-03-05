@@ -1,31 +1,35 @@
+import logging
 from main import app, db, User
 from werkzeug.security import generate_password_hash, check_password_hash
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 def debug_admin():
     with app.app_context():
-        print("=== DATABASE DEBUG ===")
+        logger.info("=== DATABASE DEBUG ===")
         
         # Check all users
         all_users = User.query.all()
-        print(f"Total users in database: {len(all_users)}")
+        logger.info(f"Total users in database: {len(all_users)}")
         
         for user in all_users:
-            print(f"User: {user.username}, Role: {user.role}")
+            logger.info(f"User: {user.username}, Role: {user.role}")
         
         # Find admin user
         admin_user = User.query.filter_by(username="admin").first()
         if admin_user:
-            print(f"\nAdmin user found: {admin_user.username}")
-            print(f"Admin role: {admin_user.role}")
-            print(f"Password hash exists: {bool(admin_user.password_hash)}")
+            logger.info(f"\nAdmin user found: {admin_user.username}")
+            logger.info(f"Admin role: {admin_user.role}")
+            logger.info(f"Password hash exists: {bool(admin_user.password_hash)}")
             
             # Test password
             test_password = "admin123"
             password_valid = admin_user.check_password(test_password)
-            print(f"Password 'admin123' is valid: {password_valid}")
+            logger.info(f"Password 'admin123' is valid: {password_valid}")
             
         else:
-            print("\nNo admin user found! Creating new one...")
+            logger.info("\nNo admin user found! Creating new one...")
             
             # Create fresh admin user
             new_admin = User(
@@ -35,12 +39,12 @@ def debug_admin():
             )
             db.session.add(new_admin)
             db.session.commit()
-            print("New admin user created!")
+            logger.info("New admin user created!")
             
-        print("\n=== TESTING PASSWORD MANUALLY ===")
+        logger.info("\n=== TESTING PASSWORD MANUALLY ===")
         test_hash = generate_password_hash("admin123")
-        print(f"Test hash created: {test_hash[:50]}...")
-        print(f"Test verification: {check_password_hash(test_hash, 'admin123')}")
+        logger.info(f"Test hash created: {test_hash[:50]}...")
+        logger.info(f"Test verification: {check_password_hash(test_hash, 'admin123')}")
 
 if __name__ == "__main__":
     debug_admin()

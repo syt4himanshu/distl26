@@ -1,6 +1,10 @@
 import os
+import logging
 from main import app, db, User
 from werkzeug.security import generate_password_hash
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def init_db():
     with app.app_context():
@@ -14,9 +18,9 @@ def init_db():
                         password_hash=generate_password_hash(admin_password))
             db.session.add(user)
             db.session.commit()
-            print(f"Admin user created: {admin_username} / {admin_password}")
+            logger.info(f"Admin user created: {admin_username} / {admin_password}")
         else:
-            print("Admin user already exists.")
+            logger.info("Admin user already exists.")
 
 if __name__ == "__main__":
     init_db()

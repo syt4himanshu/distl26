@@ -2,9 +2,119 @@
 let teachers = [];
 let students = [];
 let users = [];
+const DEFAULT_PROFILE_ICON = "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='48' fill='%23e2e8f0'/%3E%3Ccircle cx='48' cy='36' r='16' fill='%2394a3b8'/%3E%3Cpath d='M20 78c4-14 16-22 28-22s24 8 28 22' fill='%2394a3b8'/%3E%3C/svg%3E";
+const USERS_PAGE_SIZE = 20;
+let currentUsersPage = 1;
+let filteredUsersData = [];
+const STUDENTS_PAGE_SIZE = 20;
+let currentStudentsPage = 1;
+let filteredStudentsData = [];
 
 let allocations = {}; // { teacherId: [studentIds...] }
 let selectedTeacherForAllocation = null;
+let activeModal = null;
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function sanitizeUrl(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw) return DEFAULT_PROFILE_ICON;
+    if (/^(https?:|data:image\/)/i.test(raw)) return raw;
+    return DEFAULT_PROFILE_ICON;
+}
+
+// ========== UI/UX UTILITIES (NON-BREAKING) ==========
+function openModal(id) {
+    const modal = document.getElementById(id);
+    if (!modal) return false;
+
+    if (activeModal && activeModal !== id) {
+        closeModal(activeModal, true);
+    }
+
+    modal.classList.remove("hidden", "is-closing");
+    modal.classList.add("is-open");
+
+    if (modal.classList.contains("modal") || modal.classList.contains("modal-overlay")) {
+        modal.style.display = "flex";
+    } else if (modal.style.display === "none") {
+        modal.style.display = "block";
+    }
+
+    activeModal = id;
+
+    setTimeout(() => {
+        const focusable = modal.querySelectorAll("input, button, select, textarea, [tabindex]:not([tabindex='-1'])");
+        if (focusable.length > 0) {
+            focusable[0].focus();
+        }
+    }, 50);
+
+    return true;
+}
+
+function closeModal(id, instant = false) {
+    const modal = document.getElementById(id);
+    if (!modal) return false;
+
+    const completeClose = () => {
+        modal.classList.remove("is-open", "is-closing");
+        if (modal.classList.contains("modal") || modal.classList.contains("modal-overlay")) {
+            modal.style.display = "none";
+        }
+        if (activeModal === id) {
+            activeModal = null;
+        }
+    };
+
+    if (instant) {
+        completeClose();
+        return true;
+    }
+
+    modal.classList.add("is-closing");
+    modal.classList.remove("is-open");
+    setTimeout(completeClose, 220);
+    return true;
+}
+
+function showToast(message, type = "info") {
+    const safeType = ["info", "success", "danger", "warning"].includes(type) ? type : "info";
+    const icons = { info: "ℹ️", success: "✅", danger: "❌", warning: "⚠️" };
+
+    let stack = document.getElementById("toast-stack");
+    if (!stack) {
+        stack = document.createElement("div");
+        stack.id = "toast-stack";
+        stack.setAttribute("aria-live", "polite");
+        stack.setAttribute("aria-atomic", "true");
+        document.body.appendChild(stack);
+    }
+
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${safeType}`;
+
+    const icon = document.createElement("span");
+    icon.textContent = icons[safeType] || icons.info;
+    const text = document.createElement("span");
+    text.textContent = String(message || "");
+
+    toast.appendChild(icon);
+    toast.appendChild(text);
+    stack.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add("hiding");
+        setTimeout(() => toast.remove(), 240);
+    }, 3200);
+}
 
 // ========== API LOADING FUNCTIONS ==========
 
@@ -153,6 +263,8 @@ async function loadStudentsFromAPI() {
                     // Personal info (from personal_info object)
                     email: personalInfo.personal_email || personalInfo.college_email || `${student.uid}@student.edu`,
                     mobile: personalInfo.mobile_no || "+91 9876543210",
+                    photoUrl: personalInfo.photo_url || '',
+                    photoPublicId: personalInfo.photo_public_id || '',
                     linkedInId: personalInfo.linked_in_id || 'N/A',
                     permanentAddress: personalInfo.permanent_address || "Address not provided",
                     fatherName: personalInfo.father_name || "Father Name",
@@ -223,6 +335,7 @@ async function loadStudentsFromAPI() {
 
 
             renderStudents();
+            renderUsers(); // Re-render user rows so profile icons resolve for student UIDs.
         } else {
             console.error('❌ Failed to load students:', response.status);
         }
@@ -237,6 +350,15 @@ document.addEventListener('DOMContentLoaded', function () {
     loadTeachersFromAPI();
     loadUsersFromAPI();
     loadStatisticsFromAPI();
+
+    const profileImageModal = document.getElementById('studentImagePreviewModal');
+    if (profileImageModal) {
+        profileImageModal.addEventListener('click', function (event) {
+            if (event.target === profileImageModal) {
+                closeStudentImagePreviewModal();
+            }
+        });
+    }
 });
 
 // Initialize
@@ -588,7 +710,7 @@ async function savePassword() {
         const token = localStorage.getItem('access_token');
         const user = users[editIndex];
 
-        const response = await fetch(`http://localhost:5002/admin/reset-password`, {
+        const response = await fetch(`http://localhost:5002/api/admin/reset-password`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -622,24 +744,119 @@ function cancelPasswordEdit() {
     document.getElementById("confirmPassword").value = "";
 }
 
-function renderUsers() {
+function getFilteredUsers() {
+    const search = (document.getElementById("searchInput")?.value || "").toLowerCase();
+    const roleFilter = document.getElementById("roleFilter")?.value || "";
+
+    return users.filter(user => {
+        const userId = String(user.username || "").toLowerCase();
+        const role = String(user.role || "").toLowerCase();
+        const matchesSearch = !search || userId.includes(search);
+        const matchesRole = !roleFilter || role === roleFilter.toLowerCase();
+        return matchesSearch && matchesRole;
+    });
+}
+
+function updateUsersPaginationUI(totalItems) {
+    const totalPages = Math.max(1, Math.ceil(totalItems / USERS_PAGE_SIZE));
+    if (currentUsersPage > totalPages) currentUsersPage = totalPages;
+    if (currentUsersPage < 1) currentUsersPage = 1;
+
+    const pageInfo = document.getElementById("usersPageInfo");
+    const prevBtn = document.getElementById("usersPrevPageBtn");
+    const nextBtn = document.getElementById("usersNextPageBtn");
+
+    if (pageInfo) pageInfo.textContent = `Page ${currentUsersPage} of ${totalPages} (${totalItems} users)`;
+    if (prevBtn) prevBtn.disabled = currentUsersPage === 1;
+    if (nextBtn) nextBtn.disabled = currentUsersPage === totalPages;
+}
+
+function renderUsers(resetPage = true) {
     const tbody = document.getElementById("userTableBody");
     tbody.innerHTML = "";
 
-    users.forEach((user, index) => {
+    filteredUsersData = getFilteredUsers();
+    if (resetPage) currentUsersPage = 1;
+    updateUsersPaginationUI(filteredUsersData.length);
+
+    if (filteredUsersData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #666;">No users found for current filters.</td></tr>';
+        return;
+    }
+
+    const startIdx = (currentUsersPage - 1) * USERS_PAGE_SIZE;
+    const pageUsers = filteredUsersData.slice(startIdx, startIdx + USERS_PAGE_SIZE);
+
+    pageUsers.forEach((user) => {
+        const originalIndex = users.findIndex(u => u.id === user.id);
+        const profile = resolveUserProfileImage(user);
+        const encodedUsername = encodeURIComponent(user.username || '');
+        const safeUsername = escapeHtml(user.username);
+        const safeRole = escapeHtml(user.role);
+        const safeStatus = escapeHtml(user.status);
+        const safeCreated = escapeHtml(user.created);
+        const safeThumb = sanitizeUrl(profile.thumbUrl);
         const row = document.createElement("tr");
         row.innerHTML = `
-      <td><strong>${user.username}</strong></td>
-      <td><span class="tag ${user.role}">${user.role}</span></td>
-      <td><span class="tag" style="background: #dcfce7; color: #166534;">${user.status}</span></td>
-      <td>${user.created}</td>
-      <td>
-        <button class="btn-sm btn-password" onclick="changeUserPassword(${index})" style="background: #8b5cf6; color: white;">🔐 Password</button>
-        <button class="btn-sm btn-delete" onclick="deleteUser(${index})">🗑 Delete</button>
-      </td>
-    `;
+	      <td>
+	        <div class="user-id-cell">
+	          <button class="profile-icon-btn" type="button" onclick="openProfileImageForUser('${encodedUsername}')" title="View profile photo">
+	            <img class="profile-icon-img" src="${safeThumb}" alt="${safeUsername} profile photo" loading="lazy" onerror="this.src='${DEFAULT_PROFILE_ICON}'">
+	          </button>
+	          <strong>${safeUsername}</strong>
+	        </div>
+	      </td>
+	      <td><span class="tag ${safeRole}">${safeRole}</span></td>
+	      <td><span class="tag" style="background: #dcfce7; color: #166534;">${safeStatus}</span></td>
+	      <td>${safeCreated}</td>
+	      <td>
+	        <button class="btn-sm btn-password" onclick="changeUserPassword(${originalIndex})" style="background: #8b5cf6; color: white;">🔐 Password</button>
+	        <button class="btn-sm btn-delete" onclick="deleteUser(${originalIndex})">🗑 Delete</button>
+	      </td>
+	    `;
         tbody.appendChild(row);
     });
+}
+
+function resolveUserProfileImage(user) {
+    if (!user || user.role !== 'student') {
+        return { imageUrl: DEFAULT_PROFILE_ICON, thumbUrl: DEFAULT_PROFILE_ICON, hasImage: false };
+    }
+
+    const student = students.find(s => String(s.uid || '').trim() === String(user.username || '').trim());
+    if (!student || !student.photoUrl) {
+        return { imageUrl: DEFAULT_PROFILE_ICON, thumbUrl: DEFAULT_PROFILE_ICON, hasImage: false };
+    }
+
+    return { imageUrl: student.photoUrl, thumbUrl: student.photoUrl, hasImage: true };
+}
+
+function openProfileImageForUser(encodedUsername) {
+    const username = decodeURIComponent(encodedUsername || '');
+    const user = users.find(u => String(u.username) === String(username));
+    if (!user) return;
+
+    const profile = resolveUserProfileImage(user);
+    const modal = document.getElementById("studentImagePreviewModal");
+    const previewTitle = document.getElementById("studentImagePreviewTitle");
+    const previewImage = document.getElementById("studentImagePreviewImg");
+    if (!modal || !previewTitle || !previewImage) return;
+
+    previewTitle.textContent = profile.hasImage ? `${username} - Profile Photo` : `${username} - No image uploaded`;
+    previewImage.src = profile.imageUrl;
+    previewImage.alt = `${username} profile photo`;
+    previewImage.onerror = () => {
+        previewImage.src = DEFAULT_PROFILE_ICON;
+    };
+    openModal("studentImagePreviewModal");
+}
+
+function closeStudentImagePreviewModal() {
+    const modal = document.getElementById("studentImagePreviewModal");
+    const previewImage = document.getElementById("studentImagePreviewImg");
+    if (!modal || !previewImage) return;
+    closeModal("studentImagePreviewModal", true);
+    previewImage.src = "";
 }
 
 
@@ -697,23 +914,15 @@ async function deleteUser(index) {
 }
 
 function filterUsers() {
-    const search = document.getElementById("searchInput").value.toLowerCase();
-    const roleFilter = document.getElementById("roleFilter").value;
-    const rows = document.querySelectorAll("#userTableBody tr");
+    renderUsers(true);
+}
 
-    rows.forEach(row => {
-        const userId = row.cells[0].textContent.toLowerCase();
-        const role = row.cells[1].textContent.toLowerCase();
-
-        const matchesSearch = userId.includes(search);
-        const matchesRole = roleFilter === "" || role.includes(roleFilter);
-
-        if (matchesSearch && matchesRole) {
-            row.style.display = "";
-        } else {
-            row.style.display = "none";
-        }
-    });
+function changeUsersPage(direction) {
+    const totalPages = Math.max(1, Math.ceil(filteredUsersData.length / USERS_PAGE_SIZE));
+    const nextPage = currentUsersPage + direction;
+    if (nextPage < 1 || nextPage > totalPages) return;
+    currentUsersPage = nextPage;
+    renderUsers(false);
 }
 
 // Teachers Management
@@ -778,24 +987,73 @@ function viewTeacher(teacherId) {
       <tr><th>Assigned Students</th><td>${studentDetails || 'None'}</td></tr>
     </table>
   `;
-    document.getElementById("teacherModal").style.display = "flex";
+    openModal("teacherModal");
 }
 
 function closeTeacherModal() {
-    document.getElementById("teacherModal").style.display = "none";
+    closeModal("teacherModal", true);
 }
 
 // Students Management
-function renderStudents() {
+function updateStudentsPaginationUI(totalItems) {
+    const totalPages = Math.max(1, Math.ceil(totalItems / STUDENTS_PAGE_SIZE));
+    const pageInfo = document.getElementById("studentsPageInfo");
+    const prevBtn = document.getElementById("studentsPrevPageBtn");
+    const nextBtn = document.getElementById("studentsNextPageBtn");
+
+    if (currentStudentsPage > totalPages) currentStudentsPage = totalPages;
+    if (currentStudentsPage < 1) currentStudentsPage = 1;
+
+    if (pageInfo) pageInfo.textContent = `Page ${currentStudentsPage} of ${totalPages} (${totalItems} students)`;
+    if (prevBtn) prevBtn.disabled = currentStudentsPage === 1;
+    if (nextBtn) nextBtn.disabled = currentStudentsPage === totalPages;
+}
+
+function getFilteredStudents() {
+    const search = (document.getElementById("studentSearchInput")?.value || '').toLowerCase();
+    const domain = document.getElementById("domainFilter")?.value || '';
+    const year = document.getElementById("yearFilter")?.value || '';
+    const section = document.getElementById("sectionFilter")?.value || '';
+    const softSkills = document.getElementById("softSkillsFilter")?.value || '';
+    const careerGoal = document.getElementById("careerGoalFilter")?.value || '';
+
+    return students.filter(student => {
+        const firstName = (student.firstName || '').toLowerCase();
+        const lastName = (student.lastName || '').toLowerCase();
+        const uid = (student.uid || '').toLowerCase();
+        const fullName = (student.fullName || `${student.firstName || ''} ${student.lastName || ''}`).toLowerCase();
+
+        const matchesSearch = !search || firstName.includes(search) || lastName.includes(search) || fullName.includes(search) || uid.includes(search);
+        const studentDomain = Array.isArray(student.domain) ? student.domain : String(student.domain || '').split(',').map(d => d.trim());
+        const matchesDomain = !domain || studentDomain.includes(domain);
+        const matchesYear = !year || String(student.year) === String(year);
+        const matchesSection = !section || student.section === section;
+        const matchesSoftSkills = !softSkills || String(student.softSkillsRating) === String(softSkills);
+        const matchesCareerGoal = !careerGoal || student.careerGoal === careerGoal;
+
+        return matchesSearch && matchesDomain && matchesYear && matchesSection && matchesSoftSkills && matchesCareerGoal;
+    });
+}
+
+function renderStudents(resetPage = true) {
     const tbody = document.getElementById("studentTableBody");
     tbody.innerHTML = "";
 
-    if (students.length === 0) {
+    filteredStudentsData = getFilteredStudents();
+    if (resetPage) currentStudentsPage = 1;
+
+    const totalFiltered = filteredStudentsData.length;
+    updateStudentsPaginationUI(totalFiltered);
+
+    if (totalFiltered === 0) {
         tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: #666;">No students found. Students are being loaded from the database...</td></tr>';
         return;
     }
 
-    students.forEach(student => {
+    const startIdx = (currentStudentsPage - 1) * STUDENTS_PAGE_SIZE;
+    const pageStudents = filteredStudentsData.slice(startIdx, startIdx + STUDENTS_PAGE_SIZE);
+
+    pageStudents.forEach(student => {
 
         // Handle both API format and detailed format
         const studentId = student.uid;
@@ -811,25 +1069,36 @@ function renderStudents() {
         const mentor = student.mentorId ?
             teachers.find(t => t.id === student.mentorId)?.name || 'Unknown' :
             'Not Assigned';
+        const safeUid = escapeHtml(uid);
+        const safeName = escapeHtml(name);
+        const safeSemester = escapeHtml(semester);
+        const safeSection = escapeHtml(section);
+        const safeYear = escapeHtml(year);
+        const safeSgpa = escapeHtml(sgpa);
+        const safeCareerGoal = escapeHtml(careerGoal);
+        const safeMentor = escapeHtml(mentor);
+        const safeDomainTags = Array.isArray(domain)
+            ? domain.map(d => `<span class="tag">${escapeHtml(d)}</span>`).join('')
+            : '<span class="tag">General</span>';
 
         const row = document.createElement("tr");
         row.innerHTML = `
-      <td><strong>${uid}</strong></td>
-      <td>${name}</td>
-      <td>${semester}</td>
-      <td>${section}</td>
-      <td>${year}</td>
-      <td>${sgpa}</td>
-      <td>
-        <div class="tags">
-          ${Array.isArray(domain) ? domain.map(d => `<span class="tag">${d}</span>`).join('') : '<span class="tag">General</span>'}
-        </div>
-      </td>
-      <td><span class="tag ${careerGoal === 'Placement' ? 'placement' : 'higher-studies'}">${careerGoal}</span></td>
-      <td>${mentor}</td>
-      <td>
-        <button class="btn-sm btn-view" onclick="viewStudent('${studentId}')">👁 View</button>
-        <small style="display: block; color: #666; margin-top: 5px;">Edit via User Mgmt</small>
+	      <td><strong>${safeUid}</strong></td>
+	      <td>${safeName}</td>
+	      <td>${safeSemester}</td>
+	      <td>${safeSection}</td>
+	      <td>${safeYear}</td>
+	      <td>${safeSgpa}</td>
+	      <td>
+	        <div class="tags">
+	          ${safeDomainTags}
+	        </div>
+	      </td>
+	      <td><span class="tag ${careerGoal === 'Placement' ? 'placement' : 'higher-studies'}">${safeCareerGoal}</span></td>
+	      <td>${safeMentor}</td>
+	      <td>
+	        <button class="btn-sm btn-view" onclick="viewStudent('${studentId}')">👁 View</button>
+	        <small style="display: block; color: #666; margin-top: 5px;">Edit via User Mgmt</small>
       </td>
     `;
         tbody.appendChild(row);
@@ -837,36 +1106,15 @@ function renderStudents() {
 }
 
 function filterStudents() {
-    const search = document.getElementById("studentSearchInput").value.toLowerCase();
-    const domain = document.getElementById("domainFilter").value;
-    const year = document.getElementById("yearFilter").value;
-    const section = document.getElementById("sectionFilter").value;
-    const softSkills = document.getElementById("softSkillsFilter").value;
-    const careerGoal = document.getElementById("careerGoalFilter").value;
+    renderStudents(true);
+}
 
-    const rows = document.querySelectorAll("#studentTableBody tr");
-
-    rows.forEach((row, index) => {
-        const student = students[index];
-        if (!student) return;
-
-        const matchesSearch = !search ||
-            student.firstName.toLowerCase().includes(search) ||
-            student.lastName.toLowerCase().includes(search) ||
-            student.uid.toLowerCase().includes(search);
-
-        const matchesDomain = !domain || student.domain.includes(domain);
-        const matchesYear = !year || student.year.toString() === year;
-        const matchesSection = !section || student.section === section;
-        const matchesSoftSkills = !softSkills || student.softSkillsRating.toString() === softSkills;
-        const matchesCareerGoal = !careerGoal || student.careerGoal === careerGoal;
-
-        if (matchesSearch && matchesDomain && matchesYear && matchesSection && matchesSoftSkills && matchesCareerGoal) {
-            row.style.display = "";
-        } else {
-            row.style.display = "none";
-        }
-    });
+function changeStudentsPage(direction) {
+    const totalPages = Math.max(1, Math.ceil(filteredStudentsData.length / STUDENTS_PAGE_SIZE));
+    const nextPage = currentStudentsPage + direction;
+    if (nextPage < 1 || nextPage > totalPages) return;
+    currentStudentsPage = nextPage;
+    renderStudents(false);
 }
 
 // ========== STUDENT MANAGEMENT FUNCTIONS (DISABLED) ==========
@@ -934,276 +1182,428 @@ async function deleteStudent(userId) {
 // ========== END STUDENT MANAGEMENT FUNCTIONS ==========
 
 function viewStudent(studentId) {
-
-
     const student = students.find(s => s.uid == studentId);
     if (!student) return;
+    const modalRoot = document.getElementById('studentModal');
 
+    const rawStudent = student._rawData || student;
+    const personalInfo = rawStudent.personal_info || student.personal_info || {};
+    const careerObjective = rawStudent.career_objective || student.career_objective || {};
+    const skills = rawStudent.skills || student.skills || {};
+    const swoc = rawStudent.swoc || student.swoc || {};
+    const pastEducation = rawStudent.past_education_records || student.past_education_records || [];
+    const postAdmission = rawStudent.post_admission_records || student.post_admission_records || [];
+    const careerActivities = rawStudent.career_activities || student.career_activities || [];
+    const projects = rawStudent.projects || student.projects || [];
+    const internships = rawStudent.internships || student.internships || [];
+    const participations = rawStudent.cocurricular_participations || student.cocurricular_participations || [];
+    const organizations = rawStudent.cocurricular_organizations || student.cocurricular_organizations || [];
+    const sdpActivities = rawStudent.skill_development_programs || rawStudent.sdp_records || rawStudent.training_records || rawStudent.mooc_records || [];
 
-
-    // Helper function to handle null/undefined values
     const getValue = (value, defaultValue = 'N/A') => {
-        return value !== null && value !== undefined && value !== '' ? value : defaultValue;
+        if (value === null || value === undefined) return defaultValue;
+        if (typeof value === 'string' && value.trim() === '') return defaultValue;
+        return value;
     };
 
-    // Helper function to format date
+    const pickValue = (...values) => values.find((value) => value !== null && value !== undefined && String(value).trim() !== '');
+
+    const setText = (id, value, defaultValue = 'N/A') => {
+        const el = modalRoot ? modalRoot.querySelector(`#${id}`) : document.getElementById(id);
+        if (!el) return;
+        el.textContent = getValue(value, defaultValue);
+    };
+
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
-        try {
-            return new Date(dateString).toLocaleDateString('en-CA'); // YYYY-MM-DD format
-        } catch (e) {
-            return dateString;
-        }
+        const parsedDate = new Date(dateString);
+        if (Number.isNaN(parsedDate.getTime())) return String(dateString);
+        return parsedDate.toLocaleDateString('en-CA');
     };
 
-    // Helper function to format internship duration
+    const formatPercent = (value) => {
+        const normalized = getValue(value);
+        if (normalized === 'N/A') return normalized;
+        const text = String(normalized);
+        return text.endsWith('%') ? text : `${text}%`;
+    };
+
     const formatDuration = (start, end) => {
-        if (!start || !end) return 'N/A';
-        return `${formatDate(start)} to ${formatDate(end)}`;
+        const startDate = formatDate(start);
+        const endDate = formatDate(end);
+        if (startDate === 'N/A' && endDate === 'N/A') return 'N/A';
+        if (startDate === 'N/A') return endDate;
+        if (endDate === 'N/A') return startDate;
+        return `${startDate} to ${endDate}`;
     };
 
-    // Populate the detailed student information
+    const boolToText = (value) => {
+        if (value === true || value === 'true' || value === 1 || value === '1') return 'Yes';
+        if (value === false || value === 'false' || value === 0 || value === '0') return 'No';
+        return 'N/A';
+    };
 
-    document.getElementById("studentFullNam").textContent = getValue(student.fullName)
-    document.getElementById("studentSection").textContent = getValue(student.section);
-    document.getElementById("studentSemester").textContent = getValue(student.semester);
-    document.getElementById("studentUID").textContent = getValue(student.uid);
-    document.getElementById("studentYear").textContent = getValue(student.year);
+    const normalizeActivity = (name) => String(name || '').trim().toLowerCase();
+    const higherExamNames = new Set(['gate', 'gre', 'cat', 'mba cet', 'gmat', 'toefl', 'ielts']);
 
-    // Personal info - now directly from student object (flattened)
-    document.getElementById("studentDOB").textContent = formatDate(student.dob);
-    document.getElementById("studentGender").textContent = getValue(student.gender);
-    document.getElementById("studentMobile").textContent = getValue(student.mobile);
-    document.getElementById("studentPersonalEmail").textContent = getValue(student.email);
-    document.getElementById("studentCollegeEmail").textContent = getValue(student.collegeEmail);
-    document.getElementById("studentLinkedIn").textContent = getValue(student.linkedInId);
-    document.getElementById("studentAddress").textContent = getValue(student.permanentAddress);
-    document.getElementById("emergencyContactName").textContent = getValue(student.emergencyContactName);
-    document.getElementById("emergencyContactNumber").textContent = getValue(student.emergencyContactNumber);
+    const findEducationRecord = (...aliases) => {
+        return pastEducation.find((record) => aliases.includes(String(record.exam_name || record.degree || '').trim().toUpperCase()));
+    };
 
-    // Parent information - now directly from student object (flattened)
-    document.getElementById("fatherName").textContent = getValue(student.fatherName);
-    document.getElementById("fatherMobile").textContent = getValue(student.fatherMobile);
-    document.getElementById("fatherEmail").textContent = getValue(student.fatherEmail);
-    document.getElementById("fatherOccupation").textContent = getValue(student.fatherOccupation);
-    document.getElementById("motherName").textContent = getValue(student.motherName);
-    document.getElementById("motherMobile").textContent = getValue(student.motherMobile);
-    document.getElementById("motherEmail").textContent = getValue(student.motherEmail);
-    document.getElementById("motherOccupation").textContent = getValue(student.motherOccupation);
+    const sscRecord = findEducationRecord('SSC', 'X');
+    const hsscRecord = findEducationRecord('HSSC', 'XII');
+    const diplomaRecord = findEducationRecord('DIPLOMA');
 
-    // Academic information - Before Admission
-    const pastEducation = student.past_education_records || [];
-    const sscRecord = pastEducation.find(record => record.exam_name === 'SSC');
-    const hsscRecord = pastEducation.find(record => record.exam_name === 'HSSC');
+    let aptitudeActivity = null;
+    let gdActivity = null;
+    let piActivity = null;
+    let psychometricActivity = null;
+    let higherExamActivity = null;
+    let otherActivity = null;
 
-    document.getElementById("sscPercentage").textContent = sscRecord ? getValue(sscRecord.percentage + '%') : 'N/A';
-    document.getElementById("sscYear").textContent = sscRecord ? getValue(sscRecord.year_of_passing) : 'N/A';
-    document.getElementById("hsscPercentage").textContent = hsscRecord ? getValue(hsscRecord.percentage + '%') : 'N/A';
-    document.getElementById("hsscYear").textContent = hsscRecord ? getValue(hsscRecord.year_of_passing) : 'N/A';
-
-    // Display all past education records in detail
-    const pastEducationContainer = document.getElementById("pastEducationDetails");
-    if (pastEducationContainer && pastEducation.length > 0) {
-        let pastEducationHTML = '';
-        pastEducation.forEach(record => {
-            pastEducationHTML += `<div class="education-record">
-                <strong>${getValue(record.exam_name)}</strong><br>
-                📊 Percentage: ${getValue(record.percentage + '%')} | 📅 Year: ${getValue(record.year_of_passing)}
-            </div>`;
-        });
-        pastEducationContainer.innerHTML = pastEducationHTML;
-    }
-
-    // Academic information - After Admission
-    const postAdmission = student.post_admission_records || [];
-    const currentSemester = getValue(student.semester, 'N/A');
-
-    // Calculate backlog count and subjects
-    let backlogCount = 0;
-    let backlogSubjects = [];
-
-    if (postAdmission.length == 0) {
-        document.getElementById("sem1SGPA").innerText = "N/A"
-        document.getElementById("sem2SGPA").innerText = "N/A"
-        document.getElementById("sem3SGPA").innerText = "N/A"
-        document.getElementById("sem4SGPA").innerText = "N/A"
-        document.getElementById("sem5SGPA").innerText = "N/A"
-        document.getElementById("sem6SGPA").innerText = "N/A"
-        document.getElementById("sem7SGPA").innerText = "N/A"
-        document.getElementById("sem8SGPA").innerText = "N/A"
-    }
-
-    postAdmission.forEach(record => {
-        if (record.sgpa !== null && record.sgpa !== undefined) {
-            document.getElementById(`sem${record.semester}SGPA`).textContent = record.sgpa;
+    careerActivities.forEach((activity) => {
+        const key = normalizeActivity(activity.activity_name);
+        if (!aptitudeActivity && key === 'aptitude') {
+            aptitudeActivity = activity;
+            return;
         }
+        if (!gdActivity && (key === 'gd' || key.includes('group discussion'))) {
+            gdActivity = activity;
+            return;
+        }
+        if (!piActivity && (key === 'pi' || key.includes('personal interview'))) {
+            piActivity = activity;
+            return;
+        }
+        if (!psychometricActivity && key.includes('psychometric')) {
+            psychometricActivity = activity;
+            return;
+        }
+        if (!higherExamActivity && higherExamNames.has(key)) {
+            higherExamActivity = activity;
+            return;
+        }
+        if (!otherActivity) {
+            otherActivity = activity;
+        }
+    });
 
-        if (record.backlog_subjects && record.backlog_subjects !== 'None' && record.backlog_subjects !== 'N/A') {
-            backlogCount++;
+    const formatList = (value) => {
+        if (Array.isArray(value)) return value.filter(Boolean).join(', ');
+        return value;
+    };
+
+    const photoEl = modalRoot ? modalRoot.querySelector('#studentPhotoPreview') : document.getElementById("studentPhotoPreview");
+    if (photoEl) {
+        const src = pickValue(personalInfo.photo_url, student.photoUrl, rawStudent.image_url) || DEFAULT_PROFILE_ICON;
+        photoEl.src = src;
+        photoEl.onerror = () => {
+            photoEl.src = DEFAULT_PROFILE_ICON;
+        };
+    }
+
+    const deptEl = modalRoot ? modalRoot.querySelector('#studentDepartment') : document.getElementById("studentDepartment");
+    if (deptEl) deptEl.textContent = "Computer Science Engineering";
+    const deptLabelEl = modalRoot ? modalRoot.querySelector('#studentDepartmentLabel') : document.getElementById("studentDepartmentLabel");
+    if (deptLabelEl) deptLabelEl.textContent = "Department of Computer Science Engineering";
+
+    // Personal information
+    setText('studentFullNam', pickValue(rawStudent.full_name, student.fullName));
+    setText('studentSection', pickValue(rawStudent.section, student.section));
+    setText('studentSemester', pickValue(rawStudent.semester, student.semester));
+    setText('studentUID', pickValue(rawStudent.uid, student.uid));
+    setText('studentYear', pickValue(rawStudent.year_of_admission, student.year));
+    setText('studentDOB', formatDate(pickValue(personalInfo.dob, rawStudent.dob, student.dob)));
+    setText('studentGender', pickValue(personalInfo.gender, rawStudent.gender, student.gender));
+    setText('studentBloodGroup', pickValue(personalInfo.blood_group, personalInfo.bloodGroup, rawStudent.blood_group, rawStudent.bloodGroup, student.bloodGroup));
+    setText('studentCategory', pickValue(personalInfo.category, rawStudent.category, student.category));
+    setText('studentAadhar', pickValue(personalInfo.aadhar_number, personalInfo.aadhar_no, rawStudent.aadhar_number, rawStudent.aadharNumber, student.aadharNumber));
+    setText('studentMisUid', pickValue(personalInfo.mis_uid, personalInfo.misUID, rawStudent.mis_uid, rawStudent.misUID, student.misUID));
+    setText('studentMobile', pickValue(personalInfo.mobile_no, rawStudent.mobile, student.mobile));
+    setText('studentPersonalEmail', pickValue(personalInfo.personal_email, rawStudent.personal_email, rawStudent.email, student.email));
+    setText('studentCollegeEmail', pickValue(personalInfo.college_email, rawStudent.college_email, student.collegeEmail));
+    setText('studentLinkedIn', pickValue(personalInfo.linked_in_id, personalInfo.linkedInId, rawStudent.linked_in_id, student.linkedInId));
+    setText('studentGithub', pickValue(personalInfo.github_id, personalInfo.github_url, personalInfo.githubId, rawStudent.github_id, rawStudent.githubId, student.githubId));
+    setText('studentAddress', pickValue(personalInfo.permanent_address, rawStudent.permanent_address, student.permanentAddress));
+    setText('studentPresentAddress', pickValue(personalInfo.present_address, personalInfo.current_address, rawStudent.present_address, rawStudent.presentAddress, student.presentAddress));
+
+    const guardianName = pickValue(personalInfo.emergency_contact_name, personalInfo.guardian_name, rawStudent.guardian_name, student.guardianName, student.emergencyContactName);
+    const guardianMobile = pickValue(personalInfo.emergency_contact_number, personalInfo.guardian_mobile, rawStudent.guardian_mobile, student.guardianMobile, student.emergencyContactNumber);
+    const guardianEmail = pickValue(personalInfo.emergency_contact_email, personalInfo.guardian_email, rawStudent.guardian_email, student.guardianEmail);
+    setText('studentGuardianName', guardianName);
+    setText('studentGuardianMobile', guardianMobile);
+    setText('studentGuardianEmail', guardianEmail);
+    setText('parentGuardianName', guardianName);
+    setText('parentGuardianMobile', guardianMobile);
+    setText('parentGuardianEmail', guardianEmail);
+
+    // Parent information
+    setText('fatherName', pickValue(personalInfo.father_name, rawStudent.father_name, student.fatherName));
+    setText('fatherMobile', pickValue(personalInfo.father_mobile_no, rawStudent.father_mobile_no, student.fatherMobile));
+    setText('fatherEmail', pickValue(personalInfo.father_email, rawStudent.father_email, student.fatherEmail));
+    setText('fatherOccupation', pickValue(personalInfo.father_occupation, rawStudent.father_occupation, student.fatherOccupation));
+    setText('motherName', pickValue(personalInfo.mother_name, rawStudent.mother_name, student.motherName));
+    setText('motherMobile', pickValue(personalInfo.mother_mobile_no, rawStudent.mother_mobile_no, student.motherMobile));
+    setText('motherEmail', pickValue(personalInfo.mother_email, rawStudent.mother_email, student.motherEmail));
+    setText('motherOccupation', pickValue(personalInfo.mother_occupation, rawStudent.mother_occupation, student.motherOccupation));
+
+    // Academic information - before admission
+    setText('sscBoard', pickValue(sscRecord?.board, sscRecord?.education_board, sscRecord?.institution));
+    setText('sscPercentage', sscRecord ? formatPercent(sscRecord.percentage) : 'N/A');
+    setText('sscYear', sscRecord ? getValue(sscRecord.year_of_passing) : 'N/A');
+    setText('hsscBoard', pickValue(hsscRecord?.board, hsscRecord?.education_board, hsscRecord?.institution));
+    setText('hsscPercentage', hsscRecord ? formatPercent(hsscRecord.percentage) : 'N/A');
+    setText('hsscYear', hsscRecord ? getValue(hsscRecord.year_of_passing) : 'N/A');
+    setText('diplomaBoard', pickValue(diplomaRecord?.board, diplomaRecord?.education_board, diplomaRecord?.institution));
+    setText('diplomaPercentage', diplomaRecord ? formatPercent(diplomaRecord.percentage) : 'N/A');
+    setText('diplomaYear', diplomaRecord ? getValue(diplomaRecord.year_of_passing) : 'N/A');
+    setText('entranceExamType', pickValue(rawStudent.entrance_exam_type, rawStudent.entranceExamType));
+    setText('entranceExamScore', pickValue(rawStudent.entrance_exam_score, rawStudent.entranceExamScore));
+    setText('entranceExamDate', formatDate(pickValue(rawStudent.entrance_exam_date, rawStudent.entranceExamDate)));
+    setText('otherExamDetails', pickValue(rawStudent.other_exam_details, rawStudent.otherExamDetails));
+
+    const pastEducationContainer = modalRoot ? modalRoot.querySelector('#pastEducationDetails') : document.getElementById("pastEducationDetails");
+    if (pastEducationContainer) {
+        if (pastEducation.length > 0) {
+            let pastEducationHTML = '';
+            pastEducation.forEach((record) => {
+                pastEducationHTML += `<div class="education-record">
+                    <strong>${getValue(record.exam_name || record.degree)}</strong><br>
+                    Percentage: ${formatPercent(record.percentage)} | Year: ${getValue(record.year_of_passing)}
+                </div>`;
+            });
+            pastEducationContainer.innerHTML = pastEducationHTML;
+        } else {
+            pastEducationContainer.innerHTML = '<p>No past education records available.</p>';
+        }
+    }
+
+    // Academic information - after admission
+    for (let sem = 1; sem <= 8; sem++) {
+        setText(`sem${sem}SGPA`, 'N/A');
+    }
+
+    let backlogCount = 0;
+    const backlogSubjects = [];
+    postAdmission.forEach((record) => {
+        if (record?.semester >= 1 && record?.semester <= 8) {
+            setText(`sem${record.semester}SGPA`, getValue(record.sgpa));
+        }
+        if (record?.backlog_subjects && record.backlog_subjects !== 'None' && record.backlog_subjects !== 'N/A') {
+            backlogCount += 1;
             backlogSubjects.push(`Sem ${record.semester}: ${record.backlog_subjects}`);
         }
     });
 
-    // Display all semester-wise performance records
-    const semesterPerformanceContainer = document.getElementById("semesterPerformanceDetails");
-    if (semesterPerformanceContainer && postAdmission.length > 0) {
-        let semesterHTML = '';
-        postAdmission.forEach(record => {
-            const backlogInfo = record.backlog_subjects && record.backlog_subjects !== 'None' && record.backlog_subjects !== 'N/A'
-                ? ` | 📚 Backlogs: ${record.backlog_subjects}` : '';
-            semesterHTML += `<div class="semester-record">
-                <strong>Semester ${record.semester}</strong><br>
-                📊 SGPA: ${getValue(record.sgpa)}${backlogInfo}
-            </div>`;
-        });
-        semesterPerformanceContainer.innerHTML = semesterHTML;
+    setText('currentSemester', pickValue(rawStudent.semester, student.semester));
+    setText('backlogCount', backlogCount);
+    setText('backlogSubjects', backlogSubjects.length > 0 ? backlogSubjects.join('; ') : 'None');
+    setText('currentSGPA', typeof student.sgpa === 'number' ? student.sgpa.toFixed(2) : getValue(student.sgpa));
+    setText('currentCGPA', typeof student.cgpa === 'number' ? student.cgpa.toFixed(2) : getValue(student.cgpa));
+
+    const semesterPerformanceContainer = modalRoot ? modalRoot.querySelector('#semesterPerformanceDetails') : document.getElementById("semesterPerformanceDetails");
+    if (semesterPerformanceContainer) {
+        if (postAdmission.length > 0) {
+            let semesterHTML = '';
+            postAdmission.forEach((record) => {
+                const backlogInfo = record.backlog_subjects && record.backlog_subjects !== 'None' && record.backlog_subjects !== 'N/A'
+                    ? ` | Backlogs: ${record.backlog_subjects}` : '';
+                semesterHTML += `<div class="semester-record">
+                    <strong>Semester ${record.semester}</strong><br>
+                    SGPA: ${getValue(record.sgpa)}${backlogInfo}
+                </div>`;
+            });
+            semesterPerformanceContainer.innerHTML = semesterHTML;
+        } else {
+            semesterPerformanceContainer.innerHTML = '<p>No semester performance records available.</p>';
+        }
     }
 
-    document.getElementById("currentSemester").textContent = currentSemester;
-    document.getElementById("backlogCount").textContent = backlogCount;
-    document.getElementById("backlogSubjects").textContent = backlogSubjects.length > 0 ?
-        backlogSubjects.join('; ') : 'None';
+    // Career development activities
+    setText('aptitudeName', aptitudeActivity?.activity_name);
+    setText('aptitudeScore', aptitudeActivity?.score_rank);
+    setText('aptitudeDate', formatDate(aptitudeActivity?.exam_date));
 
-    // Display current SGPA and CGPA prominently
-    document.getElementById("currentSGPA").textContent = student.sgpa ? student.sgpa.toFixed(2) : 'N/A';
-    document.getElementById("currentCGPA").textContent = student.cgpa ? student.cgpa.toFixed(2) : 'N/A';
+    setText('gdName', gdActivity?.activity_name);
+    setText('gdScore', gdActivity?.score_rank);
+    setText('gdDate', formatDate(gdActivity?.exam_date));
 
-    // Performance in Career Development Activities
-    const careerActivities = student.career_activities || [];
+    setText('piName', piActivity?.activity_name);
+    setText('piScore', piActivity?.score_rank);
+    setText('piDate', formatDate(piActivity?.exam_date));
 
-    if (careerActivities.length == 0) {
+    setText('psychometricName', psychometricActivity?.activity_name);
+    setText('psychometricScore', psychometricActivity?.score_rank);
+    setText('psychometricDate', formatDate(psychometricActivity?.exam_date));
 
+    setText('higherExamType', higherExamActivity?.activity_name);
+    setText('higherExamScore', higherExamActivity?.score_rank);
+    setText('higherExamDate', formatDate(higherExamActivity?.exam_date));
+
+    setText('otherExamName', otherActivity?.activity_name);
+    setText('otherExamScore', otherActivity?.score_rank);
+    setText('otherExamDate', formatDate(otherActivity?.exam_date));
+
+    if (getValue((modalRoot ? modalRoot.querySelector('#entranceExamType') : document.getElementById('entranceExamType'))?.textContent) === 'N/A') {
+        setText('entranceExamType', higherExamActivity?.activity_name);
+    }
+    if (getValue((modalRoot ? modalRoot.querySelector('#entranceExamScore') : document.getElementById('entranceExamScore'))?.textContent) === 'N/A') {
+        setText('entranceExamScore', higherExamActivity?.score_rank);
+    }
+    if (getValue((modalRoot ? modalRoot.querySelector('#entranceExamDate') : document.getElementById('entranceExamDate'))?.textContent) === 'N/A') {
+        setText('entranceExamDate', formatDate(higherExamActivity?.exam_date));
     }
 
-    if (careerActivities.length > 0) {
-        document.getElementById("aptitudeScore").textContent = getValue(careerActivities[0].score_rank);
-        document.getElementById("aptitudeDate").textContent = formatDate(careerActivities[0].exam_date);
-
-        if (careerActivities.length > 1) {
-            document.getElementById("cocubesScore").textContent = getValue(careerActivities[1].score_rank);
-            document.getElementById("cocubesDate").textContent = formatDate(careerActivities[1].exam_date);
-        }
-
-        if (careerActivities.length > 2) {
-            document.getElementById("gateScore").textContent = getValue(careerActivities[2].score_rank);
-            document.getElementById("gateDate").textContent = formatDate(careerActivities[2].exam_date);
-        }
-
-        // Display all career activities in detail
-        const careerActivitiesContainer = document.getElementById("allCareerActivitiesDetails");
-        if (careerActivitiesContainer && careerActivities.length > 0) {
+    const careerActivitiesContainer = modalRoot ? modalRoot.querySelector('#allCareerActivitiesDetails') : document.getElementById("allCareerActivitiesDetails");
+    if (careerActivitiesContainer) {
+        if (careerActivities.length > 0) {
             let careerActivitiesHTML = '';
             careerActivities.forEach((activity, index) => {
                 careerActivitiesHTML += `<div class="career-activity-record">
                     <strong>Activity ${index + 1}: ${getValue(activity.activity_name)}</strong><br>
-                    📊 Score/Rank: ${getValue(activity.score_rank)} | 📅 Date: ${formatDate(activity.exam_date)}
+                    Score/Rank: ${getValue(activity.score_rank)} | Date: ${formatDate(activity.exam_date)}
                 </div>`;
             });
             careerActivitiesContainer.innerHTML = careerActivitiesHTML;
+        } else {
+            careerActivitiesContainer.innerHTML = '<p>No career activities available.</p>';
         }
     }
 
-    // Project and Internship Details
-    const projects = student.projects || [];
-    const internships = student.internships || [];
+    // Project and internship details
+    const miniProject = projects[0];
+    const majorProject = projects[1];
+    const ubaProject = projects[2];
 
-    if (projects.length > 0) {
-        document.getElementById("project1Title").textContent = getValue(projects[0].title);
-        document.getElementById("project1Description").textContent = getValue(projects[0].description);
+    setText('project1Title', pickValue(miniProject?.title, miniProject?.name));
+    setText('project1Description', pickValue(miniProject?.description, miniProject?.guide, miniProject?.mentor));
+    setText('project2Title', pickValue(majorProject?.title, majorProject?.name));
+    setText('project2Description', pickValue(majorProject?.description, majorProject?.guide, majorProject?.mentor));
+    setText('ubaProjectTitle', pickValue(ubaProject?.title, ubaProject?.name));
+    setText('ubaProjectDescription', pickValue(ubaProject?.description, ubaProject?.guide, ubaProject?.mentor));
+
+    const internship1 = internships[0] || {};
+    const internship2 = internships[1] || {};
+
+    setText('internship1Company', internship1.company_name);
+    setText('internship1Title', pickValue(internship1.title, internship1.role, internship1.position));
+    setText('internship1Domain', internship1.domain);
+    setText('internship1Description', internship1.description);
+    setText('internship1Type', internship1.internship_type);
+    setText('internship1Paid', internship1.paid_unpaid);
+    setText('internship1Duration', formatDuration(internship1.start_date, internship1.end_date));
+
+    setText('internship2Company', internship2.company_name);
+    setText('internship2Title', pickValue(internship2.title, internship2.role, internship2.position));
+    setText('internship2Domain', internship2.domain);
+    setText('internship2Description', internship2.description);
+    setText('internship2Type', internship2.internship_type);
+    setText('internship2Paid', internship2.paid_unpaid);
+    setText('internship2Duration', formatDuration(internship2.start_date, internship2.end_date));
+
+    const projectsContainer = modalRoot ? modalRoot.querySelector('#allProjectsDetails') : document.getElementById("allProjectsDetails");
+    if (projectsContainer) {
+        if (projects.length > 0) {
+            let projectsHTML = '';
+            projects.forEach((project, index) => {
+                projectsHTML += `<div class="project-record">
+                    <strong>Project ${index + 1}: ${getValue(project.title || project.name)}</strong><br>
+                    Guide/Description: ${getValue(project.description || project.guide)}
+                </div>`;
+            });
+            projectsContainer.innerHTML = projectsHTML;
+        } else {
+            projectsContainer.innerHTML = '<p>No project records available.</p>';
+        }
     }
 
-    if (projects.length > 1) {
-        document.getElementById("project2Title").textContent = getValue(projects[1].title);
-        document.getElementById("project2Description").textContent = getValue(projects[1].description);
+    const internshipsContainer = modalRoot ? modalRoot.querySelector('#allInternshipsDetails') : document.getElementById("allInternshipsDetails");
+    if (internshipsContainer) {
+        if (internships.length > 0) {
+            let internshipsHTML = '';
+            internships.forEach((internship, index) => {
+                const duration = formatDuration(internship.start_date, internship.end_date);
+                internshipsHTML += `<div class="internship-record">
+                    <strong>Internship ${index + 1}: ${getValue(internship.company_name)}</strong><br>
+                    Domain: ${getValue(internship.domain)} | Type: ${getValue(internship.internship_type)} | Paid: ${getValue(internship.paid_unpaid)}<br>
+                    Duration: ${duration}
+                </div>`;
+            });
+            internshipsContainer.innerHTML = internshipsHTML;
+        } else {
+            internshipsContainer.innerHTML = '<p>No internship records available.</p>';
+        }
     }
 
-    // Display all projects in detail
-    const projectsContainer = document.getElementById("allProjectsDetails");
-    if (projectsContainer && projects.length > 0) {
-        let projectsHTML = '';
-        projects.forEach((project, index) => {
-            projectsHTML += `<div class="project-record">
-                <strong>Project ${index + 1}: ${getValue(project.title)}</strong><br>
-                📝 Description: ${getValue(project.description)}
-            </div>`;
-        });
-        projectsContainer.innerHTML = projectsHTML;
-    }
-
-    if (internships.length > 0) {
-        document.getElementById("internship1Company").textContent = getValue(internships[0].company_name);
-        document.getElementById("internship1Domain").textContent = getValue(internships[0].domain);
-        document.getElementById("internship1Type").textContent = getValue(internships[0].internship_type);
-        document.getElementById("internship1Paid").textContent = getValue(internships[0].paid_unpaid);
-        document.getElementById("internship1Duration").textContent = formatDuration(internships[0].start_date, internships[0].end_date);
-    }
-
-    if (internships.length > 1) {
-        document.getElementById("internship2Company").textContent = getValue(internships[1].company_name);
-        document.getElementById("internship2Domain").textContent = getValue(internships[1].domain);
-        document.getElementById("internship2Type").textContent = getValue(internships[1].internship_type);
-        document.getElementById("internship2Paid").textContent = getValue(internships[1].paid_unpaid);
-        document.getElementById("internship2Duration").textContent = formatDuration(internships[1].start_date, internships[1].end_date);
-    }
-
-    // Display all internships in detail
-    const internshipsContainer = document.getElementById("allInternshipsDetails");
-    if (internshipsContainer && internships.length > 0) {
-        let internshipsHTML = '';
-        internships.forEach((internship, index) => {
-            const duration = formatDuration(internship.start_date, internship.end_date);
-            internshipsHTML += `<div class="internship-record">
-                <strong>Internship ${index + 1}: ${getValue(internship.company_name)}</strong><br>
-                🏢 Company: ${getValue(internship.company_name)} | 🌐 Domain: ${getValue(internship.domain)}<br>
-                📋 Type: ${getValue(internship.internship_type)} | 💰 Paid: ${getValue(internship.paid_unpaid)}<br>
-                📅 Duration: ${duration}
-            </div>`;
-        });
-        internshipsContainer.innerHTML = internshipsHTML;
-    }
-
-    // Co-Curricular Activities
-    const participations = student.cocurricular_participations || [];
-    const organizations = student.cocurricular_organizations || [];
+    // Co-curricular activities
+    const activityLists = modalRoot ? modalRoot.querySelectorAll('.activity-list') : document.querySelectorAll('#studentModal .activity-list');
 
     let participationHTML = '';
-    participations.forEach(activity => {
-        participationHTML += `<p><strong>${getValue(activity.name)}</strong><br>
-            📅 Date: ${formatDate(activity.date)} | 🏆 Level: ${getValue(activity.level)} | 🎖️ Awards: ${getValue(activity.awards)}</p>`;
+    participations.forEach((activity) => {
+        participationHTML += `<p><strong>${getValue(activity.name)}</strong><br>Date: ${formatDate(activity.date)} | Level: ${getValue(activity.level)} | Awards: ${getValue(activity.awards)}</p>`;
     });
-    document.querySelector(".activity-list").innerHTML = participationHTML || '<p>No participation activities</p>';
+    if (activityLists[0]) {
+        activityLists[0].innerHTML = participationHTML || '<p>No participation activities</p>';
+    }
 
     let organizationHTML = '';
-    organizations.forEach(activity => {
-        organizationHTML += `<p><strong>${getValue(activity.name)}</strong><br>
-            📅 Date: ${formatDate(activity.date)} | 🏆 Level: ${getValue(activity.level)} | 💬 Remark: ${getValue(activity.remark)}</p>`;
+    organizations.forEach((activity) => {
+        organizationHTML += `<p><strong>${getValue(activity.name)}</strong><br>Date: ${formatDate(activity.date)} | Level: ${getValue(activity.level)} | Remark: ${getValue(activity.remark)}</p>`;
     });
-    document.querySelectorAll(".activity-list")[1].innerHTML = organizationHTML || '<p>No organized activities</p>';
+    if (activityLists[1]) {
+        activityLists[1].innerHTML = organizationHTML || '<p>No organized activities</p>';
+    }
 
-    // SWOC Analysis - now directly from student object (flattened)
-    document.getElementById("strengths").textContent = getValue(student.strengths);
-    document.getElementById("weaknesses").textContent = getValue(student.weaknesses);
-    document.getElementById("opportunities").textContent = getValue(student.opportunities);
-    document.getElementById("challenges").textContent = getValue(student.challenges);
+    let sdpHTML = '';
+    if (Array.isArray(sdpActivities)) {
+        sdpActivities.forEach((record, index) => {
+            const title = pickValue(record.title, record.name, `Program ${index + 1}`);
+            const agency = pickValue(record.agency, record.platform, record.provider);
+            const duration = pickValue(record.duration, record.hours);
+            const dateRange = formatDuration(record.date_from || record.start_date, record.date_to || record.end_date);
+            const details = [agency, duration ? `${duration} hrs` : '', dateRange !== 'N/A' ? dateRange : ''].filter(Boolean).join(' | ');
+            sdpHTML += `<p><strong>${getValue(title)}</strong>${details ? `<br>${details}` : ''}</p>`;
+        });
+    }
+    if (activityLists[2]) {
+        activityLists[2].innerHTML = sdpHTML || '<p>No skill development records</p>';
+    }
 
-    // Career Objectives and Skills - now directly from student object (flattened)
-    document.getElementById("careerObjectives").textContent = getValue(student.careerGoal);
-    document.getElementById("careerDetails").textContent = getValue(student.careerDetails);
-    document.getElementById("clarityPreparedness").textContent = getValue(student.clarityPreparedness);
-    document.getElementById("campusPlacement").textContent = student.interestedInCampusPlacement ? "Yes" : "No";
-    document.getElementById("campusPlacementReasons").textContent = getValue(student.campusPlacementReasons);
-    document.getElementById("programmingLanguages").textContent = getValue(student.programmingLanguages);
-    document.getElementById("technologiesFrameworks").textContent = getValue(student.technologiesFrameworks);
-    document.getElementById("familiarToolsPlatforms").textContent = getValue(student.familiarToolsPlatforms);
-    document.getElementById("expectations").textContent = getValue(student.expectations);
+    // SWOC
+    setText('strengths', pickValue(swoc.strengths, student.strengths));
+    setText('weaknesses', pickValue(swoc.weaknesses, student.weaknesses));
+    setText('opportunities', pickValue(swoc.opportunities, student.opportunities));
+    setText('challenges', pickValue(swoc.challenges, student.challenges));
 
-    // Domain of interest tags
-    const domainContainer = document.getElementById("domainOfInterest");
-    if (student.domain) {
-        const domains = student.domain.split(',').map(d => d.trim());
-        domainContainer.innerHTML = domains.map(d => `<span class="tag">${d}</span>`).join('');
-    } else {
-        domainContainer.innerHTML = '<span class="empty-value">N/A</span>';
+    // Career objective and skills
+    setText('careerObjectives', pickValue(careerObjective.career_goal, student.careerGoal));
+    setText('placementType', pickValue(careerObjective.placement_type, careerObjective.placementType, rawStudent.placement_type, rawStudent.placementType));
+    setText('higherStudiesType', pickValue(careerObjective.higher_studies_type, careerObjective.higherStudiesType, rawStudent.higher_studies_type, rawStudent.higherStudiesType));
+    setText('careerDetails', pickValue(careerObjective.specific_details, student.careerDetails));
+    setText('clarityPreparedness', pickValue(careerObjective.clarity_preparedness, student.clarityPreparedness));
+    setText('campusPlacement', boolToText(pickValue(careerObjective.interested_in_campus_placement, student.interestedInCampusPlacement)));
+    setText('campusPlacementReasons', pickValue(careerObjective.campus_placement_reasons, student.campusPlacementReasons));
+    setText('areasOfInterest', formatList(pickValue(careerObjective.areas_of_interest, careerObjective.areasOfInterest, rawStudent.areas_of_interest, rawStudent.areasOfInterest)));
+    setText('mentorInterest', pickValue(careerObjective.mentor_interest, careerObjective.mentorInterest, rawStudent.mentor_interest, rawStudent.mentorInterest));
+    setText('technicalSoftSkills', pickValue(skills.technical_soft_skills, skills.technicalSoftSkills, rawStudent.technical_soft_skills, rawStudent.technicalSoftSkills));
+    setText('additionalTechnicalSkills', pickValue(skills.additional_technical_skills, skills.additionalTechnicalSkills, rawStudent.additional_technical_skills, rawStudent.additionalTechnicalSkills));
+    setText('additionalSoftSkills', pickValue(skills.additional_soft_skills, skills.additionalSoftSkills, rawStudent.additional_soft_skills, rawStudent.additionalSoftSkills));
+    setText('programmingLanguages', pickValue(skills.programming_languages, student.programmingLanguages));
+    setText('technologiesFrameworks', pickValue(skills.technologies_frameworks, student.technologiesFrameworks));
+    setText('familiarToolsPlatforms', pickValue(skills.familiar_tools_platforms, student.familiarToolsPlatforms));
+    setText('expectations', pickValue(careerObjective.institution_expectations, careerObjective.institutionExpectations, skills.expectations, student.expectations));
+
+    const domainContainer = modalRoot ? modalRoot.querySelector('#domainOfInterest') : document.getElementById("domainOfInterest");
+    const domainsText = pickValue(skills.domains_of_interest, student.domain);
+    if (domainContainer) {
+        if (domainsText && domainsText !== 'N/A') {
+            const domains = String(domainsText).split(',').map(d => d.trim()).filter(Boolean);
+            domainContainer.innerHTML = domains.length > 0
+                ? domains.map(d => `<span class="tag">${d}</span>`).join('')
+                : '<span class="empty-value">N/A</span>';
+        } else {
+            domainContainer.innerHTML = '<span class="empty-value">N/A</span>';
+        }
     }
 
     // Show the modal
@@ -1282,8 +1682,8 @@ function extractStudentData(modal) {
         collegeEmail: getValue('studentCollegeEmail'),
         linkedin: getValue('studentLinkedIn'),
         address: getValue('studentAddress'),
-        emergencyContactName: getValue('emergencyContactName'),
-        emergencyContactNumber: getValue('emergencyContactNumber'),
+        emergencyContactName: getValue('studentGuardianName'),
+        emergencyContactNumber: getValue('studentGuardianMobile'),
 
         // Parent's Information
         fatherName: getValue('fatherName'),
@@ -1319,10 +1719,10 @@ function extractStudentData(modal) {
         // Career Development Activities
         aptitudeScore: getValue('aptitudeScore'),
         aptitudeDate: getValue('aptitudeDate'),
-        cocubesScore: getValue('cocubesScore'),
-        cocubesDate: getValue('cocubesDate'),
-        gateScore: getValue('gateScore'),
-        gateDate: getValue('gateDate'),
+        cocubesScore: getValue('gdScore'),
+        cocubesDate: getValue('gdDate'),
+        gateScore: getValue('piScore'),
+        gateDate: getValue('piDate'),
         otherExamName: getValue('otherExamName'),
         otherExamScore: getValue('otherExamScore'),
         otherExamDate: getValue('otherExamDate'),
@@ -1386,8 +1786,8 @@ function generatePDFContent(data) {
                     <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>College Email ID</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.collegeEmail}</td></tr>
                     <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>LinkedIn ID</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.linkedin}</td></tr>
                     <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Permanent Address</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.address}</td></tr>
-                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Emergency Contact Name</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.emergencyContactName}</td></tr>
-                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Emergency Contact Number</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.emergencyContactNumber}</td></tr>
+                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Local Guardian Name</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.emergencyContactName}</td></tr>
+                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Local Guardian Mobile</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.emergencyContactNumber}</td></tr>
                 </table>
             </div>
             
@@ -1439,10 +1839,10 @@ function generatePDFContent(data) {
                 <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
                     <tr><td style="border: 1px solid #ddd; padding: 8px; width: 30%;"><strong>Aptitude Score/Rank</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.aptitudeScore}</td></tr>
                     <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Aptitude Date</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.aptitudeDate}</td></tr>
-                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Cocubes Score/Rank</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.cocubesScore}</td></tr>
-                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Cocubes Date</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.cocubesDate}</td></tr>
-                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Gate Score/Rank</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.gateScore}</td></tr>
-                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Gate Date</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.gateDate}</td></tr>
+                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Group Discussion Score/Outcome</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.cocubesScore}</td></tr>
+                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Group Discussion Date</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.cocubesDate}</td></tr>
+                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Personal Interview Score/Outcome</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.gateScore}</td></tr>
+                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Personal Interview Date</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.gateDate}</td></tr>
                     <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Other Exam Name</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.otherExamName}</td></tr>
                     <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Other Exam Score/Rank</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.otherExamScore}</td></tr>
                     <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Other Exam Date</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.otherExamDate}</td></tr>
@@ -1452,10 +1852,10 @@ function generatePDFContent(data) {
             <div style="margin: 20px 0;">
                 <h2 style="color: #1e40af; background: #f0f5ff; padding: 10px; border-radius: 5px;">Project and Internship Details</h2>
                 <table style="width: 100%; border-collapse: collapse; margin: 10px 0;">
-                    <tr><td style="border: 1px solid #ddd; padding: 8px; width: 30%;"><strong>Project 1 Title</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.project1Title}</td></tr>
-                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Project 1 Description</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.project1Description}</td></tr>
-                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Project 2 Title</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.project2Title}</td></tr>
-                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Project 2 Description</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.project2Description}</td></tr>
+                    <tr><td style="border: 1px solid #ddd; padding: 8px; width: 30%;"><strong>Mini Project Title</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.project1Title}</td></tr>
+                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Mini Project Guide</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.project1Description}</td></tr>
+                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Major Project Title</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.project2Title}</td></tr>
+                    <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Major Project Guide</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.project2Description}</td></tr>
                     <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Internship 1 Company</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.internship1Company}</td></tr>
                     <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Internship 1 Domain</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.internship1Domain}</td></tr>
                     <tr><td style="border: 1px solid #ddd; padding: 8px;"><strong>Internship 1 Type</strong></td><td style="border: 1px solid #ddd; padding: 8px;">${data.internship1Type}</td></tr>
@@ -2367,14 +2767,14 @@ async function logout() {
 
 // Change Password Modal Functions
 function showChangePasswordModal() {
-    document.getElementById("changePasswordModal").style.display = "flex";
+    openModal("changePasswordModal");
     document.getElementById("adminChangePasswordForm").reset();
     document.getElementById("changePasswordMessage").style.display = "none";
     document.getElementById("passwordStrength").style.display = "none";
 }
 
 function closeChangePasswordModal() {
-    document.getElementById("changePasswordModal").style.display = "none";
+    closeModal("changePasswordModal", true);
     document.getElementById("adminChangePasswordForm").reset();
     document.getElementById("changePasswordMessage").style.display = "none";
     document.getElementById("passwordStrength").style.display = "none";
