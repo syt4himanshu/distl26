@@ -1,18 +1,15 @@
 import os
 import string
-import logging
 from datetime import datetime, date
 import random
+from pathlib import Path
+import cloudinary
+import cloudinary.uploader
 from flask import Flask, Blueprint, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from flask_talisman import Talisman
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from flask_migrate import Migrate
 from sqlalchemy import Date
 from sqlalchemy.orm import joinedload
-from functools import wraps
 from flask_jwt_extended import (
     JWTManager, create_access_token,
     jwt_required, get_jwt_identity
@@ -21,143 +18,97 @@ from flask_jwt_extended import (
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import timedelta
 import jwt
-import cloudinary
-import cloudinary.uploader
 from dotenv import load_dotenv
-from werkzeug.exceptions import HTTPException
 
 # --------------------------------------
 # App & Config
 # --------------------------------------
-load_dotenv()
-
-logging.basicConfig(
-    level=os.getenv("LOG_LEVEL", "INFO"),
-    format="%(asctime)s %(levelname)s %(name)s %(message)s",
-)
-logger = logging.getLogger(__name__)
-
-
-def require_env(var_name):
-    value = os.environ.get(var_name)
-    if not value:
-        raise RuntimeError(f"Missing required environment variable: {var_name}")
-    return value
-
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR.parent.parent / ".env")
+load_dotenv(BASE_DIR / ".env")
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = require_env("DATABASE_URL")
-app.config["SECRET_KEY"] = require_env("SECRET_KEY")
-app.config["JWT_SECRET_KEY"] = require_env("JWT_SECRET_KEY")
-
+database_url = os.getenv("DATABASE_URL", "").strip()
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url or "sqlite:///university.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-key")
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
-app.config["SESSION_COOKIE_SECURE"] = True
-app.config["SESSION_COOKIE_HTTPONLY"] = True
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_pre_ping": True,
-    "pool_recycle": 300,
-    "pool_size": int(os.environ.get("DB_POOL_SIZE", "5")),
-    "max_overflow": int(os.environ.get("DB_MAX_OVERFLOW", "2")),
-}
 
 db = SQLAlchemy(app)
-jwt_manager = JWTManager(app)
-migrate = Migrate(app, db)
-limiter = Limiter(
-    key_func=get_remote_address,
-    app=app,
-    default_limits=["200 per hour"],
-)
-force_https = os.environ.get("FORCE_HTTPS", "false").lower() == "true"
-Talisman(
-    app,
-    content_security_policy=None,
-    force_https=force_https,
-)
+jwt = JWTManager(app)
 
-cloudinary.config(
-    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
-    api_key=os.getenv("CLOUDINARY_API_KEY"),
-    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
-)
-
-from sqlalchemy import text
-
-# ============================================
-# CORS CONFIGURATION
-# ============================================
-allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
-ALLOWED_ORIGINS = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
-
-# Backward compatibility for older env var while still supporting local dev ports.
-legacy_allowed_origin = os.getenv("ALLOWED_ORIGIN", "").strip()
-if legacy_allowed_origin:
-    ALLOWED_ORIGINS.append(legacy_allowed_origin)
-
-# Ignore placeholder values commonly left in .env templates.
-ALLOWED_ORIGINS = [
-    origin for origin in ALLOWED_ORIGINS
-    if "your-frontend-domain.com" not in origin
-]
-
-allow_local_dev_origins = os.getenv("ALLOW_LOCAL_DEV_ORIGINS", "true").lower() == "true"
-if allow_local_dev_origins:
-    ALLOWED_ORIGINS.extend([
-        r"http://localhost:\d+",
-        r"http://127\.0\.0\.1:\d+",
-    ])
-
-if not ALLOWED_ORIGINS:
-    ALLOWED_ORIGINS = [
-        r"http://localhost:\d+",
-        r"http://127\.0\.0\.1:\d+",
+CLOUDINARY_READY = all(
+    [
+        os.getenv("CLOUDINARY_CLOUD_NAME"),
+        os.getenv("CLOUDINARY_API_KEY"),
+        os.getenv("CLOUDINARY_API_SECRET"),
     ]
-
-CORS(
-    app,
-    resources={r"/*": {"origins": ALLOWED_ORIGINS}},
-    supports_credentials=True,
-    allow_headers=["Content-Type", "Authorization"],
-    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 )
+if CLOUDINARY_READY:
+    cloudinary.config(
+        cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+        api_key=os.getenv("CLOUDINARY_API_KEY"),
+        api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+        secure=True,
+    )
+# CORS configuration
+from flask_cors import CORS
 
-logger.info("CORS enabled for origins: %s", ALLOWED_ORIGINS)
-logger.info("HTTPS enforcement (Flask-Talisman force_https): %s", force_https)
+# Enable CORS for all routes
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+
+
+# Test endpoint to verify server is working
+@app.route("/test", methods=["GET", "OPTIONS"])
+def test_endpoint():
+    if request.method == "OPTIONS":
+        response = jsonify({"message": "OK"})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        return response
+    return jsonify({"message": "Server is running!"})
+
+# Simple CORS test endpoint
+@app.route("/cors-test", methods=["GET", "POST", "OPTIONS"])
+def cors_test():
+    if request.method == "OPTIONS":
+        response = jsonify({"message": "CORS preflight OK"})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        return response
+    return jsonify({"message": "CORS test successful", "method": request.method})
 
 # Health check endpoint
 @app.route("/health", methods=["GET", "OPTIONS"])
 def health_check():
+    if request.method == "OPTIONS":
+        response = jsonify({"status": "healthy"})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        return response
     return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
 
 # Error handlers
 @app.errorhandler(404)
 def not_found(error):
     response = jsonify({"error": "Not found"})
+    response.headers.add('Access-Control-Allow-Origin', '*')
     return response, 404
 
 @app.errorhandler(500)
 def internal_error(error):
-    logger.exception("Unhandled internal server error")
     response = jsonify({"error": "Internal server error"})
+    response.headers.add('Access-Control-Allow-Origin', '*')
     return response, 500
-
-
-@app.errorhandler(HTTPException)
-def handle_http_exception(error):
-    logger.warning("HTTP error %s at %s", error.code, request.path)
-    return jsonify({"error": error.description}), error.code
-
-
-@app.errorhandler(Exception)
-def handle_unexpected_exception(error):
-    logger.exception("Unhandled exception at %s", request.path)
-    return jsonify({"error": "Internal server error"}), 500
-
-# ============================================
-# MODELS
-# ============================================
+# --------------------------------------
+# Models
+# --------------------------------------
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(120), unique=True, nullable=False)
@@ -169,6 +120,8 @@ class User(db.Model):
     faculty_profile = db.relationship("Faculty", backref="user", uselist=False, cascade="all, delete-orphan")
 
     def check_password(self, password):
+        print(self.password_hash)
+        print(password)
         return check_password_hash(self.password_hash, password)
 
 
@@ -177,10 +130,13 @@ class Faculty(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     first_name = db.Column(db.String(120))
     last_name = db.Column(db.String(120)) 
-    contact_number = db.Column(db.String(20))
+    contact_number = db.Column(db.String(20)) # All except email can be changed by faculty
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
+    # One-to-many: Faculty mentors many students
     mentees = db.relationship('Student', backref='mentor', lazy=True)
+
+    # Mentoring minutes written by faculty
     mentoring_minutes_written = db.relationship('MentoringMinute', backref='faculty', lazy=True)
 
 
@@ -190,25 +146,34 @@ class Student(db.Model):
 
     first_name = db.Column(db.String(120))
     middle_name = db.Column(db.String(120), nullable=True)
-    last_name = db.Column(db.String(120))
+    last_name = db.Column(db.String(120)) # Names can be changed by admin only
 
     semester = db.Column(db.Integer)
     section = db.Column(db.String(10))
-    year_of_admission = db.Column(db.Integer)
+    year_of_admission = db.Column(db.Integer) # these 3 can be changed by student
 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+    # Foreign key for assigned faculty mentor
     mentor_id = db.Column(db.Integer, db.ForeignKey('faculty.id'), nullable=True)
 
+    # One-to-one with personal info
     personal_info = db.relationship('StudentPersonalInfo', backref='student', uselist=False, cascade='all, delete-orphan')
+
+    # One-to-many relationships
     past_education_records = db.relationship('PastEducation', backref='student', cascade='all, delete-orphan')
     post_admission_records = db.relationship('PostAdmissionAcademicRecord', backref='student', cascade='all, delete-orphan')
+    career_activities = db.relationship('CareerActivity', backref='student', cascade='all, delete-orphan')
     projects = db.relationship('Project', backref='student', cascade='all, delete-orphan')
     internships = db.relationship('Internship', backref='student', cascade='all, delete-orphan')
     cocurricular_participations = db.relationship('CoCurricularParticipation', backref='student', cascade='all, delete-orphan')
     cocurricular_organizations = db.relationship('CoCurricularOrganization', backref='student', cascade='all, delete-orphan')
+
+    # One-to-one relationships for career and skills
     career_objective = db.relationship('CareerObjective', backref='student', uselist=False, cascade='all, delete-orphan')
     skills = db.relationship('Skills', backref='student', uselist=False, cascade='all, delete-orphan')
     swoc = db.relationship('SWOC', backref='student', uselist=False, cascade='all, delete-orphan')
+    
     mentoring_minutes = db.relationship('MentoringMinute', backref='student', cascade='all, delete-orphan')
 
     @property
@@ -243,24 +208,24 @@ class StudentPersonalInfo(db.Model):
 
     emergency_contact_name = db.Column(db.String(120), nullable=False)
     emergency_contact_number = db.Column(db.String(20), nullable=False)
-    blood_group = db.Column(db.String(5), nullable=True)
-    category = db.Column(db.String(20), nullable=True)
-    aadhar_number = db.Column(db.String(14), nullable=True)
+    photo_url = db.Column(db.Text, nullable=True)
+    photo_public_id = db.Column(db.String(255), nullable=True)
+    blood_group = db.Column(db.String(20), nullable=True)
+    category = db.Column(db.String(50), nullable=True)
+    aadhar_number = db.Column(db.String(20), nullable=True)
     mis_uid = db.Column(db.String(50), nullable=True)
     github_id = db.Column(db.String(255), nullable=True)
     present_address = db.Column(db.Text, nullable=True)
     guardian_name = db.Column(db.String(120), nullable=True)
-    guardian_mobile = db.Column(db.String(15), nullable=True)
+    guardian_mobile = db.Column(db.String(20), nullable=True)
     guardian_email = db.Column(db.String(255), nullable=True)
-    photo_url = db.Column(db.Text, nullable=True)
-    photo_public_id = db.Column(db.String(255), nullable=True)
 
 
 class PastEducation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
 
-    exam_name = db.Column(db.String(100), nullable=False)
+    exam_name = db.Column(db.String(100), nullable=False)  # 'SSC', 'hssc_or_diploma'
     percentage = db.Column(db.Float, nullable=False)
     year_of_passing = db.Column(db.Integer, nullable=False)
 
@@ -269,9 +234,18 @@ class PostAdmissionAcademicRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
 
-    semester = db.Column(db.Integer, nullable=False)
+    semester = db.Column(db.Integer, nullable=False)  # Semester number (completed)
     sgpa = db.Column(db.Float, nullable=False)
     backlog_subjects = db.Column(db.Text, nullable=True)
+
+
+class CareerActivity(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+
+    activity_name = db.Column(db.String(255), nullable=False)
+    score_rank = db.Column(db.String(50), nullable=False)
+    exam_date = db.Column(db.Date, nullable=False)
 
 
 class Project(db.Model):
@@ -288,8 +262,8 @@ class Internship(db.Model):
 
     company_name = db.Column(db.String(255))
     domain = db.Column(db.String(255))
-    internship_type = db.Column(db.String(20))
-    paid_unpaid = db.Column(db.String(10))
+    internship_type = db.Column(db.String(20))  # "Online" or "Physical"
+    paid_unpaid = db.Column(db.String(10))  # "Paid" or "Unpaid"
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
 
@@ -300,7 +274,7 @@ class CoCurricularParticipation(db.Model):
 
     name = db.Column(db.String(255))
     date = db.Column(db.Date)
-    level = db.Column(db.String(100))
+    level = db.Column(db.String(100))  # Institute/Dept/State/National/International
     awards = db.Column(db.String(255), nullable=True)
 
 
@@ -310,7 +284,7 @@ class CoCurricularOrganization(db.Model):
 
     name = db.Column(db.String(255))
     date = db.Column(db.Date)
-    level = db.Column(db.String(100))
+    level = db.Column(db.String(100))  # Institute/Dept/State/National/International
     remark = db.Column(db.String(255), nullable=True)
 
 
@@ -318,9 +292,9 @@ class CareerObjective(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
 
-    career_goal = db.Column(db.String(50), nullable=False)
+    career_goal = db.Column(db.String(50), nullable=False)  # e.g., "higher studies", "job", etc.
     specific_details = db.Column(db.Text, nullable=True)
-    clarity_preparedness = db.Column(db.String(20))
+    clarity_preparedness = db.Column(db.String(20))  # e.g., unsatisfactory, satisfactory, good
     interested_in_campus_placement = db.Column(db.Boolean)
     campus_placement_reasons = db.Column(db.Text, nullable=True)
 
@@ -357,46 +331,46 @@ class MentoringMinute(db.Model):
     suggestion = db.Column(db.Text, nullable=True)
     action = db.Column(db.Text, nullable=True)
 
-
-# ============================================
-# HELPERS
-# ============================================
+    # student = db.relationship('Student', backref='mentoring_minutes')
+    # faculty = db.relationship('Faculty', backref='mentoring_minutes_written')
+# --------------------------------------
+# Helpers
+# --------------------------------------
 def generate_password(length=8):
     chars = string.ascii_letters + string.digits + "!@#$%^&*"
     return ''.join(random.choice(chars) for _ in range(length))
 
-def get_current_user_id():
-    """Return JWT identity normalized to int user id."""
-    identity = get_jwt_identity()
-    try:
-        return int(identity)
-    except (TypeError, ValueError):
-        return None
 
 
 def role_required(roles):
-    """Decorator factory for role based access with JWT protection"""
-
-    def decorator(fn):
+    """Decorator factory for role based access"""
+    def wrapper(fn):
+        from functools import wraps
         @wraps(fn)
-        @jwt_required()
-        def wrapper(*args, **kwargs):
-            current_user_id = get_current_user_id()
-            if current_user_id is None:
-                return jsonify({"error": "Invalid token identity"}), 401
-            user = db.session.get(User, current_user_id)
-
-            if not user:
-                return jsonify({"error": "User not found"}), 404
-
-            if user.role not in roles:
-                return jsonify({"error": "Forbidden: Insufficient permissions"}), 403
-
-            return fn(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
+        def decorated(*args, **kwargs):
+            # Handle OPTIONS requests first (before JWT verification)
+            if request.method == 'OPTIONS':
+                print("DEBUG: Handling OPTIONS preflight request")
+                return fn(*args, **kwargs)
+            
+            # For non-OPTIONS requests, apply JWT verification
+            @jwt_required()
+            def jwt_protected_function():
+                current_user_id = get_jwt_identity()
+                user = db.session.get(User, current_user_id)
+                
+                if not user:
+                    return jsonify({"error": "User not found"}), 404
+                
+                if user.role not in roles:
+                    return jsonify({"error": "Forbidden: Insufficient permissions"}), 403
+                
+                return fn(*args, **kwargs)
+            
+            return jwt_protected_function()
+            
+        return decorated
+    return wrapper
 
     
 def split_full_name(full_name):
@@ -410,7 +384,7 @@ def parse_date(date_str):
     if not date_str:
         return None
     if isinstance(date_str, date):
-        return date_str
+        return date_str  # Already a date object
     try:
         return datetime.strptime(date_str, "%Y-%m-%d").date()
     except ValueError:
@@ -439,6 +413,12 @@ def validate_post_admission_records(student_semester, records):
         return False, f"All semester values must be between 1 and {student_semester - 1}."
     return True, ""
 
+def validate_career_activities(records):
+    activity_names = [r.get("activity_name") for r in records]
+    if len(activity_names) != len(set(activity_names)):
+        return False, "Duplicate career activity names are not allowed."
+    return True, ""
+
 def get_date_fields(model_class):
     return [
         column.name for column in model_class.__table__.columns
@@ -446,9 +426,11 @@ def get_date_fields(model_class):
     ]
 
 def load_student_with_all_related(user_id):
+    # List related attributes to eager load from Student
     relations_to_load = [
         'past_education_records',
         'post_admission_records',
+        'career_activities',
         'projects',
         'internships',
         'cocurricular_participations',
@@ -461,9 +443,11 @@ def load_student_with_all_related(user_id):
 
     query = db.session.query(User).filter(User.id == user_id)
     
+    # Join load student_profile AND its related collections iteratively
     for rel in relations_to_load:
         query = query.options(joinedload(User.student_profile).joinedload(getattr(Student, rel)))
 
+    # Eager load student_profile itself
     query = query.options(joinedload(User.student_profile))
 
     return query.first()
@@ -479,6 +463,7 @@ def sync_related_records(student, model_class, current_records, updated_records_
             model_class.query.filter(model_class.id.in_(to_delete_ids)).delete(synchronize_session=False)
 
         for record_data in updated_records_payload:
+            # Convert date fields in record_data dynamically
             for field in date_fields:
                 if field in record_data:
                     record_data[field] = parse_date(record_data[field])
@@ -494,6 +479,8 @@ def sync_related_records(student, model_class, current_records, updated_records_
                 new_record = model_class(**clean_data)
                 new_record.student_id = student.id
                 db.session.add(new_record)
+    
+    # db.session.flush()
 
 def serialize_model(obj):
     if obj is None:
@@ -507,44 +494,46 @@ def serialize_model(obj):
     return data
 
 
-def ensure_cloudinary_photo_columns():
-    # Keep existing deployments working even without an Alembic migration.
-    db.session.execute(text("ALTER TABLE student_personal_info ADD COLUMN IF NOT EXISTS photo_url TEXT"))
-    db.session.execute(text("ALTER TABLE student_personal_info ADD COLUMN IF NOT EXISTS photo_public_id VARCHAR(255)"))
-    db.session.execute(text("ALTER TABLE student_personal_info ADD COLUMN IF NOT EXISTS blood_group VARCHAR(5)"))
-    db.session.execute(text("ALTER TABLE student_personal_info ADD COLUMN IF NOT EXISTS category VARCHAR(20)"))
-    db.session.execute(text("ALTER TABLE student_personal_info ADD COLUMN IF NOT EXISTS aadhar_number VARCHAR(14)"))
-    db.session.execute(text("ALTER TABLE student_personal_info ADD COLUMN IF NOT EXISTS mis_uid VARCHAR(50)"))
-    db.session.execute(text("ALTER TABLE student_personal_info ADD COLUMN IF NOT EXISTS github_id VARCHAR(255)"))
-    db.session.execute(text("ALTER TABLE student_personal_info ADD COLUMN IF NOT EXISTS present_address TEXT"))
-    db.session.execute(text("ALTER TABLE student_personal_info ADD COLUMN IF NOT EXISTS guardian_name VARCHAR(120)"))
-    db.session.execute(text("ALTER TABLE student_personal_info ADD COLUMN IF NOT EXISTS guardian_mobile VARCHAR(15)"))
-    db.session.execute(text("ALTER TABLE student_personal_info ADD COLUMN IF NOT EXISTS guardian_email VARCHAR(255)"))
-    db.session.commit()
+# --------------------------------------
+# Auth Endpoints
+# --------------------------------------
 
 
-# ============================================
-# AUTH ENDPOINTS
-# ============================================
-
-@app.route("/api/auth/login", methods=["POST", "OPTIONS"])
-@limiter.limit("10 per minute")
-def login():
+@app.before_request
+def handle_preflight():
     if request.method == "OPTIONS":
-        return "", 204
+        response = jsonify()
+        origin = request.headers.get("Origin")
+        # Allow local/dev origins dynamically instead of pinning to one port.
+        response.headers.add("Access-Control-Allow-Origin", origin if origin else "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        response.headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+        response.headers.add("Vary", "Origin")
+        return response
 
-    data = request.get_json(silent=True) or {}
-    username = data.get("username") or data.get("uid")
-    password = data.get("password")
+
+@app.route("/api/auth/login", methods=["POST"])
+def login():
+    data = request.get_json() or {}
+    username = (data.get("username") or data.get("uid") or "").strip()  # Accept both username and uid
+    password = (data.get("password") or "").strip()
     
     user = User.query.filter_by(username=username).first()
     if not user:
         return jsonify({"error": "Invalid credentials"}), 401
-        
+
     if not user.check_password(password):
-        return jsonify({"error": "Invalid credentials"}), 401
+        # Local/dev fallback: allow admin login using .env credentials without DB mutation.
+        env_admin_user = os.getenv("ADMIN_USERNAME", "admin").strip()
+        env_admin_pass = os.getenv("ADMIN_PASSWORD", "abcd1234").strip()
+        is_env_admin_login = (
+            user.role == "admin"
+            and username == env_admin_user
+            and password == env_admin_pass
+        )
+        if not is_env_admin_login:
+            return jsonify({"error": "Invalid credentials"}), 401
         
-    # JWT "sub" should be a string; using int can fail verification in newer PyJWT.
     token = create_access_token(identity=str(user.id))
     return jsonify({
         "access_token": token,
@@ -555,46 +544,6 @@ def login():
             "role": user.role
         }
     })
-
-
-@app.route("/api/auth/verify", methods=["GET"])
-@jwt_required()
-def verify_token():
-    current_user_id = get_current_user_id()
-    if current_user_id is None:
-        return jsonify({"valid": False}), 401
-    user = User.query.get(current_user_id)
-    if user:
-        return jsonify({
-            "valid": True,
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "role": user.role
-            }
-        }), 200
-    return jsonify({"valid": False}), 401
-
-
-@app.route("/api/auth/verify-token", methods=["GET"])
-@jwt_required(optional=True)
-def verify_token_alias():
-    """Alias endpoint for /api/auth/verify - frontend compatibility"""
-    current_user_id = get_current_user_id()
-    if not current_user_id:
-        return jsonify({"valid": False}), 401
-    
-    user = User.query.get(current_user_id)
-    if user:
-        return jsonify({
-            "valid": True,
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "role": user.role
-            }
-        }), 200
-    return jsonify({"valid": False}), 401
 
 
 @app.route("/api/auth/register", methods=["POST"])
@@ -610,13 +559,16 @@ def register():
         section = data.get("section")
         year_of_admission = data.get("year_of_admission")
 
+        # Validate required fields
         if not uid or not full_name:
             return jsonify({"error": "Missing UID or full_name"}), 400
         if User.query.filter_by(username=uid).first():
             return jsonify({"error": "Student with given UID already exists"}), 400
 
+        # Split full name into first_name, middle_name, last_name
         first_name, middle_name, last_name = split_full_name(full_name)
 
+        # Create user and student
         user = User(username=uid, role="student", password_hash=generate_password_hash(uid))
         student = Student(
             uid=uid,
@@ -652,8 +604,9 @@ def register():
         first_name = data.get("first_name")
         last_name = data.get("last_name")
         contact_number = data.get("contact_number")
-        password = data.get("password", "default_password")
+        password = data.get("password", "default_password")  # Default password if not provided
 
+        # Validate required fields
         if not email or not first_name or not last_name:
             return jsonify({"error": "Missing email, first_name, or last_name"}), 400
         if not email.endswith("@stvincentngp.edu.in"):
@@ -661,6 +614,7 @@ def register():
         if User.query.filter_by(username=email).first():
             return jsonify({"error": "Faculty with given email already exists"}), 400
 
+        # Create user and faculty
         user = User(username=email, role="faculty", password_hash=generate_password_hash(password))
         faculty = Faculty(
             email=email,
@@ -686,51 +640,9 @@ def register():
 
     else:
         return jsonify({"error": "Invalid role"}), 400
+    
 
-
-@app.route("/api/auth/register/bulk", methods=["POST"])
-@role_required(["admin"])
-def bulk_register_students():
-    students = request.get_json()
-    if not isinstance(students, list):
-        return jsonify({"error": "Input must be a list of students"}), 400
-
-    results = []
-    for entry in students:
-        uid = entry.get("uid")
-        if not uid:
-            results.append({"uid": None, "status": "failed", "error": "Missing UID"})
-            continue
-
-        if User.query.filter_by(username=uid, role="student").first():
-            results.append({"uid": uid, "status": "failed", "error": "UID already exists"})
-            continue
-
-        user = User(username=uid, role="student", password_hash=generate_password_hash(uid))
-        first_name, middle_name, last_name = split_full_name(entry.get("full_name", ""))
-        student = Student(
-            uid=uid,
-            first_name=first_name,
-            middle_name=middle_name,
-            last_name=last_name,
-            semester=entry.get("semester"),
-            section=entry.get("section"),
-            year_of_admission=entry.get("year_of_admission"),
-            user=user
-        )
-        db.session.add(user)
-        db.session.add(student)
-        results.append({"uid": uid, "status": "success"})
-
-    try:
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        logger.exception("Bulk student registration failed")
-        return jsonify({"error": "Database error"}), 500
-
-    return jsonify({"result": results}), 200
-
+# Bulk Register Faculty  End Point
 
 @app.route("/api/auth/register/faculty/bulk", methods=["POST"])
 @role_required(["admin"])
@@ -742,7 +654,7 @@ def bulk_register_faculty():
     results = []
     for entry in faculties:
         email = entry.get("email")
-        password = entry.get("password", "default_password")
+        password = entry.get("password", "default_password")  # Default password or require it
         first_name = entry.get("first_name", "")
         last_name = entry.get("last_name", "")
         contact_number = entry.get("contact_number", "")
@@ -773,20 +685,71 @@ def bulk_register_faculty():
 
     try:
         db.session.commit()
-    except Exception:
+    except Exception as e:
         db.session.rollback()
-        logger.exception("Bulk faculty registration failed")
-        return jsonify({"error": "Database error"}), 500
+        return jsonify({"error": "Database error", "details": str(e)}), 500
 
     return jsonify({"result": results}), 200
 
+
+@app.route("/api/auth/register/bulk", methods=["POST"])
+@role_required(["admin"])
+def bulk_register_students():
+    students = request.get_json()
+    if not isinstance(students, list):
+        return jsonify({"error": "Input must be a list of students"}), 400
+
+    results = []
+    for entry in students:
+        uid = entry.get("uid")
+        if not uid:
+            results.append({"uid": None, "status": "failed", "error": "Missing UID"})
+            continue
+
+        if User.query.filter_by(username=uid, role="student").first():
+            results.append({"uid": uid, "status": "failed", "error": "UID already exists"})
+            continue
+
+        user = User(username=uid, role="student", password_hash=generate_password_hash(uid))
+        first_name, middle_name, last_name = split_full_name(entry.get("full_name", ""))
+        student = Student(
+            uid=uid,
+            first_name=first_name,
+            middle_name=middle_name,  # Can be None
+            last_name=last_name,
+            semester=entry.get("semester"),
+            section=entry.get("section"),
+            year_of_admission=entry.get("year_of_admission"),
+            user=user
+        )
+        db.session.add(user)
+        db.session.add(student)
+        results.append({"uid": uid, "status": "success"})
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "Database error", "details": str(e)}), 500
+
+    return jsonify({"result": results}), 200
+
+# DISABLED: Student creation should only be done through User Management
+# @app.route("/api/admin/students", methods=["POST"])
+# @role_required(["admin"])
+# def create_student():
+#     """Create a new student with automatically linked user account"""
+#     # This endpoint is disabled - use User Management instead
+#     return jsonify({"error": "Direct student creation disabled. Use User Management."}), 400
 
 @app.route("/api/auth/change-password", methods=["POST"])
 @role_required(["student", "faculty", "admin"])
 def change_password():
     data = request.get_json()
+    print(data)
     old_password, new_password = data.get("old_password"), data.get("new_password")
     user = db.session.get(User, get_jwt_identity())
+    print(type(user))
     
     if not user.check_password(old_password):
         return jsonify({"error": "Old password incorrect"}), 400
@@ -802,6 +765,7 @@ def change_password():
     return jsonify({"message": "Password changed successfully"})
 
 
+
 jwt_blacklist = set()
 
 @app.route("/api/auth/logout", methods=["POST"])
@@ -811,20 +775,35 @@ def logout():
     jwt_blacklist.add(jti)
     return jsonify({"message": "Successfully logged out"}), 200
 
-@jwt_manager.token_in_blocklist_loader
+@app.route("/api/auth/verify", methods=["GET"])
+@jwt_required()
+def verify_token():
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    if user:
+        return jsonify({
+            "valid": True,
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "role": user.role
+            }
+        }), 200
+    return jsonify({"valid": False}), 401
+
+@jwt.token_in_blocklist_loader
 def check_if_token_revoked(jwt_header, jwt_payload):
     return jwt_payload["jti"] in jwt_blacklist
 
-
-# ============================================
-# STUDENT ENDPOINTS
-# ============================================
+# --------------------------------------
+# Student Endpoints
+# --------------------------------------
 students_bp = Blueprint("students", __name__, url_prefix="/students")
 
 @students_bp.route("/me", methods=["GET"])
 @role_required(["student"])
 def get_my_student_profile():
-    user = db.session.get(User, get_current_user_id())
+    user = db.session.get(User, get_jwt_identity())
     if not user.student_profile:
         return jsonify({"error": "Profile not found"}), 404
     s = user.student_profile
@@ -838,6 +817,7 @@ def get_my_student_profile():
         "personal_info": serialize_model(s.personal_info) if s.personal_info else None,
         "past_education_records": [serialize_model(rec) for rec in s.past_education_records] if s.past_education_records else [],
         "post_admission_records": [serialize_model(rec) for rec in s.post_admission_records] if s.post_admission_records else [],
+        "career_activities": [serialize_model(rec) for rec in s.career_activities] if s.career_activities else [],
         "projects": [serialize_model(rec) for rec in s.projects] if s.projects else [],
         "internships": [serialize_model(rec) for rec in s.internships] if s.internships else [],
         "cocurricular_participations": [serialize_model(rec) for rec in s.cocurricular_participations] if s.cocurricular_participations else [],
@@ -852,7 +832,7 @@ def get_my_student_profile():
 @students_bp.route("/me", methods=["PUT"])
 @role_required(["student"])
 def update_my_student_profile():
-    user = load_student_with_all_related(get_current_user_id())
+    user = load_student_with_all_related(get_jwt_identity())
     if not user or not user.student_profile:
         return jsonify({"error": "Profile not found"}), 404
 
@@ -864,15 +844,16 @@ def update_my_student_profile():
     s.middle_name = middle_name
     s.last_name = last_name
 
+    # Update simple Student fields (except uid)
     for field in ["semester", "section", "year_of_admission"]:
         if field in data:
             setattr(s, field, data[field])
 
+    # Update personal_info (1-to-1)
     pi_payload = data.get("personal_info")
     if pi_payload:
-        pi_payload.pop("id", None)
-        pi_payload.pop("student_id", None)
-        pi_payload = {k: v for k, v in pi_payload.items() if hasattr(StudentPersonalInfo, k)}
+        pi_payload.pop("id", None)  # Prevent changing primary key
+        pi_payload.pop("student_id", None)  # Prevent changing foreign key
         if 'dob' in pi_payload:
             pi_payload['dob'] = parse_date(pi_payload['dob'])
         if s.personal_info:
@@ -881,23 +862,34 @@ def update_my_student_profile():
         else:
             s.personal_info = StudentPersonalInfo(**pi_payload, student_id=s.id)
 
+    # Validate and sync PastEducation
     pe_payload = data.get("past_education_records", [])
     valid, err = validate_past_education_payload(pe_payload)
     if not valid:
         return jsonify({"error": err}), 400
     sync_related_records(s, PastEducation, s.past_education_records, pe_payload)
 
+    # Validate and sync PostAdmissionAcademicRecord
     pa_payload = data.get("post_admission_records", [])
     valid, err = validate_post_admission_records(s.semester, pa_payload)
     if not valid:
         return jsonify({"error": err}), 400
     sync_related_records(s, PostAdmissionAcademicRecord, s.post_admission_records, pa_payload)
 
+    # Validate and sync CareerActivities
+    ca_payload = data.get("career_activities", [])
+    valid, err = validate_career_activities(ca_payload)
+    if not valid:
+        return jsonify({"error": err}), 400
+    sync_related_records(s, CareerActivity, s.career_activities, ca_payload)
+
+    # Sync other 1-to-many relationships (projects, internships, co-curricular)
     sync_related_records(s, Project, s.projects, data.get("projects", []))
     sync_related_records(s, Internship, s.internships, data.get("internships", []))
     sync_related_records(s, CoCurricularParticipation, s.cocurricular_participations, data.get("cocurricular_participations", []))
     sync_related_records(s, CoCurricularOrganization, s.cocurricular_organizations, data.get("cocurricular_organizations", []))
 
+    # Update or create 1-to-1 relations: career_objective, skills, swoc
     for rel_name, model_class in [
         ("career_objective", CareerObjective),
         ("skills", Skills),
@@ -917,7 +909,6 @@ def update_my_student_profile():
 
     db.session.commit()
     return jsonify({"message": "Profile updated successfully."}), 200
-
 
 @app.route("/students/me/mentoring-minutes", methods=["GET"])
 @role_required(["student"])
@@ -950,6 +941,7 @@ def list_student_mentoring_minutes():
 @app.route("/students/me/mentor", methods=["GET"])
 @role_required(["student"])
 def get_student_mentor():
+    """Get current student's mentor information"""
     user = db.session.get(User, get_jwt_identity())
     student = user.student_profile
 
@@ -975,6 +967,7 @@ def get_student_mentor():
     return jsonify(mentor_data), 200
 
 
+# search and lightweight listing
 @app.route("/api/students", methods=["GET"])
 @role_required(["admin", "faculty"])
 def search_students():
@@ -1002,6 +995,7 @@ def search_students():
         "personal_info": serialize_model(s.personal_info) if s.personal_info else None,
         "past_education_records": [serialize_model(rec) for rec in s.past_education_records] if s.past_education_records else [],
         "post_admission_records": [serialize_model(rec) for rec in s.post_admission_records] if s.post_admission_records else [],
+        "career_activities": [serialize_model(rec) for rec in s.career_activities] if s.career_activities else [],
         "projects": [serialize_model(rec) for rec in s.projects] if s.projects else [],
         "internships": [serialize_model(rec) for rec in s.internships] if s.internships else [],
         "cocurricular_participations": [serialize_model(rec) for rec in s.cocurricular_participations] if s.cocurricular_participations else [],
@@ -1011,7 +1005,6 @@ def search_students():
         "swoc": serialize_model(s.swoc) if s.swoc else None,
         "mentor_id": s.mentor_id,
     } for s in results])
-
 
 @app.route("/api/students/<int:student_id>", methods=["PUT"])
 @role_required(["admin"])
@@ -1024,28 +1017,35 @@ def update_student(student_id):
     if not data:
         return jsonify({"error": "No data provided"}), 400
 
+    # Update mentor assignment (for deallocating students from teachers)
     if "mentor_id" in data:
         if data["mentor_id"] is None:
             student.mentor_id = None
         else:
+            # Verify faculty exists if assigning
             faculty = Faculty.query.get(data["mentor_id"])
             if not faculty:
                 return jsonify({"error": "Faculty not found"}), 404
             student.mentor_id = data["mentor_id"]
 
+    # You can add more fields to update here as needed
+    # For example: semester, section, etc.
+
     try:
         db.session.commit()
         return jsonify({"message": "Student updated successfully"}), 200
-    except Exception:
+    except Exception as e:
         db.session.rollback()
-        logger.exception("Student update failed for student_id=%s", student_id)
-        return jsonify({"error": "Database error"}), 500
+        return jsonify({"error": "Database error", "details": str(e)}), 500
 
-
+# --------------------------------------
+# Student Endpoints
+# --------------------------------------
 @app.route("/student/me", methods=["GET"])
 @role_required(["student"])
-def get_my_student_full_profile():
-    user = db.session.get(User, get_current_user_id())
+def get_my_student_profile():
+    """Get current student's complete profile"""
+    user = db.session.get(User, get_jwt_identity())
     student = user.student_profile
     
     if not student:
@@ -1064,6 +1064,7 @@ def get_my_student_full_profile():
         "personal_info": serialize_model(student.personal_info) if student.personal_info else None,
         "past_education_records": [serialize_model(rec) for rec in student.past_education_records] if student.past_education_records else [],
         "post_admission_records": [serialize_model(rec) for rec in student.post_admission_records] if student.post_admission_records else [],
+        "career_activities": [serialize_model(rec) for rec in student.career_activities] if student.career_activities else [],
         "projects": [serialize_model(rec) for rec in student.projects] if student.projects else [],
         "internships": [serialize_model(rec) for rec in student.internships] if student.internships else [],
         "cocurricular_participations": [serialize_model(rec) for rec in student.cocurricular_participations] if student.cocurricular_participations else [],
@@ -1075,19 +1076,34 @@ def get_my_student_full_profile():
     return jsonify(response)
 
 
-def parse_date_iso(date_str):
+
+def parse_date(date_str):
+    """Safely parse ISO 8601 date strings into Python date objects"""
     if not date_str:
         return None
     try:
+        # Handle strings like "2025-08-04T00:00:00.000Z"
         return datetime.fromisoformat(date_str.replace("Z", "")).date()
     except Exception:
         return None
 
+def sanitize_payload_for_model(model_class, payload):
+    """Keep only model-backed columns to prevent invalid kwargs on writes."""
+    if not isinstance(payload, dict):
+        return {}
+    allowed = {
+        col.name
+        for col in model_class.__table__.columns
+        if col.name not in {"id", "student_id"}
+    }
+    return {k: v for k, v in payload.items() if k in allowed}
+
 
 @app.route("/student/me", methods=["PUT"])
 @role_required(["student"])
-def update_student_profile():
-    user = db.session.get(User, get_current_user_id())
+def update_my_student_profile():
+    """Update current student's profile"""
+    user = db.session.get(User, get_jwt_identity())
     student = user.student_profile
     
     if not student:
@@ -1098,15 +1114,18 @@ def update_student_profile():
         return jsonify({"error": "No data provided"}), 400
 
     try:
+        # Update basic student info (only semester and section allowed for students)
         if "semester" in data:
             student.semester = data["semester"]
         if "section" in data:
             student.section = data["section"]
 
+        # Define model mappings for related tables
         model_mappings = {
             "personal_info": (StudentPersonalInfo, "personal_info"),
             "past_education_records": (PastEducation, "past_education_records"),
             "post_admission_records": (PostAdmissionAcademicRecord, "post_admission_records"),
+            "career_activities": (CareerActivity, "career_activities"),
             "projects": (Project, "projects"),
             "internships": (Internship, "internships"),
             "cocurricular_participations": (CoCurricularParticipation, "cocurricular_participations"),
@@ -1116,115 +1135,122 @@ def update_student_profile():
             "swoc": (SWOC, "swoc"),
         }
 
+        # Process each section
         for data_key, (model_class, rel_name) in model_mappings.items():
             if data_key in data:
                 rel_payload = data[data_key]
                 if rel_payload is None:
                     continue
 
+                # Special handling for dates inside payload
                 if isinstance(rel_payload, dict):
                     for field, value in rel_payload.items():
+                        # Only parse actual date fields, not year_of_passing or other year fields
                         if (("date" in field or "dob" in field) and 
                             field not in ["year_of_passing", "year_of_admission"]):
-                            rel_payload[field] = parse_date_iso(value)
+                            rel_payload[field] = parse_date(value)
 
                 if isinstance(rel_payload, list):
                     for item in rel_payload:
                         for field, value in item.items():
+                            # Only parse actual date fields, not year_of_passing or other year fields
                             if (("date" in field or "dob" in field) and 
                                 field not in ["year_of_passing", "year_of_admission"]):
-                                item[field] = parse_date_iso(value)
+                                item[field] = parse_date(value)
 
+                # Handle one-to-one relationships
                 if rel_name in ["personal_info", "career_objective", "skills", "swoc"]:
                     existing_record = getattr(student, rel_name)
+                    clean_payload = sanitize_payload_for_model(model_class, rel_payload)
                     if existing_record:
-                        for field, value in rel_payload.items():
+                        # Update existing record
+                        for field, value in clean_payload.items():
                             if hasattr(existing_record, field):
                                 setattr(existing_record, field, value)
                     else:
-                        new_record = model_class(**rel_payload, student_id=student.id)
+                        # Create new record
+                        new_record = model_class(**clean_payload, student_id=student.id)
                         setattr(student, rel_name, new_record)
                 
+                # Handle one-to-many relationships
                 else:
+                    # Clear existing records
                     existing_records = getattr(student, rel_name)
                     for record in existing_records:
                         db.session.delete(record)
                     
+                    # Add new records
                     if isinstance(rel_payload, list):
                         for item in rel_payload:
-                            new_record = model_class(**item, student_id=student.id)
+                            clean_item = sanitize_payload_for_model(model_class, item)
+                            new_record = model_class(**clean_item, student_id=student.id)
                             db.session.add(new_record)
 
         db.session.commit()
         return jsonify({"message": "Student profile updated successfully"}), 200
 
-    except Exception:
+    except Exception as e:
         db.session.rollback()
-        logger.exception("Student profile update failed for user_id=%s", get_current_user_id())
-        return jsonify({"error": "Failed to update profile"}), 500
-
+        return jsonify({"error": "Failed to update profile", "details": str(e)}), 500
 
 @app.route("/student/me/upload-photo", methods=["POST"])
 @role_required(["student"])
-def upload_my_photo():
-    current_user_id = get_current_user_id()
-    if current_user_id is None:
-        return jsonify({"error": "Invalid token identity"}), 401
-
-    user = db.session.get(User, current_user_id)
+def upload_my_student_photo():
+    """Upload or replace current student's profile photo in Cloudinary."""
+    user = db.session.get(User, get_jwt_identity())
     student = user.student_profile if user else None
     if not student:
         return jsonify({"error": "Student profile not found"}), 404
 
     if not student.personal_info:
-        return jsonify({"error": "Please save personal information first, then upload photo."}), 400
+        return jsonify({"error": "Please save personal info before uploading photo"}), 400
 
-    file = request.files.get("photo")
-    if not file:
-        return jsonify({"error": "No file provided"}), 400
+    photo = request.files.get("photo")
+    if not photo:
+        return jsonify({"error": "Missing 'photo' file in request"}), 400
 
-    if not file.mimetype or not file.mimetype.startswith("image/"):
-        return jsonify({"error": "Invalid file type"}), 400
+    if not (photo.mimetype or "").startswith("image/"):
+        return jsonify({"error": "Invalid file type. Please upload an image."}), 400
 
-    file.stream.seek(0, os.SEEK_END)
-    size_bytes = file.stream.tell()
-    file.stream.seek(0)
-    if size_bytes > 2 * 1024 * 1024:
-        return jsonify({"error": "File too large. Max size is 2MB"}), 400
+    # Enforce 2MB max to match frontend guardrails.
+    photo.stream.seek(0, os.SEEK_END)
+    file_size = photo.stream.tell()
+    photo.stream.seek(0)
+    if file_size > 2 * 1024 * 1024:
+        return jsonify({"error": "File too large. Max allowed size is 2MB."}), 400
 
-    if not (os.getenv("CLOUDINARY_CLOUD_NAME") and os.getenv("CLOUDINARY_API_KEY") and os.getenv("CLOUDINARY_API_SECRET")):
-        return jsonify({"error": "Cloudinary credentials are missing on the server"}), 500
+    if not CLOUDINARY_READY:
+        return jsonify({"error": "Cloudinary is not configured on server"}), 500
 
     try:
-        personal_info = student.personal_info
-
-        if personal_info.photo_public_id:
-            cloudinary.uploader.destroy(personal_info.photo_public_id, invalidate=True)
-
         upload_result = cloudinary.uploader.upload(
-            file,
-            folder="students",
+            photo,
+            folder="kys/student_profiles",
+            public_id=f"student_{student.uid}_profile",
+            overwrite=True,
             resource_type="image",
         )
+        photo_url = upload_result.get("secure_url") or upload_result.get("url")
+        public_id = upload_result.get("public_id")
 
-        personal_info.photo_url = upload_result.get("secure_url")
-        personal_info.photo_public_id = upload_result.get("public_id")
+        student.personal_info.photo_url = photo_url
+        student.personal_info.photo_public_id = public_id
         db.session.commit()
 
-        return jsonify({
-            "message": "Upload successful",
-            "photo_url": personal_info.photo_url,
-            "photo_public_id": personal_info.photo_public_id,
-        }), 200
+        return jsonify(
+            {
+                "message": "Photo uploaded successfully",
+                "photo_url": photo_url,
+                "photo_public_id": public_id,
+            }
+        ), 200
     except Exception:
         db.session.rollback()
-        logger.exception("Photo upload failed for user_id=%s", current_user_id)
-        return jsonify({"error": "Upload failed"}), 500
+        return jsonify({"error": "Photo upload failed"}), 500
 
-
-# ============================================
-# FACULTY ENDPOINTS
-# ============================================
+# --------------------------------------
+# Faculty Endpoints
+# --------------------------------------
 @app.route("/faculty/me", methods=["GET"])
 @role_required(["faculty"])
 def get_my_faculty():
@@ -1275,6 +1301,7 @@ def get_my_mentees():
             "personal_info": serialize_model(student.personal_info) if student.personal_info else None,
             "past_education_records": [serialize_model(rec) for rec in student.past_education_records] if student.past_education_records else [],
             "post_admission_records": [serialize_model(rec) for rec in student.post_admission_records] if student.post_admission_records else [],
+            "career_activities": [serialize_model(rec) for rec in student.career_activities] if student.career_activities else [],
             "projects": [serialize_model(rec) for rec in student.projects] if student.projects else [],
             "internships": [serialize_model(rec) for rec in student.internships] if student.internships else [],
             "cocurricular_participations": [serialize_model(rec) for rec in student.cocurricular_participations] if student.cocurricular_participations else [],
@@ -1295,13 +1322,17 @@ def add_mentoring_minute(student_uid):
     if not faculty:
         return jsonify({"error": "Faculty profile not found"}), 404
 
+    # Find mentee student by UID
     student = Student.query.filter_by(uid=student_uid, mentor_id=faculty.id).first()
     if not student:
         return jsonify({"error": "Mentee not found or not assigned to this faculty"}), 404
 
     data = request.get_json()
 
-    semester = student.semester
+    # Required fields in payload can be semester, date, remarks, suggestion, action
+    semester = student.semester  # use student's current semester always
+
+    #get today's date and use it as mentoring_date always (date won't be provided by user)
     mentoring_date = date.today()
 
     remarks = data.get("remarks")
@@ -1324,10 +1355,9 @@ def add_mentoring_minute(student_uid):
     try:
         db.session.add(mentoring_minute)
         db.session.commit()
-    except Exception:
+    except Exception as e:
         db.session.rollback()
-        logger.exception("Mentoring minute save failed for faculty_id=%s student_uid=%s", faculty.id, student_uid)
-        return jsonify({"error": "Database error while saving mentoring minute"}), 500
+        return jsonify({"error": "Database error while saving mentoring minute", "details": str(e)}), 500
 
     return jsonify({"message": "Mentoring minute added successfully."}), 201
 
@@ -1335,16 +1365,19 @@ def add_mentoring_minute(student_uid):
 @app.route("/faculty/me/mentees/<string:student_uid>/minutes", methods=["GET"])
 @role_required(["faculty"])
 def get_mentee_mentoring_minutes(student_uid):
+    """Get all mentoring minutes for a specific mentee student"""
     user = db.session.get(User, get_jwt_identity())
     faculty = user.faculty_profile
 
     if not faculty:
         return jsonify({"error": "Faculty profile not found"}), 404
 
+    # Find mentee student by UID
     student = Student.query.filter_by(uid=student_uid, mentor_id=faculty.id).first()
     if not student:
         return jsonify({"error": "Mentee not found or not assigned to this faculty"}), 404
 
+    # Get all mentoring minutes for this student
     minutes = MentoringMinute.query.filter_by(student_id=student.id).order_by(MentoringMinute.date.desc()).all()
 
     result = []
@@ -1356,7 +1389,7 @@ def get_mentee_mentoring_minutes(student_uid):
             "remarks": m.remarks,
             "suggestion": m.suggestion,
             "action": m.action,
-            "created_by_faculty": m.faculty_id == faculty.id
+            "created_by_faculty": m.faculty_id == faculty.id  # Whether this minute was created by current faculty
         })
 
     return jsonify({
@@ -1371,10 +1404,10 @@ def get_mentee_mentoring_minutes(student_uid):
     }), 200
 
 
-# ============================================
-# ADMIN ENDPOINTS
-# ============================================
-@app.route("/api/admin/reset-password", methods=["POST"])
+# --------------------------------------
+# Admin Endpoints
+# --------------------------------------
+@app.route("/admin/reset-password", methods=["POST"])
 @role_required(["admin"])
 def reset_password():
     data = request.get_json()
@@ -1404,7 +1437,7 @@ def reset_password():
 
     return jsonify({"message": "Password reset successfully"}), 200
 
-@app.route("/api/admin/faculty/basic", methods=["GET"])
+@app.route("/admin/faculty", methods=["GET"])
 @role_required(["admin"])
 def get_all_faculties():
     faculties = Faculty.query.all()
@@ -1420,9 +1453,11 @@ def get_all_faculties():
     ]
     return jsonify(result), 200
 
+# New API endpoints for admin dashboard
 @app.route("/api/admin/users", methods=["GET"])
 @role_required(["admin"])
 def get_all_users():
+    """Get all users for admin dashboard"""
     users = User.query.all()
     result = []
     for user in users:
@@ -1430,26 +1465,30 @@ def get_all_users():
             "id": user.id,
             "username": user.username,
             "role": user.role,
-            "status": "Active",
-            "created": "2024-01-01"
+            "status": "Active",  # You can add a status field to User model later if needed
+            "created": "2024-01-01"  # You can add created_at field to User model later if needed
         })
     return jsonify(result), 200
 
 @app.route("/api/admin/users", methods=["POST"])
 @role_required(["admin"])
 def create_user():
+    """Create a new user with detailed profile information"""
     data = request.get_json()
     if not data:
         return jsonify({"error": "No data provided"}), 400
 
+    # Common required fields for all users
     required_fields = ["username", "password", "role"]
     for field in required_fields:
         if field not in data:
             return jsonify({"error": f"Missing field: {field}"}), 400
 
+    # Validate role
     if data["role"] not in ["admin", "faculty", "student"]:
         return jsonify({"error": "Invalid role. Must be admin, faculty, or student"}), 400
 
+    # Role-specific validation
     if data["role"] == "student":
         student_fields = ["uid", "first_name", "semester", "section", "year_of_admission"]
         for field in student_fields:
@@ -1462,15 +1501,18 @@ def create_user():
             if field not in data:
                 return jsonify({"error": f"Missing faculty field: {field}"}), 400
 
+    # Check if username already exists
     existing_user = User.query.filter_by(username=data["username"]).first()
     if existing_user:
         return jsonify({"error": "Username already exists"}), 400
 
+    # Check if UID already exists for students
     if data["role"] == "student":
         existing_student = Student.query.filter_by(uid=data["uid"]).first()
         if existing_student:
             return jsonify({"error": "Student UID already exists"}), 400
 
+    # Check if email already exists for faculty
     if data["role"] == "faculty":
         existing_faculty = Faculty.query.filter_by(email=data["email"]).first()
         if existing_faculty:
@@ -1483,12 +1525,13 @@ def create_user():
             role=data["role"]
         )
         db.session.add(new_user)
-        db.session.flush()
+        db.session.flush()  # Get the user ID
 
         profile_created = None
         profile_data = {}
         
         if data["role"] == "student":
+            # Create student profile with all provided data
             student = Student(
                 uid=data["uid"],
                 first_name=data["first_name"],
@@ -1512,6 +1555,7 @@ def create_user():
             }
             
         elif data["role"] == "faculty":
+            # Create faculty profile with all provided data
             faculty = Faculty(
                 email=data["email"],
                 first_name=data["first_name"],
@@ -1529,6 +1573,7 @@ def create_user():
             }
         
         elif data["role"] == "admin":
+            # For admin, we only create the user, no additional profile
             profile_created = "admin"
 
         db.session.commit()
@@ -1548,10 +1593,15 @@ def create_user():
 
         return jsonify(response_data), 201
         
-    except Exception:
+    except Exception as e:
         db.session.rollback()
-        logger.exception("Admin user creation failed")
-        return jsonify({"error": "Database error"}), 500
+        print(f"❌ Database error in create_user: {str(e)}")
+        print(f"❌ Error type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Database error", "details": str(e)}), 500
+
+# Update user endpoint
 
 @app.route("/api/admin/users/<int:user_id>", methods=["PUT"])
 @role_required(["admin"])
@@ -1565,6 +1615,7 @@ def update_user(user_id):
         return jsonify({"error": "No data provided"}), 400
 
     try:
+        # Prevent role changes to avoid orphaned profiles
         if "role" in data and data["role"] != user.role:
             return jsonify({"error": "Changing user role is not allowed. Delete and recreate the user with the new role."}), 400
 
@@ -1573,12 +1624,14 @@ def update_user(user_id):
             if not student:
                 return jsonify({"error": "Student profile not found"}), 404
 
+            # Update User.username if uid is provided
             if "uid" in data:
                 if User.query.filter(User.username == data["uid"], User.id != user_id).first():
                     return jsonify({"error": "UID already exists"}), 400
                 user.username = data["uid"]
                 student.uid = data["uid"]
 
+            # Update Student fields
             if "full_name" in data:
                 first_name, middle_name, last_name = split_full_name(data["full_name"])
                 student.first_name = first_name
@@ -1609,6 +1662,7 @@ def update_user(user_id):
             if not faculty:
                 return jsonify({"error": "Faculty profile not found"}), 404
 
+            # Update User.username if email is provided
             if "email" in data:
                 if not data["email"].endswith("@stvincentngp.edu.in"):
                     return jsonify({"error": "Invalid email format, must end with @stvincentngp.edu.in"}), 400
@@ -1617,10 +1671,12 @@ def update_user(user_id):
                 user.username = data["email"]
                 faculty.email = data["email"]
 
+            # Update Faculty fields
             for field in ["first_name", "last_name", "contact_number"]:
                 if field in data:
                     setattr(faculty, field, data[field] if data[field] != "" else None)
 
+            # Update password if provided
             if "password" in data and data["password"]:
                 user.password_hash = generate_password_hash(data["password"])
 
@@ -1641,18 +1697,23 @@ def update_user(user_id):
         db.session.commit()
         return jsonify(response_data), 200
 
-    except Exception:
+    except Exception as e:
         db.session.rollback()
-        logger.exception("Admin user update failed for user_id=%s", user_id)
-        return jsonify({"error": "Database error"}), 500
+        print(f"❌ Database error in update_user: {str(e)}")
+        print(f"❌ Error type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Database error", "details": str(e)}), 500
 
 @app.route("/api/admin/users/<int:user_id>", methods=["DELETE"])
 @role_required(["admin"])
 def delete_user(user_id):
+    """Delete a user"""
     user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
 
+    # Prevent deleting the current admin user
     current_user = db.session.get(User, get_jwt_identity())
     if user.id == current_user.id:
         return jsonify({"error": "Cannot delete your own account"}), 400
@@ -1661,18 +1722,18 @@ def delete_user(user_id):
         db.session.delete(user)
         db.session.commit()
         return jsonify({"message": "User deleted successfully"}), 200
-    except Exception:
+    except Exception as e:
         db.session.rollback()
-        logger.exception("Admin user delete failed for user_id=%s", user_id)
-        return jsonify({"error": "Database error"}), 500
+        return jsonify({"error": "Database error", "details": str(e)}), 500
 
 @app.route("/api/admin/statistics", methods=["GET"])
 @role_required(["admin"])
 def get_dashboard_statistics():
+    """Get dashboard statistics"""
     total_users = User.query.count()
     total_students = Student.query.count()
     total_teachers = Faculty.query.count()
-    active_users = User.query.count()
+    active_users = User.query.count()  # For now, assume all users are active
     
     stats = {
         "totalUsers": total_users,
@@ -1685,14 +1746,16 @@ def get_dashboard_statistics():
 @app.route("/api/admin/faculty", methods=["GET"])
 @role_required(["admin"])
 def get_all_faculties_for_admin():
+    """Get all faculty for admin dashboard with enhanced info"""
     faculties = Faculty.query.all()
     result = []
     for faculty in faculties:
+        # Count assigned students
         mentees = Student.query.filter_by(mentor_id=faculty.id).all()
         
         result.append({
             "id": faculty.id,
-            "uid": f"FAC{faculty.id:03d}",
+            "uid": f"FAC{faculty.id:03d}",  # Generate UID like FAC001
             "name": f"{faculty.first_name or ''} {faculty.last_name or ''}".strip() or faculty.email.split('@')[0],
             "firstName": faculty.first_name or faculty.email.split('@')[0],
             "lastName": faculty.last_name or "",
@@ -1705,13 +1768,18 @@ def get_all_faculties_for_admin():
 @app.route("/api/admin/faculty/<int:faculty_id>/mentees", methods=["GET"])
 @role_required(["admin"])
 def get_faculty_mentees(faculty_id):
+    print(f"DEBUG: Accessing faculty mentees endpoint for faculty_id: {faculty_id}")
     try:
         faculty = Faculty.query.get(faculty_id)
         if not faculty:
+            print(f"DEBUG: Faculty not found for ID: {faculty_id}")
             return jsonify({"error": "Faculty not found"}), 404
 
+        # Get all students assigned to this faculty
         mentees = Student.query.filter_by(mentor_id=faculty_id).all()
+        print(f"DEBUG: Found {len(mentees)} mentees for faculty {faculty_id}")
 
+        # Build mentee info list
         mentees_data = []
         for s in mentees:
             mentee_info = {
@@ -1724,10 +1792,11 @@ def get_faculty_mentees(faculty_id):
             }
             mentees_data.append(mentee_info)
 
+        print(f"DEBUG: Returning {len(mentees_data)} mentees")
         return jsonify(mentees_data), 200
-    except Exception:
-        logger.exception("Fetching faculty mentees failed for faculty_id=%s", faculty_id)
-        return jsonify({"error": "Internal server error"}), 500
+    except Exception as e:
+        print(f"DEBUG: Error in get_faculty_mentees: {str(e)}")
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
 
 @app.route("/api/admin/faculty/<int:faculty_id>/mentees/generate", methods=["POST"])
@@ -1737,11 +1806,14 @@ def generate_faculty_mentees(faculty_id):
     if not faculty:
         return jsonify({"error": "Faculty not found"}), 404
 
+    # Step 1: Count number of faculties with currently zero mentees
     faculties_without_mentees = Faculty.query.filter(~Faculty.mentees.any()).all()
     n = len(faculties_without_mentees)
     if n == 0:
         return jsonify({"error": "No faculties without mentees to assign"}), 400
 
+    # Step 2: For each semester and section, find unassigned students and count them
+    # Get distinct semesters and sections from unassigned students
     query = db.session.query(
         Student.semester,
         Student.section
@@ -1750,6 +1822,7 @@ def generate_faculty_mentees(faculty_id):
     mentees_to_assign = []
 
     for semester, section in query:
+        # Count unassigned students in this semester and section (m)
         unassigned_students = Student.query.filter_by(
             semester=semester,
             section=section,
@@ -1757,11 +1830,15 @@ def generate_faculty_mentees(faculty_id):
         ).all()
         m = len(unassigned_students)
 
+        # Calculate k = m // n (floor division)
         k = m // n
         if k == 0:
+            # if zero, skip assigning for this semester-section
             continue
 
+        # Shuffle unassigned students list for random selection
         random.shuffle(unassigned_students)
+        # Select first k students for this faculty
         selected_students = unassigned_students[:k]
 
         for student in selected_students:
@@ -1774,6 +1851,7 @@ def generate_faculty_mentees(faculty_id):
                 "year_of_admission": student.year_of_admission
             })
 
+    # Return preview of selected mentees for this faculty (do NOT commit here)
     return jsonify(mentees_to_assign), 200
 
 @app.route("/api/admin/faculty/<int:faculty_id>/mentees/confirm", methods=["POST"])
@@ -1791,22 +1869,25 @@ def confirm_faculty_mentees(faculty_id):
     if not isinstance(student_ids, list):
         return jsonify({"error": "student_ids must be a list"}), 400
 
+    # Query all students by the given ids who are currently unassigned or assigned to this faculty
     students = Student.query.filter(Student.id.in_(student_ids)).all()
 
+    # Check if any student ID is invalid or not found
     if len(students) != len(student_ids):
         return jsonify({"error": "One or more student IDs not found"}), 404
 
+    # Assign each student to the faculty
     for student in students:
         student.mentor_id = faculty_id
 
     try:
         db.session.commit()
-    except Exception:
+    except Exception as e:
         db.session.rollback()
-        logger.exception("Mentee assignment failed for faculty_id=%s", faculty_id)
-        return jsonify({"error": "Database error during assignment"}), 500
+        return jsonify({"error": "Database error during assignment", "details": str(e)}), 500
 
     return jsonify({"message": f"Assigned {len(students)} mentees to faculty {faculty_id} successfully."}), 200
+
 
 
 @app.route("/api/admin/faculty/<int:faculty_id>/mentees/remove", methods=["POST"])
@@ -1817,6 +1898,7 @@ def remove_faculty_mentees(faculty_id):
         return jsonify({"error": "Faculty not found"}), 404
 
     data = request.get_json()
+    print("data", data)
     if not data or "student_ids" not in data:
         return jsonify({"error": "Missing student_ids list"}), 400
 
@@ -1824,14 +1906,16 @@ def remove_faculty_mentees(faculty_id):
     if not isinstance(student_ids, list):
         return jsonify({"error": "student_ids must be a list"}), 400
 
+    # Query all students specified who are currently assigned to this faculty
     students = Student.query.filter(
         Student.uid.in_(student_ids),
         Student.mentor_id == faculty_id
     ).all()
-    
+    print("students", students)
     if len(students) != len(student_ids):
         return jsonify({"error": "One or more student IDs not found"}), 404
 
+    # Remove mentor assignment
     for student in students:
         student.mentor_id = None
 
@@ -1841,13 +1925,13 @@ def remove_faculty_mentees(faculty_id):
             "message": f"Removed {len(students)} mentee assignments from faculty {faculty_id} successfully.",
             "removed_student_ids": student_ids
         }), 200
-    except Exception:
+    except Exception as e:
         db.session.rollback()
-        logger.exception("Mentee removal failed for faculty_id=%s", faculty_id)
-        return jsonify({"error": "Database error during removal"}), 500
+        return jsonify({"error": "Database error during removal", "details": str(e)}), 500
 
 
-@app.route("/api/admin/student/<uid>", methods=["DELETE"])
+
+@app.route("/admin/student/<uid>", methods=["DELETE"])
 @role_required(["admin"])
 def delete_student(uid):
     s = Student.query.filter_by(uid=uid).first()
@@ -1856,11 +1940,11 @@ def delete_student(uid):
     
     if s.user:
         db.session.delete(s.user)
-    db.session.delete(s)
+    db.session.delete(s)  # delete user cascade
     db.session.commit()
     return jsonify({"message": "Student deleted successfully"})
 
-@app.route("/api/admin/faculty/<int:faculty_id>", methods=["DELETE"])
+@app.route("/admin/faculty/<int:faculty_id>", methods=["DELETE"])
 @role_required(["admin"])
 def delete_faculty(faculty_id):
     f = Faculty.query.get(faculty_id)
@@ -1874,16 +1958,21 @@ def delete_faculty(faculty_id):
     return jsonify({"message": "Faculty deleted successfully"})
 
 
-# ============================================
-# Register Blueprints
-# ============================================
+# --------------------------------------
+# Register_Blueprints
+# --------------------------------------
 app.register_blueprint(students_bp)
-
-# ============================================
+# --------------------------------------
 # Run
-# ============================================
+# --------------------------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5002))
-    debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
-    logger.info("Starting development server on port %s", port)
-    app.run(host="0.0.0.0", port=port, debug=debug)
+    print("DEBUG: Starting Flask server...")
+    print("DEBUG: CORS enabled with origins:", ["http://127.0.0.1:5501", "http://localhost:5501", "http://127.0.0.1:3000", "http://localhost:3000"])
+    with app.app_context():
+        # Create all database tables
+        print("DEBUG: Creating database tables...")
+        db.create_all()
+        print("✅ Database tables created successfully")
+    
+    print("DEBUG: Server starting on port 5002...")
+    app.run(debug=True, port=5002)
